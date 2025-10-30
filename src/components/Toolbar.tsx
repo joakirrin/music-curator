@@ -18,69 +18,93 @@ export const Toolbar = ({ onAddSong, onImport, songs, onClear }: ToolbarProps) =
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange: React.ChangeEventHandler<HTMLInputElement> = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const text = await file.text();
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-
-      if (file.name.endsWith('.csv')) {
-        const importedSongs = fromCSV(content);
-        onImport(importedSongs);
-      } else if (file.name.endsWith('.json')) {
-        try {
-          const importedSongs = JSON.parse(content) as Song[];
-          onImport(importedSongs);
-        } catch (error) {
-          alert('Invalid JSON file');
-        }
+    try {
+      if (file.name.toLowerCase().endsWith('.csv')) {
+        const parsed = fromCSV(text);
+        onImport(parsed);
+      } else if (file.name.toLowerCase().endsWith('.json')) {
+        const data = JSON.parse(text) as Partial<Song>[];
+        const normalized: Song[] = data.map((s) => ({
+          id: s.id ?? crypto.randomUUID(),
+          cancion: s.cancion ?? '',
+          artista: s.artista ?? '',
+          fts: s.fts ?? '',
+          album: s.album ?? '',
+          anio: s.anio ?? '',
+          productor: s.productor ?? '',
+          plataformas: Array.isArray(s.plataformas) ? (s.plataformas as any) : [],
+          me_gusta: Boolean(s.me_gusta),
+          agregar: (s as any).agregar ?? (s as any).toAdd ?? false,
+          comentarios: s.comentarios ?? ''
+        }));
+        onImport(normalized);
+      } else {
+        alert('Unsupported file type. Please import a .csv or .json file.');
       }
-    };
-    reader.readAsText(file);
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    } catch (err) {
+      console.error(err);
+      alert('Failed to import file. Please check the format.');
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  const handleExportCSV = () => {
+  const exportAllCSV = () => {
     const csv = toCSV(songs);
-    downloadFile('playlist.csv', csv, 'text/csv');
+    downloadFile('songs.csv', csv, 'text/csv;charset=utf-8');
   };
 
-  const handleExportJSON = () => {
+  const exportSelectedCSV = () => {
+    const selected = songs.filter(s => s.agregar);
+    const csv = toCSV(selected);
+    downloadFile('songs_selected.csv', csv, 'text/csv;charset=utf-8');
+  };
+
+  const exportAllJSON = () => {
     const json = JSON.stringify(songs, null, 2);
-    downloadFile('playlist.json', json, 'application/json');
+    downloadFile('songs.json', json, 'application/json;charset=utf-8');
   };
 
   return (
-    <div className="border-b bg-gray-50 px-4 py-3">
-      <div className="container mx-auto flex flex-wrap gap-2">
-        <Button onClick={onAddSong} className="bg-emerald-600 hover:bg-emerald-700">
+    <div className="border-b bg-white px-4 py-3">
+      <div className="container mx-auto flex items-center gap-3">
+        <Button onClick={onAddSong}>
           <Plus className="mr-2 h-4 w-4" />
           Add Song
         </Button>
 
-        <Button onClick={handleImportClick} variant="outline">
-          <Upload className="mr-2 h-4 w-4" />
-          Import
-        </Button>
         <input
           ref={fileInputRef}
           type="file"
           accept=".csv,.json"
-          onChange={handleFileChange}
           className="hidden"
+          onChange={handleFileChange}
         />
-
-        <Button onClick={handleExportCSV} variant="outline">
-          <Download className="mr-2 h-4 w-4" />
-          Export CSV
+        <Button variant="secondary" onClick={handleImportClick}>
+          <Upload className="mr-2 h-4 w-4" />
+          Import CSV/JSON
         </Button>
 
-        <Button onClick={handleExportJSON} variant="outline">
+        <div className="h-6 w-px bg-gray-200" />
+
+        <Button variant="outline" onClick={exportAllCSV}>
+          <Download className="mr-2 h-4 w-4" />
+          Export CSV (All)
+        </Button>
+        <Button
+          variant="outline"
+          onClick={exportSelectedCSV}
+          disabled={!songs.some(s => s.agregar)}
+        >
+          <Download className="mr-2 h-4 w-4" />
+          Export Selected CSV
+        </Button>
+        <Button variant="outline" onClick={exportAllJSON}>
           <Download className="mr-2 h-4 w-4" />
           Export JSON
         </Button>
