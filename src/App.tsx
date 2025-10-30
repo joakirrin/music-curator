@@ -30,9 +30,13 @@ function App() {
     setSongs([newSong, ...songs]);
   };
 
-  const updateSong = (updatedSong: Song) => {
-    setSongs(songs.map(song => song.id === updatedSong.id ? updatedSong : song));
-  };
+const updateSong = (updatedSong: Song) => {
+  setSongs(prevSongs => 
+    prevSongs.map(song => 
+      song.id === updatedSong.id ? updatedSong : song
+    )
+  );
+};
 
   const deleteSong = (id: string) => {
     setSongs(songs.filter(song => song.id !== id));
