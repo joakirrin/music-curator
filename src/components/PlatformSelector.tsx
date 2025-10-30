@@ -28,7 +28,7 @@ export const PlatformSelector = ({ selectedPlatforms, onToggle }: PlatformSelect
             <Button
               key={platform}
               variant="ghost"
-              className="w-full justify-start text-gray-900 hover:bg-gray-100"
+              className="w-full justify-start text-black hover:bg-emerald-600 hover:text-white"
               onClick={() => onToggle(platform)}
             >
               {platform}
