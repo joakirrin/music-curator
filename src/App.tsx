@@ -30,16 +30,17 @@ function App() {
     setSongs([newSong, ...songs]);
   };
 
-const updateSong = (updatedSong: Song) => {
-  setSongs(prevSongs => 
-    prevSongs.map(song => 
-      song.id === updatedSong.id ? updatedSong : song
-    )
-  );
-};
+  // 🔥 FIX: Use functional update to ensure we're working with the latest state
+  const updateSong = (updatedSong: Song) => {
+    setSongs(prevSongs => 
+      prevSongs.map(song => 
+        song.id === updatedSong.id ? updatedSong : song
+      )
+    );
+  };
 
   const deleteSong = (id: string) => {
-    setSongs(songs.filter(song => song.id !== id));
+    setSongs(prevSongs => prevSongs.filter(song => song.id !== id));
   };
 
   const clearAll = () => {
