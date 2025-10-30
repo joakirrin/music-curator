@@ -22,13 +22,13 @@ export const PlatformSelector = ({ selectedPlatforms, onToggle }: PlatformSelect
           <Plus className="h-3 w-3" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-48">
+      <PopoverContent className="w-48 bg-white">
         <div className="space-y-1">
           {availablePlatforms.map(platform => (
             <Button
               key={platform}
               variant="ghost"
-              className="w-full justify-start"
+              className="w-full justify-start text-gray-900 hover:bg-gray-100"
               onClick={() => onToggle(platform)}
             >
               {platform}
