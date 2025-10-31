@@ -1,125 +1,94 @@
-import { Plus, Upload, Download, Trash2 } from 'lucide-react';
-import { Button } from './ui/button';
-import { Song } from '../types/song';
-import { toCSV, fromCSV, downloadFile } from '../utils/fileHandlers';
-import { useRef } from 'react';
+// src/components/Toolbar.tsx
+import React, { useRef } from "react";
+import { Song } from "../types/song";
+import { toCSV, fromCSV, fromJSON, downloadFile } from "../utils/fileHandlers";
 
-interface ToolbarProps {
-  onAddSong: () => void;
-  onImport: (songs: Song[]) => void;
+type Props = {
   songs: Song[];
-  onClear: () => void;
-}
+  onImport: (incoming: Song[]) => void;
+};
 
-export const Toolbar = ({ onAddSong, onImport, songs, onClear }: ToolbarProps) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+export default function Toolbar({ songs, onImport }: Props) {
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const jsonRef = useRef<HTMLInputElement | null>(null);
 
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
+  const handleExportCSV = () => {
+    const csv = toCSV(songs);
+    downloadFile("songs.csv", csv, "text/csv;charset=utf-8");
   };
 
-  const handleFileChange: React.ChangeEventHandler<HTMLInputElement> = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const text = await file.text();
-
-    try {
-      if (file.name.toLowerCase().endsWith('.csv')) {
+  const handleImportCSV = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const text = String(reader.result || "");
         const parsed = fromCSV(text);
         onImport(parsed);
-      } else if (file.name.toLowerCase().endsWith('.json')) {
-        const data = JSON.parse(text) as Partial<Song>[];
-        const normalized: Song[] = data.map((s) => ({
-          id: s.id ?? crypto.randomUUID(),
-          cancion: s.cancion ?? '',
-          artista: s.artista ?? '',
-          fts: s.fts ?? '',
-          album: s.album ?? '',
-          anio: s.anio ?? '',
-          productor: s.productor ?? '',
-          plataformas: Array.isArray(s.plataformas) ? (s.plataformas as any) : [],
-          me_gusta: Boolean(s.me_gusta),
-          agregar: (s as any).agregar ?? (s as any).toAdd ?? false,
-          comentarios: s.comentarios ?? ''
-        }));
-        onImport(normalized);
-      } else {
-        alert('Unsupported file type. Please import a .csv or .json file.');
+      } catch (err) {
+        alert((err as Error).message || "Failed to import CSV.");
       }
-    } catch (err) {
-      console.error(err);
-      alert('Failed to import file. Please check the format.');
-    } finally {
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
+      if (fileRef.current) fileRef.current.value = "";
+    };
+    reader.readAsText(file);
   };
 
-  const exportAllCSV = () => {
-    const csv = toCSV(songs);
-    downloadFile('songs.csv', csv, 'text/csv;charset=utf-8');
-  };
-
-  const exportSelectedCSV = () => {
-    const selected = songs.filter(s => s.agregar);
-    const csv = toCSV(selected);
-    downloadFile('songs_selected.csv', csv, 'text/csv;charset=utf-8');
-  };
-
-  const exportAllJSON = () => {
-    const json = JSON.stringify(songs, null, 2);
-    downloadFile('songs.json', json, 'application/json;charset=utf-8');
+  const handleImportJSON = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const json = JSON.parse(String(reader.result || "[]"));
+        const parsed = fromJSON(json);
+        onImport(parsed);
+      } catch {
+        alert("Failed to import JSON.");
+      }
+      if (jsonRef.current) jsonRef.current.value = "";
+    };
+    reader.readAsText(file);
   };
 
   return (
-    <div className="border-b bg-white px-4 py-3">
-      <div className="container mx-auto flex items-center gap-3">
-        <Button onClick={onAddSong}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Song
-        </Button>
+    <div className="flex items-center gap-2 p-2">
+      <button
+        className="px-3 py-1 rounded bg-slate-800 text-white hover:bg-slate-700"
+        onClick={() => fileRef.current?.click()}
+      >
+        Import CSV (ES/EN)
+      </button>
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".csv,text/csv"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) handleImportCSV(f);
+        }}
+      />
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".csv,.json"
-          className="hidden"
-          onChange={handleFileChange}
-        />
-        <Button variant="secondary" onClick={handleImportClick}>
-          <Upload className="mr-2 h-4 w-4" />
-          Import CSV/JSON
-        </Button>
+      <button
+        className="px-3 py-1 rounded bg-slate-800 text-white hover:bg-slate-700"
+        onClick={() => jsonRef.current?.click()}
+      >
+        Import JSON (ES/EN)
+      </button>
+      <input
+        ref={jsonRef}
+        type="file"
+        accept=".json,application/json"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) handleImportJSON(f);
+        }}
+      />
 
-        <div className="h-6 w-px bg-gray-200" />
-
-        <Button variant="outline" onClick={exportAllCSV}>
-          <Download className="mr-2 h-4 w-4" />
-          Export CSV (All)
-        </Button>
-        <Button
-          variant="outline"
-          onClick={exportSelectedCSV}
-          disabled={!songs.some(s => s.agregar)}
-        >
-          <Download className="mr-2 h-4 w-4" />
-          Export Selected CSV
-        </Button>
-        <Button variant="outline" onClick={exportAllJSON}>
-          <Download className="mr-2 h-4 w-4" />
-          Export JSON
-        </Button>
-
-        <div className="flex-1" />
-
-        <Button
-          onClick={onClear}
-          variant="destructive"
-          className="ml-auto"
-        >
-          <Trash2 className="mr-2 h-4 w-4" />
-          Clear All
-        </Button>
-      </div>
+      <button
+        className="px-3 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-500"
+        onClick={handleExportCSV}
+      >
+        Export CSV (EN)
+      </button>
     </div>
   );
-};
+}
