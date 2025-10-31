@@ -57,6 +57,9 @@ export default function Toolbar({ songs, onImport, onClear }: Props) {
     }
   };
 
+  const btn =
+    "px-3 py-2 rounded-xl border shadow-sm text-sm bg-white text-gray-800 border-gray-300 hover:bg-gray-50";
+
   return (
     <div className="container mx-auto px-4 py-4 flex items-center gap-2 border-b bg-white">
       <input
@@ -74,31 +77,22 @@ export default function Toolbar({ songs, onImport, onClear }: Props) {
         onChange={onJSONChange}
       />
 
-      <button
-        onClick={triggerCSV}
-        className="px-3 py-2 rounded-xl border shadow-sm text-sm hover:bg-gray-50"
-      >
+      <button onClick={triggerCSV} className={btn}>
         Import CSV (EN/ES)
       </button>
 
-      <button
-        onClick={triggerJSON}
-        className="px-3 py-2 rounded-xl border shadow-sm text-sm hover:bg-gray-50"
-      >
+      <button onClick={triggerJSON} className={btn}>
         Import JSON (EN/ES)
       </button>
 
-      <button
-        onClick={handleExportCSV}
-        className="px-3 py-2 rounded-xl border shadow-sm text-sm hover:bg-gray-50"
-      >
+      <button onClick={handleExportCSV} className={btn}>
         Export CSV (EN)
       </button>
 
       {onClear && (
         <button
           onClick={onClear}
-          className="ml-auto px-3 py-2 rounded-xl border shadow-sm text-sm hover:bg-red-50 text-red-600 border-red-200"
+          className="ml-auto px-3 py-2 rounded-xl border shadow-sm text-sm bg-white text-red-600 border-red-200 hover:bg-red-50"
         >
           Delete All
         </button>
