@@ -1,3 +1,4 @@
+// src/components/Header.tsx
 import { motion } from "framer-motion";
 import { FoneaLogo } from "./FoneaLogo";
 
