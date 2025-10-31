@@ -1,7 +1,7 @@
 // src/App.tsx
 import React, { useMemo, useState } from "react";
 import { useSongsState } from "./hooks/useLocalState";
-import SongRow from "./components/SongRow";
+import { SongRow } from "./components/SongRow";
 import Toolbar from "./components/Toolbar";
 import { Song } from "./types/song";
 
@@ -65,7 +65,7 @@ export default function App() {
           <SongRow
             key={s.id}
             song={s}
-            onChange={(patch) => handleRowChange(s.id, patch)}
+            onChange={(patch: Partial<Song>) => handleRowChange(s.id, patch)}
           />
         ))}
       </div>
