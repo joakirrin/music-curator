@@ -3,9 +3,13 @@
 
 import { Song, Platform } from "../types/song";
 
-// ---- Constants
-
-const EN_HEADERS: Array<keyof Omit<Song, "id" | "platforms" | "liked" | "toAdd"> | "platforms" | "liked" | "toAdd"> = [
+// ---- Canonical headers (English, export order)
+const EN_HEADERS: Array<
+  | keyof Omit<Song, "id" | "platforms" | "liked" | "toAdd">
+  | "platforms"
+  | "liked"
+  | "toAdd"
+> = [
   "title",
   "artist",
   "featuring",
@@ -18,20 +22,8 @@ const EN_HEADERS: Array<keyof Omit<Song, "id" | "platforms" | "liked" | "toAdd">
   "comments",
 ];
 
-const ES_HEADERS = [
-  "cancion",
-  "artista",
-  "fts",
-  "album",
-  "anio",
-  "productor",
-  "plataformas",
-  "me_gusta",
-  "agregar",
-  "comentarios",
-] as const;
-
-const HEADER_MAP_ES_TO_EN: Record<(typeof ES_HEADERS)[number], (typeof EN_HEADERS)[number]> = {
+// Spanish -> English header map (legacy import)
+const HEADER_MAP_ES_TO_EN: Record<string, keyof Song> = {
   cancion: "title",
   artista: "artist",
   fts: "featuring",
@@ -44,24 +36,31 @@ const HEADER_MAP_ES_TO_EN: Record<(typeof ES_HEADERS)[number], (typeof EN_HEADER
   comentarios: "comments",
 };
 
-const ALLOWED_PLATFORMS: Platform[] = ["Spotify", "YouTube", "Bandcamp", "SoundCloud"];
+const ALLOWED_PLATFORMS: Platform[] = [
+  "Spotify",
+  "YouTube",
+  "Bandcamp",
+  "SoundCloud",
+];
 
 // ---- Helpers
 
-function coerceBoolean(v: unknown): boolean {
-  if (typeof v === "boolean") return v;
-  if (typeof v === "number") return v !== 0;
-  if (typeof v === "string") {
-    const s = v.trim().toLowerCase();
-    return s === "1" || s === "true" || s === "yes" || s === "y";
-  }
-  return false;
+function generateId(): string {
+  return `song_${Math.random().toString(36).slice(2, 10)}`;
 }
 
 function coerceString(v: unknown): string {
   if (v == null) return "";
   if (typeof v === "string") return v;
-  return String(v ?? "");
+  return String(v ?? "").trim();
+}
+
+function coerceBool(v: unknown): boolean {
+  if (typeof v === "boolean") return v;
+  const s = coerceString(v).toLowerCase();
+  if (s === "1" || s === "true" || s === "yes") return true;
+  if (s === "0" || s === "false" || s === "no") return false;
+  return false;
 }
 
 function coercePlatforms(v: unknown): Platform[] {
@@ -73,49 +72,105 @@ function coercePlatforms(v: unknown): Platform[] {
       .filter((p): p is Platform => ALLOWED_PLATFORMS.includes(p as Platform));
   }
   if (typeof v === "string") {
-    const parts = v.split(";").map((s) => s.trim()).filter(Boolean);
+    const parts = v
+      .split(";")
+      .map((s) => s.trim())
+      .filter(Boolean);
     return coercePlatforms(parts);
   }
   return [];
 }
 
 function capitalizeExact(s: string): string {
-  // Keep exact tokens as allowed, simple normalization for common casings
-  const candidates: Record<string, Platform> = {
-    spotify: "Spotify",
-    youtube: "YouTube",
-    bandcamp: "Bandcamp",
-    soundcloud: "SoundCloud",
+  // normalize most common casings to canonical
+  const t = s.trim().toLowerCase();
+  if (t === "spotify") return "Spotify";
+  if (t === "youtube") return "YouTube";
+  if (t === "bandcamp") return "Bandcamp";
+  if (t === "soundcloud") return "SoundCloud";
+  return s;
+}
+
+// ---- Public API
+
+/**
+ * normalizeSong(input: unknown): Song
+ * - Accepts English or Spanish keys.
+ * - Coerces booleans, normalizes platforms.
+ * - Unknown platform strings are ignored.
+ * - Missing strings -> "" (optional fields may remain undefined if empty).
+ */
+export function normalizeSong(input: unknown): Song {
+  const raw = (input ?? {}) as Record<string, unknown>;
+
+  // Copy in case it's a class / prototype, and lift Spanish keys into English
+  const working: Record<string, unknown> = { ...raw };
+  for (const [es, en] of Object.entries(HEADER_MAP_ES_TO_EN)) {
+    if (es in working && !(en in working)) {
+      working[en] = working[es];
+    }
+  }
+  // Defensive legacy aliases (already covered above, but safe)
+  if ("me_gusta" in working && !("liked" in working))
+    working["liked"] = working["me_gusta"];
+  if ("agregar" in working && !("toAdd" in working))
+    working["toAdd"] = working["agregar"];
+  if ("plataformas" in working && !("platforms" in working))
+    working["platforms"] = working["plataformas"];
+
+  const title = coerceString(working.title);
+  const artist = coerceString(working.artist);
+  const featuring = coerceString(working.featuring) || undefined;
+  const album = coerceString(working.album) || undefined;
+  const year = coerceString(working.year) || undefined;
+  const producer = coerceString(working.producer) || undefined;
+  const platforms = coercePlatforms(working.platforms);
+  const liked = coerceBool(working.liked);
+  const toAdd = coerceBool(working.toAdd);
+  const comments = coerceString(working.comments) || undefined;
+
+  const id = coerceString((working as any).id) || generateId();
+
+  return {
+    id,
+    title,
+    artist,
+    featuring,
+    album,
+    year,
+    producer,
+    platforms,
+    liked,
+    toAdd,
+    comments,
   };
-  const key = s.replace(/\s+/g, "").toLowerCase();
-  return (candidates[key] as string) || s;
 }
 
-function generateId(): string {
-  // Small, stable-enough ID generator (no deps)
-  return "s_" + Math.random().toString(36).slice(2, 10);
-}
+// ---- CSV
 
-// Standard CSV escaping for a single field
-function csvEscape(field: string): string {
-  const needsQuote = /[",\n]/.test(field);
-  let out = field.replace(/"/g, '""');
-  return needsQuote ? `"${out}"` : out;
-}
-
-// Minimal RFC4180 CSV parser (commas, double quotes, newlines)
+// Small CSV parser (quotes + commas), no new deps
 function parseCSV(text: string): string[][] {
   const rows: string[][] = [];
   let cur: string[] = [];
   let cell = "";
   let inQuotes = false;
 
+  const pushCell = () => {
+    cur.push(cell);
+    cell = "";
+  };
+  const pushRow = () => {
+    rows.push(cur);
+    cur = [];
+  };
+
   for (let i = 0; i < text.length; i++) {
     const ch = text[i];
 
     if (inQuotes) {
       if (ch === '"') {
-        if (text[i + 1] === '"') {
+        const next = text[i + 1];
+        if (next === '"') {
           cell += '"';
           i++;
         } else {
@@ -124,153 +179,141 @@ function parseCSV(text: string): string[][] {
       } else {
         cell += ch;
       }
+      continue;
+    }
+
+    if (ch === '"') {
+      inQuotes = true;
+    } else if (ch === ",") {
+      pushCell();
+    } else if (ch === "\n" || ch === "\r") {
+      // handle \r\n, \n, \r
+      // finalize row only if we have something (skip stray empty lines)
+      if (ch === "\r" && text[i + 1] === "\n") i++;
+      pushCell();
+      if (cur.length > 1 || cur[0] !== "") pushRow();
     } else {
-      if (ch === '"') {
-        inQuotes = true;
-      } else if (ch === ",") {
-        cur.push(cell);
-        cell = "";
-      } else if (ch === "\n") {
-        cur.push(cell);
-        rows.push(cur);
-        cur = [];
-        cell = "";
-      } else if (ch === "\r") {
-        // ignore CR (handle CRLF)
-        continue;
-      } else {
-        cell += ch;
-      }
+      cell += ch;
     }
   }
-  // last cell
-  cur.push(cell);
-  rows.push(cur);
-  // drop trailing empty row from final newline
-  if (rows.length && rows[rows.length - 1].length === 1 && rows[rows.length - 1][0] === "") {
-    rows.pop();
-  }
+  // tail
+  pushCell();
+  if (cur.length > 1 || cur[0] !== "") pushRow();
+
   return rows;
 }
 
-// ---- Normalization
+function csvEscape(s: string): string {
+  const needs = /[",\n\r]/.test(s);
+  let out = s.replace(/"/g, '""');
+  return needs ? `"${out}"` : out;
+}
 
 /**
- * normalizeSong
- * Accepts English or Spanish keys (legacy), coerces to canonical English Song.
- * - Fills missing strings as ""
- * - Coerces booleans
- * - Ensures platforms is Platform[] of allowed values (ignores unknown strings)
+ * fromCSV(text): Song[]
+ * - Detects Spanish or English header row.
+ * - If Spanish, maps to English.
+ * - If not recognized, throws a friendly error.
  */
-export function normalizeSong(input: unknown): Song {
-  const raw = (typeof input === "object" && input != null ? input as Record<string, unknown> : {}) as Record<string, unknown>;
-
-  // Map Spanish keys -> English keys into a working object
-  const working: Record<string, unknown> = { ...raw };
-  for (const [es, en] of Object.entries(HEADER_MAP_ES_TO_EN)) {
-    if (es in working && !(en in working)) {
-      working[en] = working[es];
-    }
-  }
-  // Legacy boolean aliases (already covered by header map but keep defensive)
-  if ("me_gusta" in working && !("liked" in working)) working["liked"] = working["me_gusta"];
-  if ("agregar" in working && !("toAdd" in working)) working["toAdd"] = working["agregar"];
-  if ("plataformas" in working && !("platforms" in working)) working["platforms"] = working["plataformas"];
-
-  const song: Song = {
-    id: coerceString(working.id) || generateId(),
-    title: coerceString(working.title),
-    artist: coerceString(working.artist),
-    featuring: coerceString(working.featuring) || undefined,
-    album: coerceString(working.album) || undefined,
-    year: coerceString(working.year) || undefined,
-    producer: coerceString(working.producer) || undefined,
-    platforms: coercePlatforms(working.platforms),
-    liked: coerceBoolean(working.liked),
-    toAdd: coerceBoolean(working.toAdd),
-    comments: coerceString(working.comments) || undefined,
-  };
-
-  // Ensure required strings at least "", for consistent UI (title/artist)
-  if (!song.title) song.title = "";
-  if (!song.artist) song.artist = "";
-
-  return song;
-}
-
-// ---- CSV Export (always English canonical headers)
-
-export function toCSV(songs: Song[]): string {
-  const header = EN_HEADERS.join(",");
-  const rows = songs.map((s) => {
-    const fields: string[] = [
-      csvEscape(s.title ?? ""),
-      csvEscape(s.artist ?? ""),
-      csvEscape(s.featuring ?? ""),
-      csvEscape(s.album ?? ""),
-      csvEscape(s.year ?? ""),
-      csvEscape(s.producer ?? ""),
-      csvEscape((s.platforms || []).join(";")),
-      csvEscape(s.liked ? "1" : "0"),
-      csvEscape(s.toAdd ? "1" : "0"),
-      csvEscape(s.comments ?? ""),
-    ];
-    return fields.join(",");
-  });
-  return [header, ...rows].join("\n");
-}
-
-// ---- CSV Import (accept Spanish or English header row)
-
 export function fromCSV(text: string): Song[] {
-  const rows = parseCSV(text);
+  const rows = parseCSV(text.trim());
   if (!rows.length) return [];
 
-  const headerRow = rows[0].map((h) => h.trim());
-  const isEnglish = headerRow.length === EN_HEADERS.length && headerRow.every((h, i) => h === EN_HEADERS[i]);
-  const isSpanish = headerRow.length === ES_HEADERS.length && headerRow.every((h, i) => h === ES_HEADERS[i]);
+  const header = rows[0].map((h) => h.trim());
+  const isEnglish = EN_HEADERS.every((h) => header.includes(h));
+  const esKeys = Object.keys(HEADER_MAP_ES_TO_EN);
+  const isSpanish = esKeys.every((es) => header.includes(es) || EN_HEADERS.includes(HEADER_MAP_ES_TO_EN[es] as any));
 
-  let headerEn: string[] = [];
+  let headerToUse: string[] = [];
   if (isEnglish) {
-    headerEn = [...EN_HEADERS];
+    headerToUse = header;
   } else if (isSpanish) {
-    headerEn = headerRow.map((h) => HEADER_MAP_ES_TO_EN[h as (typeof ES_HEADERS)[number]]);
+    // map Spanish columns to English names for internal handling
+    headerToUse = header.map((h) => (HEADER_MAP_ES_TO_EN[h] ?? h) as string);
   } else {
     throw new Error(
-      "Unrecognized CSV headers. Expected English: " +
-        EN_HEADERS.join(",") +
-        " or Spanish: " +
-        ES_HEADERS.join(",")
+      "Unrecognized CSV headers. Expect English (title,artist,...) or Spanish legacy (cancion,artista,...)."
     );
   }
 
   const dataRows = rows.slice(1);
-  const songs: Song[] = dataRows.map((cols) => {
-    const rec: Record<string, unknown> = {};
-    for (let i = 0; i < headerEn.length; i++) {
-      const key = headerEn[i];
-      rec[key] = cols[i] ?? "";
+  const songs: Song[] = [];
+
+  for (const r of dataRows) {
+    const obj: Record<string, unknown> = {};
+    for (let i = 0; i < r.length; i++) {
+      const key = headerToUse[i];
+      const val = r[i];
+      if (!key) continue;
+
+      if (key === "platforms") {
+        obj.platforms = val;
+      } else if (key === "liked" || key === "toAdd") {
+        obj[key] = val === "1" || val.toLowerCase() === "true";
+      } else {
+        obj[key] = val;
+      }
     }
-    // liked/toAdd as "1"/"0"
-    if ("liked" in rec) rec.liked = coerceBoolean(rec.liked);
-    if ("toAdd" in rec) rec.toAdd = coerceBoolean(rec.toAdd);
-    if ("platforms" in rec) rec.platforms = coercePlatforms(rec.platforms);
-    return normalizeSong(rec);
-  });
+    songs.push(normalizeSong(obj));
+  }
 
   return songs;
 }
 
-// ---- JSON Import (accept English or Spanish keys)
+/**
+ * toCSV(songs): string
+ * - Always English headers, canonical order.
+ * - platforms joined with ';'
+ * - booleans as "1"/"0"
+ */
+export function toCSV(songs: Song[]): string {
+  const header = EN_HEADERS.join(",");
+  const lines = [header];
 
+  for (const s of songs) {
+    const rowVals = EN_HEADERS.map((k) => {
+      const v = (s as any)[k];
+      if (k === "platforms") {
+        return csvEscape((v as Platform[]).join(";"));
+      }
+      if (k === "liked" || k === "toAdd") {
+        return (v ? "1" : "0") as string;
+      }
+      return csvEscape(v ?? "");
+    });
+    lines.push(rowVals.join(","));
+  }
+
+  return lines.join("\n");
+}
+
+/**
+ * fromJSON(value): Song[]
+ * - Accepts array of objects with either English or Spanish keys.
+ * - Normalizes via normalizeSong.
+ */
 export function fromJSON(value: unknown): Song[] {
-  const arr = Array.isArray(value) ? value : [];
-  return arr.map((item) => normalizeSong(item));
+  if (!value) return [];
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return fromJSON(parsed);
+    } catch {
+      throw new Error("Invalid JSON content.");
+    }
+  }
+  if (!Array.isArray(value)) {
+    throw new Error("JSON must be an array of songs.");
+  }
+  return value.map(normalizeSong);
 }
 
 // ---- Download helper (intact)
-
-export function downloadFile(filename: string, content: string, mime: string = "text/plain;charset=utf-8"): void {
+export function downloadFile(
+  filename: string,
+  content: string,
+  mime: string = "text/plain;charset=utf-8"
+): void {
   const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
