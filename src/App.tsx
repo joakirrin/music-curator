@@ -7,6 +7,12 @@ import { FilterBar } from './components/FilterBar';
 import { SongRow } from './components/SongRow';
 import { SpotifyButton } from './components/SpotifyButton';
 import { AnimatePresence } from 'framer-motion';
+import { useEffect } from "react";
+
+useEffect(() => {
+  document.title = "Fonea – Sound Curator";
+}, []);
+
 
 function App() {
   const [songs, setSongs] = useLocalState();
