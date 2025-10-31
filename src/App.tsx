@@ -5,7 +5,7 @@ import { Song, FilterType } from "./types/song";
 import { SongRow } from "./components/SongRow";
 import Toolbar from "./components/Toolbar";
 import { FilterBar } from "./components/FilterBar";
-import FoneaLogo from "./components/FoneaLogo"; // change to named import if your file exports named
+import { FoneaLogo } from "./components/FoneaLogo";
 
 import { demoSongs } from "./utils/demoData";
 
