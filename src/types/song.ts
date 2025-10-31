@@ -2,6 +2,8 @@
 
 export type Platform = "Spotify" | "YouTube" | "Bandcamp" | "SoundCloud";
 
+export type FilterType = "all" | "liked" | "toAdd" | "pending";
+
 export type Song = {
   id: string;
   title: string;         // (was: cancion)
