@@ -2,7 +2,7 @@
 // LocalStorage-backed songs state with one-time migration (songs -> songs_v2)
 
 import { useEffect, useState, useCallback } from "react";
-import { Song } from "../types/song";
+import type { Song } from "../types/song";
 import { normalizeSong } from "../utils/fileHandlers";
 
 const NEW_KEY = "songs_v2";
@@ -18,32 +18,35 @@ function safeParse(json: string | null): unknown {
 }
 
 export function useSongsState(initial: Song[] = []) {
-  const [songs, setSongs] = useState<Song[]>(initial);
+  const [songs, setSongs] = useState<Song[]>([]);
 
-  // Load + migrate once
   useEffect(() => {
+    // Phase 1: Try new storage
     const v2Raw = safeParse(localStorage.getItem(NEW_KEY));
     if (Array.isArray(v2Raw)) {
-      const v2 = v2Raw.map((r) => normalizeSong(r));
-      setSongs(v2);
+      const normalized = v2Raw.map(normalizeSong);
+      setSongs(normalized);
       return;
     }
 
-    const oldRaw = safeParse(localStorage.getItem(OLD_KEY));
-    if (Array.isArray(oldRaw)) {
-      const migrated = oldRaw.map((r) => normalizeSong(r));
-      localStorage.setItem(NEW_KEY, JSON.stringify(migrated));
-      setSongs(migrated);
+    // Phase 2: Migrate from old key if present
+    const v1Raw = safeParse(localStorage.getItem(OLD_KEY));
+    if (Array.isArray(v1Raw)) {
+      const normalized = v1Raw.map(normalizeSong);
+      setSongs(normalized);
+      // Write through to new key
+      localStorage.setItem(NEW_KEY, JSON.stringify(normalized));
       return;
     }
 
-    // Nothing stored
-    setSongs(initial);
+    // Phase 3: Use provided initial
+    setSongs(initial.map(normalizeSong));
   }, [initial]);
 
   const saveSongs = useCallback((next: Song[]) => {
-    setSongs(next);
-    localStorage.setItem(NEW_KEY, JSON.stringify(next));
+    const normalized = next.map(normalizeSong);
+    setSongs(normalized);
+    localStorage.setItem(NEW_KEY, JSON.stringify(normalized));
   }, []);
 
   return { songs, setSongs: saveSongs, storageKey: NEW_KEY };
