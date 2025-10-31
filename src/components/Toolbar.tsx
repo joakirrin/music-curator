@@ -1,100 +1,104 @@
 // src/components/Toolbar.tsx
 import { useRef } from "react";
-import { Song } from "../types/song";
-import { toCSV, fromCSV, fromJSON, downloadFile } from "../utils/fileHandlers";
+import type { Song } from "../types/song";
+import { fromCSV, fromJSON, toCSV, downloadFile } from "../utils/fileHandlers";
 
 type Props = {
   songs: Song[];
   onImport: (incoming: Song[]) => void;
-  onClear?: () => void; // ← optional; shows Delete All if provided
+  onClear?: () => void;
 };
 
 export default function Toolbar({ songs, onImport, onClear }: Props) {
-  const fileRef = useRef<HTMLInputElement | null>(null);
-  const jsonRef = useRef<HTMLInputElement | null>(null);
+  const csvInputRef = useRef<HTMLInputElement>(null);
+  const jsonInputRef = useRef<HTMLInputElement>(null);
 
   const handleExportCSV = () => {
     const csv = toCSV(songs);
     downloadFile("songs.csv", csv, "text/csv;charset=utf-8");
   };
 
-  const handleImportCSV = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const text = String(reader.result || "");
-        const parsed = fromCSV(text);
-        onImport(parsed);
-      } catch (err) {
-        alert((err as Error).message || "Failed to import CSV.");
-      }
-      if (fileRef.current) fileRef.current.value = "";
-    };
-    reader.readAsText(file);
+  const triggerCSV = () => csvInputRef.current?.click();
+  const triggerJSON = () => jsonInputRef.current?.click();
+
+  const readFileAsText = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result || ""));
+      r.onerror = reject;
+      r.readAsText(file);
+    });
+
+  const onCSVChange: React.ChangeEventHandler<HTMLInputElement> = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await readFileAsText(file);
+    try {
+      const incoming = fromCSV(text);
+      onImport(incoming);
+    } catch (err: any) {
+      alert(err?.message ?? "Failed to import CSV.");
+    } finally {
+      e.currentTarget.value = "";
+    }
   };
 
-  const handleImportJSON = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const json = JSON.parse(String(reader.result || "[]"));
-        const parsed = fromJSON(json);
-        onImport(parsed);
-      } catch {
-        alert("Failed to import JSON.");
-      }
-      if (jsonRef.current) jsonRef.current.value = "";
-    };
-    reader.readAsText(file);
+  const onJSONChange: React.ChangeEventHandler<HTMLInputElement> = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await readFileAsText(file);
+    try {
+      const incoming = fromJSON(text);
+      onImport(incoming);
+    } catch (err: any) {
+      alert(err?.message ?? "Failed to import JSON.");
+    } finally {
+      e.currentTarget.value = "";
+    }
   };
 
   return (
-    <div className="flex items-center gap-2 p-2">
-      <button
-        className="px-3 py-1 rounded bg-slate-800 text-white hover:bg-slate-700"
-        onClick={() => fileRef.current?.click()}
-      >
-        Import CSV (ES/EN)
-      </button>
+    <div className="container mx-auto px-4 py-4 flex items-center gap-2 border-b bg-white">
       <input
-        ref={fileRef}
+        ref={csvInputRef}
         type="file"
         accept=".csv,text/csv"
         className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) handleImportCSV(f);
-        }}
+        onChange={onCSVChange}
       />
-
-      <button
-        className="px-3 py-1 rounded bg-slate-800 text-white hover:bg-slate-700"
-        onClick={() => jsonRef.current?.click()}
-      >
-        Import JSON (ES/EN)
-      </button>
       <input
-        ref={jsonRef}
+        ref={jsonInputRef}
         type="file"
         accept=".json,application/json"
         className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) handleImportJSON(f);
-        }}
+        onChange={onJSONChange}
       />
 
       <button
-        className="px-3 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-500"
+        onClick={triggerCSV}
+        className="px-3 py-2 rounded-xl border shadow-sm text-sm hover:bg-gray-50"
+      >
+        Import CSV (EN/ES)
+      </button>
+
+      <button
+        onClick={triggerJSON}
+        className="px-3 py-2 rounded-xl border shadow-sm text-sm hover:bg-gray-50"
+      >
+        Import JSON (EN/ES)
+      </button>
+
+      <button
         onClick={handleExportCSV}
+        className="px-3 py-2 rounded-xl border shadow-sm text-sm hover:bg-gray-50"
       >
         Export CSV (EN)
       </button>
 
       {onClear && (
         <button
-          className="ml-auto px-3 py-1 rounded bg-red-600 text-white hover:bg-red-500"
           onClick={onClear}
+          className="ml-auto px-3 py-2 rounded-xl border shadow-sm text-sm hover:bg-red-50 text-red-600 border-red-200"
         >
           Delete All
         </button>
