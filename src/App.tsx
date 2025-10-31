@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useSongsState } from "./hooks/useLocalState";
 import { SongRow } from "./components/SongRow";
 import Toolbar from "./components/Toolbar";
