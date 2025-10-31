@@ -1,132 +1,283 @@
-import { Song, Platform } from '../types/song';
+// src/utils/fileHandlers.ts
+// Utilities for CSV/JSON import-export + normalization (Spanish -> English)
 
-const CSV_HEADERS = ['cancion','artista','fts','album','anio','productor','plataformas','me_gusta','agregar','comentarios'] as const;
+import { Song, Platform } from "../types/song";
 
-const escapeCSV = (value: string) => {
-  const v = value ?? '';
-  if (/[",\n]/.test(v)) {
-    return '"' + v.replace(/"/g, '""') + '"';
-  }
-  return v;
+// ---- Constants
+
+const EN_HEADERS: Array<keyof Omit<Song, "id" | "platforms" | "liked" | "toAdd"> | "platforms" | "liked" | "toAdd"> = [
+  "title",
+  "artist",
+  "featuring",
+  "album",
+  "year",
+  "producer",
+  "platforms",
+  "liked",
+  "toAdd",
+  "comments",
+];
+
+const ES_HEADERS = [
+  "cancion",
+  "artista",
+  "fts",
+  "album",
+  "anio",
+  "productor",
+  "plataformas",
+  "me_gusta",
+  "agregar",
+  "comentarios",
+] as const;
+
+const HEADER_MAP_ES_TO_EN: Record<(typeof ES_HEADERS)[number], (typeof EN_HEADERS)[number]> = {
+  cancion: "title",
+  artista: "artist",
+  fts: "featuring",
+  album: "album",
+  anio: "year",
+  productor: "producer",
+  plataformas: "platforms",
+  me_gusta: "liked",
+  agregar: "toAdd",
+  comentarios: "comments",
 };
 
-/** Export songs to CSV following the contract:
- * columnas: cancion,artista,fts,album,anio,productor,plataformas,me_gusta,agregar,comentarios
- * plataformas joined by ';'
- * me_gusta/agregar as 1/0
- * Note: we intentionally do NOT include internal id in CSV.
- */
-export const toCSV = (songs: Song[]): string => {
-  const lines = [CSV_HEADERS.join(',')];
-  for (const s of songs) {
-    const row = [
-      s.cancion || '',
-      s.artista || '',
-      s.fts || '',
-      s.album || '',
-      s.anio || '',
-      s.productor || '',
-      (s.plataformas || []).join(';'),
-      s.me_gusta ? '1' : '0',
-      s.agregar ? '1' : '0',
-      s.comentarios || '',
-    ];
-    lines.push(row.map(escapeCSV).join(','));
-  }
-  return lines.join('\n');
-};
+const ALLOWED_PLATFORMS: Platform[] = ["Spotify", "YouTube", "Bandcamp", "SoundCloud"];
 
-// tiny CSV parser that supports quotes and commas/newlines in fields
-const parseCSV = (text: string): string[][] => {
+// ---- Helpers
+
+function coerceBoolean(v: unknown): boolean {
+  if (typeof v === "boolean") return v;
+  if (typeof v === "number") return v !== 0;
+  if (typeof v === "string") {
+    const s = v.trim().toLowerCase();
+    return s === "1" || s === "true" || s === "yes" || s === "y";
+  }
+  return false;
+}
+
+function coerceString(v: unknown): string {
+  if (v == null) return "";
+  if (typeof v === "string") return v;
+  return String(v ?? "");
+}
+
+function coercePlatforms(v: unknown): Platform[] {
+  if (Array.isArray(v)) {
+    return v
+      .map((p) => coerceString(p).trim())
+      .filter(Boolean)
+      .map(capitalizeExact)
+      .filter((p): p is Platform => ALLOWED_PLATFORMS.includes(p as Platform));
+  }
+  if (typeof v === "string") {
+    const parts = v.split(";").map((s) => s.trim()).filter(Boolean);
+    return coercePlatforms(parts);
+  }
+  return [];
+}
+
+function capitalizeExact(s: string): string {
+  // Keep exact tokens as allowed, simple normalization for common casings
+  const candidates: Record<string, Platform> = {
+    spotify: "Spotify",
+    youtube: "YouTube",
+    bandcamp: "Bandcamp",
+    soundcloud: "SoundCloud",
+  };
+  const key = s.replace(/\s+/g, "").toLowerCase();
+  return (candidates[key] as string) || s;
+}
+
+function generateId(): string {
+  // Small, stable-enough ID generator (no deps)
+  return "s_" + Math.random().toString(36).slice(2, 10);
+}
+
+// Standard CSV escaping for a single field
+function csvEscape(field: string): string {
+  const needsQuote = /[",\n]/.test(field);
+  let out = field.replace(/"/g, '""');
+  return needsQuote ? `"${out}"` : out;
+}
+
+// Minimal RFC4180 CSV parser (commas, double quotes, newlines)
+function parseCSV(text: string): string[][] {
   const rows: string[][] = [];
-  let i = 0, cur = '', inQuotes = false;
-  const pushCell = (row: string[]) => { row.push(cur); cur = ''; };
-  let row: string[] = [];
-  while (i < text.length) {
+  let cur: string[] = [];
+  let cell = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
     const ch = text[i];
+
     if (inQuotes) {
       if (ch === '"') {
-        if (text[i+1] === '"') { cur += '"'; i += 2; continue; }
-        inQuotes = false; i++; continue;
-      } else { cur += ch; i++; continue; }
-    } else {
-      if (ch === '"') { inQuotes = true; i++; continue; }
-      if (ch === ',') { pushCell(row); i++; continue; }
-      if (ch === '\n' || ch === '\r') {
-        if (ch === '\r' && text[i+1] === '\n') i++;
-        pushCell(row);
-        rows.push(row);
-        row = [];
-        i++;
-        continue;
+        if (text[i + 1] === '"') {
+          cell += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        cell += ch;
       }
-      cur += ch; i++; continue;
+    } else {
+      if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ",") {
+        cur.push(cell);
+        cell = "";
+      } else if (ch === "\n") {
+        cur.push(cell);
+        rows.push(cur);
+        cur = [];
+        cell = "";
+      } else if (ch === "\r") {
+        // ignore CR (handle CRLF)
+        continue;
+      } else {
+        cell += ch;
+      }
     }
   }
-  // flush last cell/row
-  pushCell(row);
-  if (row.length > 1 || row[0] !== '') rows.push(row);
+  // last cell
+  cur.push(cell);
+  rows.push(cur);
+  // drop trailing empty row from final newline
+  if (rows.length && rows[rows.length - 1].length === 1 && rows[rows.length - 1][0] === "") {
+    rows.pop();
+  }
   return rows;
-};
+}
 
-const asPlatform = (s: string): Platform | null => {
-  const v = (s || '').trim();
-  if (!v) return null;
-  if (v === 'Spotify' || v === 'YouTube' || v === 'Bandcamp' || v === 'SoundCloud') return v as Platform;
-  return null;
-};
+// ---- Normalization
 
-export const fromCSV = (csvText: string): Song[] => {
-  const rows = parseCSV(csvText.trim());
-  if (rows.length === 0) return [];
-  const header = rows[0].map(h => h.trim().toLowerCase());
-  const start = header[0] === CSV_HEADERS[0] ? 1 : 0;
+/**
+ * normalizeSong
+ * Accepts English or Spanish keys (legacy), coerces to canonical English Song.
+ * - Fills missing strings as ""
+ * - Coerces booleans
+ * - Ensures platforms is Platform[] of allowed values (ignores unknown strings)
+ */
+export function normalizeSong(input: unknown): Song {
+  const raw = (typeof input === "object" && input != null ? input as Record<string, unknown> : {}) as Record<string, unknown>;
 
-  const idx: Record<string, number> = {};
-  CSV_HEADERS.forEach(h => {
-    const j = header.indexOf(h);
-    idx[h] = j;
+  // Map Spanish keys -> English keys into a working object
+  const working: Record<string, unknown> = { ...raw };
+  for (const [es, en] of Object.entries(HEADER_MAP_ES_TO_EN)) {
+    if (es in working && !(en in working)) {
+      working[en] = working[es];
+    }
+  }
+  // Legacy boolean aliases (already covered by header map but keep defensive)
+  if ("me_gusta" in working && !("liked" in working)) working["liked"] = working["me_gusta"];
+  if ("agregar" in working && !("toAdd" in working)) working["toAdd"] = working["agregar"];
+  if ("plataformas" in working && !("platforms" in working)) working["platforms"] = working["plataformas"];
+
+  const song: Song = {
+    id: coerceString(working.id) || generateId(),
+    title: coerceString(working.title),
+    artist: coerceString(working.artist),
+    featuring: coerceString(working.featuring) || undefined,
+    album: coerceString(working.album) || undefined,
+    year: coerceString(working.year) || undefined,
+    producer: coerceString(working.producer) || undefined,
+    platforms: coercePlatforms(working.platforms),
+    liked: coerceBoolean(working.liked),
+    toAdd: coerceBoolean(working.toAdd),
+    comments: coerceString(working.comments) || undefined,
+  };
+
+  // Ensure required strings at least "", for consistent UI (title/artist)
+  if (!song.title) song.title = "";
+  if (!song.artist) song.artist = "";
+
+  return song;
+}
+
+// ---- CSV Export (always English canonical headers)
+
+export function toCSV(songs: Song[]): string {
+  const header = EN_HEADERS.join(",");
+  const rows = songs.map((s) => {
+    const fields: string[] = [
+      csvEscape(s.title ?? ""),
+      csvEscape(s.artist ?? ""),
+      csvEscape(s.featuring ?? ""),
+      csvEscape(s.album ?? ""),
+      csvEscape(s.year ?? ""),
+      csvEscape(s.producer ?? ""),
+      csvEscape((s.platforms || []).join(";")),
+      csvEscape(s.liked ? "1" : "0"),
+      csvEscape(s.toAdd ? "1" : "0"),
+      csvEscape(s.comments ?? ""),
+    ];
+    return fields.join(",");
+  });
+  return [header, ...rows].join("\n");
+}
+
+// ---- CSV Import (accept Spanish or English header row)
+
+export function fromCSV(text: string): Song[] {
+  const rows = parseCSV(text);
+  if (!rows.length) return [];
+
+  const headerRow = rows[0].map((h) => h.trim());
+  const isEnglish = headerRow.length === EN_HEADERS.length && headerRow.every((h, i) => h === EN_HEADERS[i]);
+  const isSpanish = headerRow.length === ES_HEADERS.length && headerRow.every((h, i) => h === ES_HEADERS[i]);
+
+  let headerEn: string[] = [];
+  if (isEnglish) {
+    headerEn = [...EN_HEADERS];
+  } else if (isSpanish) {
+    headerEn = headerRow.map((h) => HEADER_MAP_ES_TO_EN[h as (typeof ES_HEADERS)[number]]);
+  } else {
+    throw new Error(
+      "Unrecognized CSV headers. Expected English: " +
+        EN_HEADERS.join(",") +
+        " or Spanish: " +
+        ES_HEADERS.join(",")
+    );
+  }
+
+  const dataRows = rows.slice(1);
+  const songs: Song[] = dataRows.map((cols) => {
+    const rec: Record<string, unknown> = {};
+    for (let i = 0; i < headerEn.length; i++) {
+      const key = headerEn[i];
+      rec[key] = cols[i] ?? "";
+    }
+    // liked/toAdd as "1"/"0"
+    if ("liked" in rec) rec.liked = coerceBoolean(rec.liked);
+    if ("toAdd" in rec) rec.toAdd = coerceBoolean(rec.toAdd);
+    if ("platforms" in rec) rec.platforms = coercePlatforms(rec.platforms);
+    return normalizeSong(rec);
   });
 
-  const out: Song[] = [];
-  for (let r = start; r < rows.length; r++) {
-    const cells = rows[r];
-    const cell = (name: typeof CSV_HEADERS[number]) => {
-      const j = idx[name];
-      return j >= 0 ? (cells[j] ?? '').trim() : '';
-    };
-    const plataformasRaw = cell('plataformas');
-    const plataformas = plataformasRaw
-      ? (plataformasRaw.split(';').map(s => asPlatform(s)).filter(Boolean) as Platform[])
-      : [];
-    const parseBool = (v: string) => v === '1' || /^true$/i.test(v);
+  return songs;
+}
 
-    const song: Song = {
-      id: crypto.randomUUID(),
-      cancion: cell('cancion'),
-      artista: cell('artista'),
-      fts: cell('fts'),
-      album: cell('album'),
-      anio: cell('anio'),
-      productor: cell('productor'),
-      plataformas,
-      me_gusta: parseBool(cell('me_gusta')),
-      agregar: parseBool(cell('agregar')),
-      comentarios: cell('comentarios'),
-    };
-    out.push(song);
-  }
-  return out;
-};
+// ---- JSON Import (accept English or Spanish keys)
 
-export const downloadFile = (filename: string, content: string, mimeType: string): void => {
-  const blob = new Blob([content], { type: mimeType });
+export function fromJSON(value: unknown): Song[] {
+  const arr = Array.isArray(value) ? value : [];
+  return arr.map((item) => normalizeSong(item));
+}
+
+// ---- Download helper (intact)
+
+export function downloadFile(filename: string, content: string, mime: string = "text/plain;charset=utf-8"): void {
+  const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
   URL.revokeObjectURL(url);
-};
+}
