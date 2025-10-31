@@ -1,125 +1,86 @@
-import { useState, useMemo, useEffect } from 'react';
-import { Song, FilterType } from './types/song';
-import { useLocalState } from './hooks/useLocalState';
-import { Header } from './components/Header';
-import { Toolbar } from './components/Toolbar';
-import { FilterBar } from './components/FilterBar';
-import { SongRow } from './components/SongRow';
-import { SpotifyButton } from './components/SpotifyButton';
-import { AnimatePresence } from 'framer-motion';
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -1,6 +1,7 @@
+ import React, { useMemo, useState } from "react";
+-import { useLocalState } from "./hooks/useLocalState";
++import { useSongsState } from "./hooks/useLocalState";
+ import SongRow from "./components/SongRow";
+ import Toolbar from "./components/Toolbar";
++import { Song } from "./types/song";
 
-function App() {
-  const [songs, setSongs] = useLocalState();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<FilterType>('all');
-  useEffect(() => { document.title = 'Fonea – Sound Curator'; }, []);
+ export default function App() {
+-  const { songs, setSongs } = useLocalState([]);
++  const { songs, setSongs } = useSongsState([]);
 
-  const addNewSong = () => {
-    const newSong: Song = {
-      id: crypto.randomUUID(),
-      cancion: '',
-      artista: '',
-      fts: '',
-      album: '',
-      anio: '',
-      productor: '',
-      plataformas: [],
-      me_gusta: false,
-      agregar: false,
-      comentarios: ''
-    };
-    setSongs(prev => [newSong, ...prev]);
-  };
+   const [query, setQuery] = useState("");
+-  const [filter, setFilter] = useState<"all" | "liked" | "agregar" | "pending">("all");
++  const [filter, setFilter] = useState<"all" | "liked" | "toAdd" | "pending">("all");
 
-  const updateSong = (updated: Song) => {
-    setSongs(prev => prev.map(s => (s.id === updated.id ? updated : s)));
-  };
+   const filtered = useMemo(() => {
+-    const q = query.trim().toLowerCase();
++    const q = query.trim().toLowerCase();
+     const base = songs.filter((s) => {
+-      const hay = [s.cancion, s.artista, s.album, s.productor, s.comentarios, s.fts]
++      const hay = [s.title, s.artist, s.album, s.producer, s.comments, s.featuring]
+         .map((x) => (x ?? "").toLowerCase())
+         .join(" ");
+       return hay.includes(q);
+     });
+     switch (filter) {
+       case "liked":
+-        return base.filter((s) => !!s.me_gusta);
+-      case "agregar":
+-        return base.filter((s) => !!s.agregar);
++        return base.filter((s) => !!s.liked);
++      case "toAdd":
++        return base.filter((s) => !!s.toAdd);
+       case "pending":
+-        return base.filter((s) => !s.me_gusta && !s.agregar);
++        return base.filter((s) => !s.liked && !s.toAdd);
+       default:
+         return base;
+     }
+   }, [songs, query, filter]);
 
-  const deleteSong = (id: string) => {
-    setSongs(prev => prev.filter(s => s.id !== id));
-  };
+   const handleRowChange = (id: string, patch: Partial<Song>) => {
+     setSongs(songs.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+   };
 
-  const handleImport = (imported: Song[]) => {
-    setSongs(imported);
-  };
+   return (
+     <div className="max-w-6xl mx-auto">
+       <Toolbar
+         songs={songs}
+         onImport={(incoming) => setSongs(incoming)}
+       />
+       <div className="flex items-center gap-2 p-2">
+         <input
+           className="flex-1 px-2 py-1 rounded border"
+           placeholder="Search by Title, Artist, Album, Producer, Comments…"
+           value={query}
+           onChange={(e) => setQuery(e.target.value)}
+         />
+-        <select className="px-2 py-1 rounded border" value={filter} onChange={(e) => setFilter(e.target.value as any)}>
+-          <option value="all">Todos</option>
+-          <option value="liked">Me gusta</option>
+-          <option value="agregar">Para agregar</option>
+-          <option value="pending">Pendiente</option>
++        <select className="px-2 py-1 rounded border" value={filter} onChange={(e) => setFilter(e.target.value as any)}>
++          <option value="all">All</option>
++          <option value="liked">Liked</option>
++          <option value="toAdd">To Add</option>
++          <option value="pending">Pending</option>
+         </select>
+       </div>
 
-  const clearAll = () => {
-    if (confirm('Clear all songs?')) {
-      setSongs([]);
-    }
-  };
-
-  const filteredSongs = useMemo(() => {
-    const q = searchTerm.toLowerCase().trim();
-    let list = songs;
-
-    if (q) {
-      list = list.filter(s =>
-        [s.cancion, s.artista, s.fts, s.album, s.anio, s.productor, s.comentarios]
-          .filter(Boolean)
-          .some(v => (v || '').toLowerCase().includes(q))
-      );
-    }
-
-    if (filterType === 'liked') list = list.filter(s => s.me_gusta);
-    if (filterType === 'toAdd') list = list.filter(s => s.agregar);
-    if (filterType === 'pending') list = list.filter(s => !s.me_gusta && !s.agregar);
-
-    return list;
-  }, [songs, searchTerm, filterType]);
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-
-      <Toolbar
-        onAddSong={addNewSong}
-        onImport={handleImport}
-        songs={songs}
-        onClear={clearAll}
-      />
-
-      <div className="container mx-auto px-4 py-6">
-        <FilterBar
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          filterType={filterType}
-          onFilterChange={setFilterType}
-        />
-
-        {filteredSongs.length === 0 ? (
-          <div className="mt-10 rounded-lg border bg-white p-8 text-center text-gray-600">
-            No songs match your filters yet. Try adding a song or adjusting the filters.
-            <div className="mt-6">
-              <SpotifyButton />
-            </div>
-          </div>
-        ) : (
-          <div className="mt-6 space-y-3">
-            <AnimatePresence initial={false}>
-              {filteredSongs.map((song) => (
-                <SongRow
-                  key={song.id}
-                  song={song}
-                  onUpdate={updateSong}
-                  onDelete={() => deleteSong(song.id)}
-                />
-              ))}
-            </AnimatePresence>
-          </div>
-        )}
-      </div>
-
-      <footer className="border-t bg-white py-6 text-center text-sm text-gray-600">
-        <div className="container mx-auto px-4">
-          <p>Fonea – Sound Curator — Curate by feeling</p>
-          <p className="mt-1 text-xs text-gray-500">
-            {songs.length} total songs • {songs.filter(s => s.me_gusta).length} liked • {songs.filter(s => s.agregar).length} to add
-          </p>
-        </div>
-      </footer>
-    </div>
-  );
-}
-
-export default App;
+       <div>
+         {filtered.map((s) => (
+           <SongRow
+             key={s.id}
+             song={s}
+             onChange={(patch) => handleRowChange(s.id, patch)}
+           />
+         ))}
+       </div>
+     </div>
+   );
+ }
