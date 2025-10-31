@@ -20,14 +20,14 @@ export const SongRow = ({ song, onUpdate, onDelete }: SongRowProps) => {
   };
 
   const togglePlatform = (platform: Platform) => {
-    const platforms = song.plataformas.includes(platform)
-      ? song.plataformas.filter(p => p !== platform)
-      : [...song.plataformas, platform];
-    updateField('plataformas', platforms);
+    const platforms = song.platforms.includes(platform)
+      ? song.platforms.filter(p => p !== platform)
+      : [...song.platforms, platform];
+    updateField('platforms', platforms);
   };
 
   const getSearchUrl = (platform: 'spotify' | 'youtube') => {
-    const query = encodeURIComponent(`${song.cancion} ${song.artista}`);
+    const query = encodeURIComponent(`${song.title} ${song.artist}`);
     return platform === 'spotify'
       ? `https://open.spotify.com/search/${query}`
       : `https://www.youtube.com/results?search_query=${query}`;
@@ -45,8 +45,8 @@ export const SongRow = ({ song, onUpdate, onDelete }: SongRowProps) => {
         <div className="space-y-2">
           <label className="text-xs font-medium text-gray-600">Song</label>
           <Input
-            value={song.cancion}
-            onChange={(e) => updateField('cancion', e.target.value)}
+            value={song.title}
+            onChange={(e) => updateField('title', e.target.value)}
             placeholder="Song title"
             className="font-medium"
           />
@@ -75,8 +75,8 @@ export const SongRow = ({ song, onUpdate, onDelete }: SongRowProps) => {
         <div className="space-y-2">
           <label className="text-xs font-medium text-gray-600">Artist</label>
           <Input
-            value={song.artista}
-            onChange={(e) => updateField('artista', e.target.value)}
+            value={song.artist}
+            onChange={(e) => updateField('artist', e.target.value)}
             placeholder="Artist"
           />
         </div>
@@ -84,8 +84,8 @@ export const SongRow = ({ song, onUpdate, onDelete }: SongRowProps) => {
         <div className="space-y-2">
           <label className="text-xs font-medium text-gray-600">Featuring</label>
           <Input
-            value={song.fts}
-            onChange={(e) => updateField('fts', e.target.value)}
+            value={song.featuring}
+            onChange={(e) => updateField('featuring', e.target.value)}
             placeholder="Features"
           />
         </div>
@@ -102,8 +102,8 @@ export const SongRow = ({ song, onUpdate, onDelete }: SongRowProps) => {
         <div className="space-y-2">
           <label className="text-xs font-medium text-gray-600">Year</label>
           <Input
-            value={song.anio}
-            onChange={(e) => updateField('anio', e.target.value)}
+            value={song.year}
+            onChange={(e) => updateField('year', e.target.value)}
             placeholder="Year"
           />
         </div>
@@ -111,8 +111,8 @@ export const SongRow = ({ song, onUpdate, onDelete }: SongRowProps) => {
         <div className="space-y-2">
           <label className="text-xs font-medium text-gray-600">Producer</label>
           <Input
-            value={song.productor}
-            onChange={(e) => updateField('productor', e.target.value)}
+            value={song.producer}
+            onChange={(e) => updateField('producer', e.target.value)}
             placeholder="Producer"
           />
         </div>
@@ -120,7 +120,7 @@ export const SongRow = ({ song, onUpdate, onDelete }: SongRowProps) => {
         <div className="space-y-2 md:col-span-2">
           <label className="text-xs font-medium text-gray-600">Platforms</label>
           <div className="flex flex-wrap gap-2">
-            {song.plataformas.map(platform => (
+            {song.platforms.map(platform => (
               <PlatformBadge
                 key={platform}
                 platform={platform}
@@ -128,7 +128,7 @@ export const SongRow = ({ song, onUpdate, onDelete }: SongRowProps) => {
               />
             ))}
             <PlatformSelector
-              selectedPlatforms={song.plataformas}
+              selectedPlatforms={song.platforms}
               onToggle={togglePlatform}
             />
           </div>
@@ -138,8 +138,8 @@ export const SongRow = ({ song, onUpdate, onDelete }: SongRowProps) => {
           <div className="flex items-center gap-4">
             <label className="flex items-center gap-2 cursor-pointer">
               <Checkbox
-                checked={song.me_gusta}
-                onCheckedChange={(checked) => updateField('me_gusta', checked as boolean)}
+                checked={song.liked}
+                onCheckedChange={(checked) => updateField('liked', checked as boolean)}
                 className="bg-white border-gray-400 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
               />
               <span className="text-sm font-medium text-gray-700">Liked</span>
@@ -147,8 +147,8 @@ export const SongRow = ({ song, onUpdate, onDelete }: SongRowProps) => {
 
             <label className="flex items-center gap-2 cursor-pointer">
               <Checkbox
-                checked={(song as any).agregar ?? false}
-                onCheckedChange={(checked) => onUpdate({ ...song, agregar: checked } as Song)}
+                checked={(song as any).toAdd ?? false}
+                onCheckedChange={(checked) => onUpdate({ ...song, toAdd: checked } as Song)}
                 className="bg-white border-gray-400 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
               />
               <span className="text-sm font-medium text-gray-700">Add to Playlist</span>
@@ -167,8 +167,8 @@ export const SongRow = ({ song, onUpdate, onDelete }: SongRowProps) => {
           <div className="space-y-1">
             <label className="text-xs font-medium text-gray-600">Comments</label>
             <Textarea
-              value={song.comentarios}
-              onChange={(e) => updateField('comentarios', e.target.value)}
+              value={song.comments}
+              onChange={(e) => updateField('comments', e.target.value)}
               placeholder="Add your notes here..."
               className="mt-1"
               rows={2}
