@@ -1,41 +1,36 @@
-import { Search } from 'lucide-react';
-import { Input } from './ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { FilterType } from '../types/song';
+// src/components/FilterBar.tsx
+import type { FilterType } from "../types/song";
 
-interface FilterBarProps {
-  searchTerm: string;
-  onSearchChange: (value: string) => void;
-  filterType: FilterType;
-  onFilterChange: (value: FilterType) => void;
-}
+type Props = {
+  value: FilterType;
+  onChange: (next: FilterType) => void;
+  search: string;
+  onSearch: (q: string) => void;
+};
 
-export const FilterBar = ({ searchTerm, onSearchChange, filterType, onFilterChange }: FilterBarProps) => {
+export default function FilterBar({ value, onChange, search, onSearch }: Props) {
   return (
-    <div className="border-b bg-white px-4 py-3">
-      <div className="container mx-auto flex gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <Input
-            placeholder="Search songs, artists, albums..."
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-
-        <Select value={filterType} onValueChange={(value) => onFilterChange(value as FilterType)}>
-          <SelectTrigger className="w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Songs</SelectItem>
-            <SelectItem value="liked">Liked</SelectItem>
-            <SelectItem value="toAdd">To Add</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-          </SelectContent>
-        </Select>
+    <div className="container mx-auto px-4 py-3 flex items-center gap-3 bg-white">
+      <div className="flex items-center gap-2">
+        {(["all", "liked", "toAdd", "pending"] as FilterType[]).map((k) => (
+          <button
+            key={k}
+            onClick={() => onChange(k)}
+            className={`px-3 py-1.5 rounded-full text-sm border ${
+              value === k ? "bg-gray-900 text-white" : "bg-white hover:bg-gray-50"
+            }`}
+          >
+            {k === "toAdd" ? "To Add" : k[0].toUpperCase() + k.slice(1)}
+          </button>
+        ))}
       </div>
+
+      <input
+        value={search}
+        onChange={(e) => onSearch(e.target.value)}
+        placeholder="Search title / artist / album / producer / comments / featuring"
+        className="ml-auto w-full max-w-md px-3 py-2 rounded-xl border text-sm"
+      />
     </div>
   );
-};
+}
