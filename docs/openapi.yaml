@@ -1,0 +1,158 @@
+openapi: 3.0.3
+info:
+  title: Fonea Bridge API (Phase 0)
+  version: "0.1.0"
+servers:
+  - url: https://example.com
+paths:
+  /sessions:
+    post:
+      summary: Create a session
+      operationId: createSession
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessionId:
+                    type: string
+      security:
+        - bearerAuth: []
+  /sessions/{id}/tracks:
+    post:
+      summary: Post tracks from assistant or app
+      operationId: postTracks
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [source, tracks]
+              properties:
+                source:
+                  type: string
+                  enum: [assistant, app]
+                note:
+                  type: string
+                tracks:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/Song"
+      responses:
+        "200":
+          description: OK
+      security:
+        - bearerAuth: []
+    get:
+      summary: Get tracks for a session
+      operationId: getTracks
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  assistantTracks:
+                    type: array
+                    items: { $ref: "#/components/schemas/Song" }
+                  appTracks:
+                    type: array
+                    items: { $ref: "#/components/schemas/Song" }
+      security:
+        - bearerAuth: []
+  /sessions/{id}/feedback:
+    post:
+      summary: Post feedback
+      operationId: postFeedback
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Feedback"
+      responses:
+        "200":
+          description: OK
+      security:
+        - bearerAuth: []
+    get:
+      summary: Get latest feedback
+      operationId: getFeedback
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  latest:
+                    $ref: "#/components/schemas/Feedback"
+      security:
+        - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    Platform:
+      type: string
+      enum: [Spotify, YouTube, Bandcamp, SoundCloud]
+    Song:
+      type: object
+      required: [id, title, artist, platforms, liked, toAdd]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        artist: { type: string }
+        featuring: { type: string }
+        album: { type: string }
+        year: { type: string }
+        producer: { type: string }
+        platforms:
+          type: array
+          items: { $ref: "#/components/schemas/Platform" }
+        liked: { type: boolean }
+        toAdd: { type: boolean }
+        comments: { type: string }
+    Feedback:
+      type: object
+      properties:
+        liked:
+          type: array
+          items: { type: string }
+        disliked:
+          type: array
+          items: { type: string }
+        add:
+          type: array
+          items: { type: string }
+        comments:
+          type: string
