@@ -18,8 +18,8 @@ export const Header = () => {
             <Music className="h-8 w-8 text-emerald-600" />
           </motion.div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">TBD Curator</h1>
-            <p className="text-sm text-gray-600">Your interactive playlist workspace</p>
+            <h1 className="text-3xl font-bold text-gray-900">Fonea - Sound Curator</h1>
+            <p className="text-sm text-gray-600">Take your music curation to the next level</p>
           </div>
         </div>
       </div>
