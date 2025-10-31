@@ -5,12 +5,10 @@ import { Song, FilterType } from "./types/song";
 import { SongRow } from "./components/SongRow";
 import Toolbar from "./components/Toolbar";
 import { FilterBar } from "./components/FilterBar";
-import { FoneaLogo } from "./components/FoneaLogo";
-
+import { Header } from "./components/Header";   // ← use the restored header
 import { demoSongs } from "./utils/demoData";
 
 export default function App() {
-  // Seed with demo data unless localStorage already has songs_v2
   const { songs, setSongs } = useSongsState(demoSongs ?? []);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -42,30 +40,21 @@ export default function App() {
 
   const handleClearAll = () => {
     if (!confirm("Delete all songs? This cannot be undone.")) return;
-    setSongs([]); // hook persists to songs_v2
-    // also clear legacy just in case
+    setSongs([]);
     localStorage.removeItem("songs");
   };
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header with logo + title */}
-      <header className="border-b bg-white">
-        <div className="container mx-auto flex items-center gap-3 py-4">
-          <FoneaLogo className="h-6 w-6" />
-          <h1 className="text-xl font-semibold tracking-tight">Fonea — Sound Curator</h1>
-        </div>
-      </header>
+      <Header />
 
       <div className="container mx-auto py-6 space-y-4">
-        {/* Toolbar with Delete All back */}
         <Toolbar
           songs={songs}
           onImport={(incoming) => setSongs(incoming)}
-          onClear={handleClearAll}
+          onClear={handleClearAll}   // ← keeps Delete All button in the toolbar
         />
 
-        {/* Pretty search + filter */}
         <FilterBar
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
@@ -73,7 +62,6 @@ export default function App() {
           onFilterChange={setFilterType}
         />
 
-        {/* List */}
         <div className="space-y-3">
           {filtered.length === 0 ? (
             <div className="text-sm text-muted-foreground px-1">
