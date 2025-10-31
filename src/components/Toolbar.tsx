@@ -6,9 +6,10 @@ import { toCSV, fromCSV, fromJSON, downloadFile } from "../utils/fileHandlers";
 type Props = {
   songs: Song[];
   onImport: (incoming: Song[]) => void;
+  onClear?: () => void; // ← optional; shows Delete All if provided
 };
 
-export default function Toolbar({ songs, onImport }: Props) {
+export default function Toolbar({ songs, onImport, onClear }: Props) {
   const fileRef = useRef<HTMLInputElement | null>(null);
   const jsonRef = useRef<HTMLInputElement | null>(null);
 
@@ -89,6 +90,15 @@ export default function Toolbar({ songs, onImport }: Props) {
       >
         Export CSV (EN)
       </button>
+
+      {onClear && (
+        <button
+          className="ml-auto px-3 py-1 rounded bg-red-600 text-white hover:bg-red-500"
+          onClick={onClear}
+        >
+          Delete All
+        </button>
+      )}
     </div>
   );
 }
