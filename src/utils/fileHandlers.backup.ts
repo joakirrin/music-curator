@@ -1,23 +1,26 @@
 // src/utils/fileHandlers.ts
 // Utilities for CSV/JSON import-export + normalization (Spanish -> English)
 
-import type { Song, Platform } from "../types";
+import { Song, Platform } from "../types/song";
 
 // ---- Canonical headers (English, export order)
-// ---- Canonical headers (English, export order)
-const EN_HEADERS = [
-  'title',
-  'artist',
-  'featuring',
-  'album',
-  'year',
-  'producer',
-  'platforms',
-  'liked',
-  'toAdd',
-  'comments',
-] as const;
-
+const EN_HEADERS: Array<
+  | keyof Omit<Song, "id" | "platforms" | "liked" | "toAdd">
+  | "platforms"
+  | "liked"
+  | "toAdd"
+> = [
+  "title",
+  "artist",
+  "featuring",
+  "album",
+  "year",
+  "producer",
+  "platforms",
+  "liked",
+  "toAdd",
+  "comments",
+];
 
 // Spanish -> English header map (legacy import)
 const HEADER_MAP_ES_TO_EN: Record<string, keyof Song> = {
@@ -143,7 +146,7 @@ export function normalizeSong(input: unknown): Song {
   };
 }
 
-// ---- CSV Parsing
+// ---- CSV
 
 // Small CSV parser (quotes + commas), no new deps
 function parseCSV(text: string): string[][] {
@@ -216,18 +219,17 @@ export function fromCSV(text: string): Song[] {
   const rows = parseCSV(text.trim());
   if (!rows.length) return [];
 
-  const header = rows[0].map((h) => h.trim().toLowerCase());
-  const isEnglish = EN_HEADERS.some((h) => header.includes(h.toLowerCase()));
+  const header = rows[0].map((h) => h.trim());
+  const isEnglish = EN_HEADERS.every((h) => header.includes(h));
   const esKeys = Object.keys(HEADER_MAP_ES_TO_EN);
-  const isSpanish = esKeys.some((es) => header.includes(es.toLowerCase()));
+  const isSpanish = esKeys.every((es) => header.includes(es) || EN_HEADERS.includes(HEADER_MAP_ES_TO_EN[es] as any));
 
   let headerToUse: string[] = [];
-  if (isEnglish || isSpanish) {
+  if (isEnglish) {
+    headerToUse = header;
+  } else if (isSpanish) {
     // map Spanish columns to English names for internal handling
-    headerToUse = rows[0].map((h) => {
-      const normalized = h.trim().toLowerCase();
-      return (HEADER_MAP_ES_TO_EN[normalized] ?? h.trim()) as string;
-    });
+    headerToUse = header.map((h) => (HEADER_MAP_ES_TO_EN[h] ?? h) as string);
   } else {
     throw new Error(
       "Unrecognized CSV headers. Expect English (title,artist,...) or Spanish legacy (cancion,artista,...)."
@@ -259,13 +261,6 @@ export function fromCSV(text: string): Song[] {
 }
 
 /**
- * parseSongsFromCsv - Alias for fromCSV for backward compatibility
- */
-export function parseSongsFromCsv(text: string): Song[] {
-  return fromCSV(text);
-}
-
-/**
  * toCSV(songs): string
  * - Always English headers, canonical order.
  * - platforms joined with ';'
@@ -293,13 +288,6 @@ export function toCSV(songs: Song[]): string {
 }
 
 /**
- * exportSongsToCsv - Alias for toCSV for backward compatibility
- */
-export function exportSongsToCsv(songs: Song[]): string {
-  return toCSV(songs);
-}
-
-/**
  * fromJSON(value): Song[]
  * - Accepts array of objects with either English or Spanish keys.
  * - Normalizes via normalizeSong.
@@ -320,23 +308,7 @@ export function fromJSON(value: unknown): Song[] {
   return value.map(normalizeSong);
 }
 
-/**
- * parseSongsFromJson - Alias for fromJSON for backward compatibility
- */
-export function parseSongsFromJson(value: unknown): Song[] {
-  return fromJSON(value);
-}
-
-/**
- * exportSongsToJson - Convert songs array to JSON string
- */
-export function exportSongsToJson(songs: Song[]): string {
-  return JSON.stringify(songs, null, 2);
-}
-
-/**
- * Download helper - Creates a downloadable file from content
- */
+// ---- Download helper (intact)
 export function downloadFile(
   filename: string,
   content: string,

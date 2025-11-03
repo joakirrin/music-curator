@@ -1,4 +1,8 @@
-// src/types/song.ts
+/**
+ * Core Song type definition
+ * Supports multiple sources (manual, ChatGPT, Spotify) and recommendation workflows
+ */
+
 
 export type Platform = "Spotify" | "YouTube" | "Bandcamp" | "SoundCloud";
 
@@ -6,14 +10,33 @@ export type FilterType = "all" | "liked" | "toAdd" | "pending";
 
 export type Song = {
   id: string;
-  title: string;         // (was: cancion)
-  artist: string;        // (was: artista)
-  featuring?: string;    // (was: fts)
+  title: string;
+  artist: string;
   album?: string;
-  year?: string;         // (was: anio)
-  producer?: string;     // (was: productor)
-  platforms: Platform[]; // (was: plataformas)
-  liked: boolean;        // (was: me_gusta)
-  toAdd: boolean;        // (was: agregar)
-  comments?: string;     // (was: comentarios)
+  duration?: number; // seconds
+  
+  // ChatGPT integration fields (optional, backward compatible)
+  source?: 'chatgpt' | 'manual' | 'spotify';
+  round?: number;
+  feedback?: 'keep' | 'skip' | 'pending';
+  playlistId?: string;
+  spotifyUri?: string;
+  previewUrl?: string;
+  addedAt?: string; // ISO 8601 timestamp
+};
+
+export type Playlist = {
+  id: string;
+  name: string;
+  description?: string;
+  songIds: string[];
+  createdAt?: string; // ISO 8601 timestamp
+  updatedAt?: string; // ISO 8601 timestamp
+};
+
+export type RecommendationRound = {
+  id: string; // e.g., "round-1"
+  round: number; // 1, 2, 3, ...
+  createdAt: string; // ISO 8601 timestamp
+  notes?: string;
 };
