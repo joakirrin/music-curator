@@ -13,16 +13,45 @@ type Props = {
 type ChatGPTRecommendation = {
   title: string;
   artist: string;
+  featuring?: string;
   album?: string;
   year?: string;
+  producer?: string;
   spotifyUri?: string;
+  spotifyUrl?: string; // ✅ NEW: Accept Spotify URL too
+  previewUrl?: string;
   reason?: string;
+  duration?: number;
 };
 
 type ChatGPTFormat = {
   round?: number;
   recommendations: ChatGPTRecommendation[];
 };
+
+// ✅ NEW: Convert Spotify URL to URI
+function normalizeSpotifyLink(input?: string): string | undefined {
+  if (!input) return undefined;
+  
+  // If it's already a URI, return it
+  if (input.startsWith('spotify:track:')) {
+    return input;
+  }
+  
+  // If it's a URL, extract the track ID
+  const urlMatch = input.match(/spotify\.com\/track\/([a-zA-Z0-9]+)/);
+  if (urlMatch) {
+    return `spotify:track:${urlMatch[1]}`;
+  }
+  
+  // If it looks like a bare track ID
+  if (input.match(/^[a-zA-Z0-9]{22}$/)) {
+    return `spotify:track:${input}`;
+  }
+  
+  // Otherwise return as-is (might be a full URL which we can handle in the component)
+  return input;
+}
 
 export default function ImportChatGPTModal({
   open,
@@ -69,18 +98,25 @@ export default function ImportChatGPTModal({
           );
         }
 
+        // ✅ NEW: Handle both spotifyUri and spotifyUrl fields
+        const spotifyLink = normalizeSpotifyLink(rec.spotifyUri || rec.spotifyUrl);
+
         return {
           id: `chatgpt-${Date.now()}-${index}`,
           title: rec.title,
           artist: rec.artist,
+          featuring: rec.featuring,
           album: rec.album,
           year: rec.year,
+          producer: rec.producer,
           source: "chatgpt" as const,
           round: nextRound,
           feedback: "pending" as const,
-          spotifyUri: rec.spotifyUri,
+          spotifyUri: spotifyLink,
+          previewUrl: rec.previewUrl,
           addedAt: new Date().toISOString(),
           comments: rec.reason,
+          duration: rec.duration,
           // Default values for other fields
           platforms: [],
           liked: false,
@@ -113,12 +149,20 @@ export default function ImportChatGPTModal({
   "round": 1,
   "recommendations": [
     {
-      "title": "Song Name",
-      "artist": "Artist Name",
-      "album": "Album Name",
-      "year": "2024",
-      "spotifyUri": "spotify:track:...",
-      "reason": "Why this was recommended"
+      "title": "Midnight City",
+      "artist": "M83",
+      "album": "Hurry Up, We're Dreaming",
+      "year": "2011",
+      "spotifyUrl": "https://open.spotify.com/track/3zidJjXGWgKqgQnfb6hKak",
+      "reason": "Epic synth anthem with soaring melodies"
+    },
+    {
+      "title": "Do I Wanna Know?",
+      "artist": "Arctic Monkeys",
+      "album": "AM",
+      "year": "2013",
+      "spotifyUrl": "https://open.spotify.com/track/5FVd6KXrgO9B3JPmC8OPst",
+      "reason": "Groovy bassline, perfect for late night vibes"
     }
   ]
 }`;
@@ -133,10 +177,10 @@ export default function ImportChatGPTModal({
           </Dialog.Title>
           <Dialog.Description className="text-sm text-gray-600 mb-4">
             Paste the JSON response from ChatGPT below. Songs will be
-            automatically assigned to the next round.
+            automatically assigned to the next round. Supports both Spotify URLs and URIs!
           </Dialog.Description>
 
-          {/* JSON Text Area */}
+          {/* JSON Text Area - ✅ FIXED: White background */}
           <div className="space-y-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -150,7 +194,7 @@ export default function ImportChatGPTModal({
                 }}
                 placeholder={exampleJSON}
                 rows={12}
-                className="w-full px-3 py-2 rounded-xl border border-gray-300 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
+                className="w-full px-3 py-2 rounded-xl border border-gray-300 bg-white text-sm text-gray-900 placeholder-gray-400 font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
               />
             </div>
 

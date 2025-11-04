@@ -96,6 +96,7 @@ function capitalizeExact(s: string): string {
  * - Coerces booleans, normalizes platforms.
  * - Unknown platform strings are ignored.
  * - Missing strings -> "" (optional fields may remain undefined if empty).
+ * - ✅ FIXED: Now preserves ChatGPT integration fields (round, source, feedback, etc.)
  */
 export function normalizeSong(input: unknown): Song {
   const raw = (input ?? {}) as Record<string, unknown>;
@@ -128,6 +129,17 @@ export function normalizeSong(input: unknown): Song {
 
   const id = coerceString((working as any).id) || generateId();
 
+  // ✅ NEW: Preserve ChatGPT integration fields
+  const source = working.source as Song['source'] | undefined;
+  const round = typeof working.round === 'number' ? working.round : undefined;
+  const feedback = working.feedback as Song['feedback'] | undefined;
+  const userFeedback = coerceString(working.userFeedback) || undefined;
+  const playlistId = coerceString(working.playlistId) || undefined;
+  const spotifyUri = coerceString(working.spotifyUri) || undefined;
+  const previewUrl = coerceString(working.previewUrl) || undefined;
+  const addedAt = coerceString(working.addedAt) || undefined;
+  const duration = typeof working.duration === 'number' ? working.duration : undefined;
+
   return {
     id,
     title,
@@ -140,6 +152,16 @@ export function normalizeSong(input: unknown): Song {
     liked,
     toAdd,
     comments,
+    // ✅ Include ChatGPT fields (only if they exist)
+    ...(source && { source }),
+    ...(round !== undefined && { round }),
+    ...(feedback && { feedback }),
+    ...(userFeedback && { userFeedback }),
+    ...(playlistId && { playlistId }),
+    ...(spotifyUri && { spotifyUri }),
+    ...(previewUrl && { previewUrl }),
+    ...(addedAt && { addedAt }),
+    ...(duration !== undefined && { duration }),
   };
 }
 
