@@ -1,0 +1,539 @@
+### Phase 5 – Polish & Advanced Features
+URL: https://github.com/joakirrin/music-curator/issues/25
+
+## Phase 5 – Polish & Advanced Features
+**Goal:** Advanced features, backend integration, and polish for production.
+
+### Task 10 – Supabase Backend Integration
+**Description:** Set up Supabase as the backend database for persistent data storage, user authentication, and real-time sync across devices.
+
+**Files to Create**
+- `src/services/supabase.ts`  
+- Database migration scripts
+
+**Subtasks**
+- [ ] Set up Supabase project and tables  
+- [ ] Design database schema (users, songs, playlists, rounds)  
+- [ ] Implement user authentication  
+- [ ] Migrate localStorage data to Supabase  
+- [ ] Implement real-time sync across devices  
+- [ ] Create data migration scripts  
+- [ ] Add offline support (sync when online)  
+- [ ] Set up proper RLS (Row-Level Security)  
+- [ ] Test data consistency  
+- [ ] Set up backups
+
+**Database Tables Needed**
+- `users` – User profiles  
+- `songs` – Song catalog  
+- `playlists` – User playlists  
+- `recommendation_rounds` – Round metadata
+
+**Acceptance Criteria**
+- [ ] Supabase project is set up  
+- [ ] All tables are created with proper schema  
+- [ ] User authentication works  
+- [ ] Data syncs in real time  
+- [ ] Existing users' data can migrate  
+- [ ] Offline mode works  
+- [ ] RLS policies are secure  
+- [ ] Backups are configured
+
+**Dependencies:** All previous phases
+
+---
+
+### Task 11 – Advanced Curation Tools
+**Description:** Implement advanced features to enhance the curation experience, including smart filtering, analytics, and export to other platforms.
+
+**Subtasks**
+- [ ] Implement smart filters (BPM, genre, mood)  
+- [ ] Create duplicate song detection  
+- [ ] Build playlist analytics dashboard  
+- [ ] Add export to Apple Music  
+- [ ] Add export to YouTube Music  
+- [ ] Implement collaborative playlists  
+- [ ] Add playlist sharing via link  
+- [ ] Create playlist recommendations  
+- [ ] Build mood/vibe detection  
+- [ ] Add playlist cover art generation
+
+**Features**
+- **Smart Filters:** Filter by BPM range, genre, mood/vibe  
+- **Duplicate Detection:** Find and merge duplicate songs  
+- **Analytics Dashboard:** Stats on playlists, curation patterns  
+- **Multi-Platform Export:** Export to Apple Music, YouTube Music  
+- **Collaborative:** Share and allow friends to edit playlists  
+- **Sharing:** Generate shareable links with preview  
+- **Recommendations:** AI suggestions for similar songs  
+- **Cover Art:** Auto-generate or custom playlist covers
+
+**Acceptance Criteria**
+- [ ] Smart filters work and narrow results  
+- [ ] Duplicates are detected and manageable  
+- [ ] Analytics dashboard loads quickly  
+- [ ] Export to multiple platforms works  
+- [ ] Collaborative features are secure  
+- [ ] Sharing links work and show previews  
+- [ ] Recommendations are relevant  
+- [ ] Cover art generation is working
+
+**Dependencies:** Phases 1–4 complete
+
+---
+
+**End of Document**
+
+
+---
+
+### Phase 4.5 – Playlist Insights & Song Traits (Spotify Only)
+URL: https://github.com/joakirrin/music-curator/issues/24
+
+## Phase 4.5 – Playlist Insights & Song Traits (Spotify Only)
+**Goal:** Analyze user Spotify playlists to reveal genres, moods, and audio features.
+
+**Description:** After playlist creation or import, fetch the user’s playlists and their tracks, gather Spotify audio features and genre data, and visualize insights (energy, danceability, valence, subgenres, etc.).
+
+**Files to Create**
+- `src/services/spotifyInsights.ts` (fetch + aggregate)  
+- `src/components/PlaylistInsights.tsx` (visualization)
+
+**Subtasks**
+- [ ] Fetch user playlists (`GET /v1/me/playlists`)  
+- [ ] Fetch tracks for each playlist (`GET /v1/playlists/{id}/tracks`)  
+- [ ] Fetch audio features in batches (`GET /v1/audio-features?ids=`)  
+- [ ] Fetch artist genres (`GET /v1/artists/{id}`)  
+- [ ] Compute aggregated stats (danceability, energy, tempo, valence, key, duration, genre distribution)  
+- [ ] Visualize data in UI (panel + charts)  
+- [ ] Provide per-playlist summaries and top traits  
+- [ ] Cache results for performance  
+- [ ] Graceful error handling
+
+**Acceptance Criteria**
+- [ ] Playlists and tracks fetched successfully  
+- [ ] Audio features and genres accurate  
+- [ ] Aggregated stats displayed clearly  
+- [ ] Visualization interactive and responsive  
+- [ ] Errors handled gracefully
+
+**Dependencies:** Task 8 (Create Spotify Playlist) & Task 5 (Authentication)
+
+---
+
+
+
+---
+
+### Phase 4 – Playlist Creation
+URL: https://github.com/joakirrin/music-curator/issues/23
+
+## Phase 4 – Playlist Creation
+**Goal:** Create and manage Spotify playlists from kept songs using reliable ID resolution.
+
+### Task 8 – Create Spotify Playlist
+**Description:** Implement playlist creation with accurate track-matching and authenticated Spotify API calls.
+
+**Files to Create**
+- `src/components/CreatePlaylistModal.tsx`  
+- `src/services/spotifyPlaylist.ts`
+
+**Subtasks**
+- [ ] “Create Playlist” button and modal  
+- [ ] Playlist name & description inputs  
+- [ ] Resolve each song → Spotify track ID via Search API  
+- [ ] Deduplicate tracks  
+- [ ] Create playlist (`POST /v1/me/playlists`)  
+- [ ] Batch-add tracks (`POST /v1/playlists/{id}/tracks`)  
+- [ ] Handle duplicate songs in playlist  
+- [ ] Implement error handling (network, permissions)  
+- [ ] Show success notification with playlist link  
+- [ ] Save playlist metadata locally
+
+**Acceptance Criteria**
+- [ ] Tracks matched reliably  
+- [ ] Playlist created successfully  
+- [ ] Deduplication works  
+- [ ] Success notification includes Spotify link  
+- [ ] Error messages are helpful  
+- [ ] Playlist metadata is saved locally
+
+**Dependencies:** Task 5, Task 3
+
+---
+
+### Task 9 – Playlist Management
+**Description:** Create comprehensive playlist management features including saving, editing, deleting, and re-curating playlists. Sync status with Spotify.
+
+**Files to Create**
+- `src/components/PlaylistManager.tsx`  
+- `src/components/PlaylistDetail.tsx`
+
+**Files to Modify**
+- `src/App.tsx` (add new routes/views)
+
+**Subtasks**
+- [ ] Save playlists in local storage (or Supabase)  
+- [ ] “My Playlists” view  
+- [ ] List all saved playlists with metadata  
+- [ ] Playlist detail/edit view  
+- [ ] Add/remove songs from playlists  
+- [ ] “Re-curate” option (export for ChatGPT)  
+- [ ] Delete/archive functionality  
+- [ ] Sync playlist status with Spotify  
+- [ ] Show playlist stats (song count, duration)  
+- [ ] Handle conflicts if playlist modified on Spotify
+
+**Features**
+- **Playlists List:** View all created playlists  
+- **Playlist Detail:** View songs, edit metadata  
+- **Add/Remove:** Manage playlist contents  
+- **Re-curate:** Export playlist for another round  
+- **Delete/Archive:** Remove or archive playlists  
+- **Sync Status:** Show if in sync with Spotify
+
+**Acceptance Criteria**
+- [ ] All playlists are saved and retrievable  
+- [ ] “My Playlists” view displays all playlists  
+- [ ] Can edit playlist name/description  
+- [ ] Songs can be added/removed  
+- [ ] Re-curate option generates proper export  
+- [ ] Delete removes from app and Spotify  
+- [ ] Sync status accurately reflects reality  
+- [ ] Mobile layout is responsive
+
+**Dependencies:** Task 8
+
+---
+
+
+
+---
+
+### Phase 3 – Feedback Loop
+URL: https://github.com/joakirrin/music-curator/issues/22
+
+## Phase 3 – Feedback Loop
+**Goal:** Enable users to export feedback and manage recommendation rounds.
+
+### Task 6 – Export Feedback for ChatGPT
+**Description:** Create functionality to export user feedback (kept/skipped songs) as JSON/CSV with extracted preferences and a ChatGPT prompt template for the next round of recommendations.
+
+**Files to Create**
+- `src/components/ExportFeedback.tsx`  
+- `src/utils/feedbackExport.ts`
+
+**Subtasks**
+- [ ] Create “Export Feedback” button in UI  
+- [ ] Generate JSON with kept songs and reasons  
+- [ ] Generate JSON with skipped songs  
+- [ ] Extract user preferences from feedback  
+- [ ] Generate CSV export format  
+- [ ] Implement copy-to-clipboard functionality  
+- [ ] Implement download-as-file option  
+- [ ] Include ChatGPT prompt template in export  
+- [ ] Show export success notification  
+- [ ] Handle empty feedback case
+
+**Export JSON Format**
+```json
+{
+  "round": 1,
+  "kept": [
+    {
+      "title": "Song Name",
+      "artist": "Artist Name",
+      "reason": "User feedback if available"
+    }
+  ],
+  "skipped": [
+    {
+      "title": "Song Name",
+      "artist": "Artist Name"
+    }
+  ],
+  "preferences": {
+    "liked_genres": [],
+    "liked_artists": [],
+    "avoided_genres": []
+  },
+  "prompt": "Based on this feedback, recommend 20 more songs..."
+}
+```
+
+**Acceptance Criteria**
+- [ ] Kept songs include all metadata  
+- [ ] Skipped songs are tracked  
+- [ ] Preferences are extracted from feedback  
+- [ ] Copy-to-clipboard works reliably  
+- [ ] Download creates a valid JSON file  
+- [ ] ChatGPT prompt is included and helpful  
+- [ ] Success/error notifications show  
+- [ ] Handles edge cases (no feedback, no songs)
+
+**Dependencies:** Task 3
+
+---
+
+### Task 7 – Round Management System
+**Description:** Create tools to view, filter, compare, and manage recommendation rounds. Helps users track their curation history and see progress over time.
+
+**Files to Create**
+- `src/components/RoundManager.tsx`  
+- `src/components/RoundComparison.tsx`
+
+**Subtasks**
+- [ ] Create rounds list view  
+- [ ] Implement filter by round number  
+- [ ] Create side-by-side round comparison view  
+- [ ] Track feedback stats per round (kept/skipped %)  
+- [ ] Implement archive functionality for old rounds  
+- [ ] Create timeline visualization  
+- [ ] Show round metadata (date, count, feedback stats)  
+- [ ] Export round data
+
+**Features**
+- **Rounds List:** View all recommendation rounds with stats  
+- **Round Comparison:** Compare feedback across multiple rounds  
+- **Timeline:** Visual timeline of rounds over time  
+- **Stats:** Show kept/skipped ratios, preferences evolution  
+- **Archive:** Move old rounds to archive view
+
+**Acceptance Criteria**
+- [ ] All rounds are listed with metadata  
+- [ ] Can filter songs by specific round  
+- [ ] Side-by-side comparison shows differences  
+- [ ] Stats accurately reflect feedback  
+- [ ] Archive/restore functionality works  
+- [ ] Timeline is visually clear  
+- [ ] Mobile layout is responsive
+
+**Dependencies:** Task 2, Task 6
+
+---
+
+
+
+---
+
+### Phase 2 – Spotify Integration
+URL: https://github.com/joakirrin/music-curator/issues/21
+
+## Phase 2 – Spotify Integration
+**Goal:** Integrate Spotify Web API for song previews and user authentication.
+
+### Task 4 – Spotify Web Playback SDK – Free Preview
+**Description:** Integrate Spotify Web API for searching tracks, fetching 30-second previews, and displaying album art. Create a floating player component for playback without requiring user authentication.
+
+**Files to Create**
+- `src/services/spotify.ts` (API wrapper)  
+- `src/components/SpotifyPlayer.tsx` (player UI)  
+- `src/hooks/useSpotify.ts` (custom hook)
+
+**Subtasks**
+- [ ] Register Spotify Developer App and get Client ID  
+- [ ] Create `spotify.ts` service with API wrapper  
+- [ ] Create floating `SpotifyPlayer` (PiP layout)  
+- [ ] Implement song search functionality  
+- [ ] Fetch preview URLs (when available)  
+- [ ] Add play/pause/skip controls  
+- [ ] Display album art & metadata  
+- [ ] Handle “no preview available” case  
+- [ ] Make player mobile responsive  
+- [ ] Add error handling for API rate limits
+
+**Environment Variables Needed**
+```
+VITE_SPOTIFY_CLIENT_ID=...
+```
+
+**Spotify API Endpoints**
+- Search: `GET /v1/search`  
+- Track details: `GET /v1/tracks/{id}`
+
+**Acceptance Criteria**
+- [ ] Client ID is securely stored in environment variables  
+- [ ] Search returns relevant Spotify tracks  
+- [ ] Preview URLs are fetched and playable (when available)  
+- [ ] Player controls work (play, pause, volume)  
+- [ ] Album art displays correctly  
+- [ ] Graceful handling when preview unavailable  
+- [ ] Rate limiting handled properly  
+- [ ] Mobile layout is responsive
+
+**Dependencies:** Task 1
+
+---
+
+### Task 5 – Spotify Authentication (Optional)
+**Description:** Implement OAuth 2.0 PKCE authentication flow to enable user playlist management and the ability to create playlists directly from the app (full-track playback later as needed).
+
+**Files to Create**
+- `src/components/SpotifyAuth.tsx`
+
+**Files to Modify**
+- `src/services/spotify.ts` (add auth methods)  
+- `src/components/Header.tsx` (add login button)
+
+**Subtasks**
+- [ ] Implement OAuth 2.0 PKCE flow  
+- [ ] Create login/logout UI components  
+- [ ] Store access tokens securely (avoid localStorage for long-term)  
+- [ ] Implement token refresh logic  
+- [ ] Fetch user’s existing playlists  
+- [ ] Add “Connected to Spotify” indicator  
+- [ ] Handle auth errors gracefully  
+- [ ] Test token expiration flow
+
+**Spotify OAuth Scopes**
+```
+playlist-modify-public
+playlist-modify-private
+user-read-email
+user-read-private
+```
+
+**Acceptance Criteria**
+- [ ] OAuth login flow completes successfully  
+- [ ] Access tokens are stored securely  
+- [ ] Tokens refresh before expiration  
+- [ ] User playlists are fetched and accessible  
+- [ ] “Connected to Spotify” indicator shows status  
+- [ ] Logout clears credentials  
+- [ ] Graceful handling of permission denials
+
+**Dependencies:** Task 4
+
+---
+
+
+
+---
+
+### Phase 1 – Foundation & Core Workflow
+URL: https://github.com/joakirrin/music-curator/issues/20
+
+## Phase 1 – Foundation & Core Workflow
+**Goal:** Set up data model, ChatGPT import flow, and improved song-review UI for the curation workflow.
+
+### Task 1 – Enhance Data Model for ChatGPT Integration
+**Description:** Add new fields to the `Song` type to support ChatGPT integration, including source tracking, rounds, feedback status, playlist references, and (future) Spotify metadata.
+
+**Files to Modify**
+- `src/types/song.ts`  
+- `src/utils/fileHandlers.ts`  
+- `src/utils/demoData.ts`
+
+**Subtasks**
+- [x] Add new fields to `Song` type  
+- [x] Create `Playlist` type definition  
+- [x] Create `RecommendationRound` type definition  
+- [x] Update `normalizeSong()` in `fileHandlers.ts`  
+- [x] Update demo data with new fields  
+- [x] Test CSV/JSON import with new fields  
+- [x] Ensure backward compatibility
+
+**Acceptance Criteria**
+- [x] All new fields are properly typed and exported  
+- [x] Existing songs don’t break with new fields  
+- [x] Demo data includes representative fields  
+- [x] Unit tests pass for data import/export
+
+**Dependencies:** None
+
+---
+
+### Task 2 – Build ChatGPT Import Flow
+**Description:** Create a UI component and workflow to import song recommendations from ChatGPT. Includes parsing strict JSON schema, auto-assigning round numbers, and displaying imported songs.
+
+**Files to Create**
+- `src/components/ImportChatGPTModal.tsx`
+
+**Files to Modify**
+- `src/components/Toolbar.tsx` (add import button)  
+- `src/App.tsx` (handle modal state)  
+- `src/components/FilterBar.tsx` (add “Latest Round” filter)
+
+**Subtasks**
+- [x] Create `ImportChatGPTModal` component  
+- [x] Add “🤖 Import from ChatGPT” button to Toolbar  
+- [x] Implement JSON parsing for ChatGPT format  
+- [ ] Auto-assign round numbers when missing  
+- [x] Add timestamp on import (`addedAt`)  
+- [x] Show success/error notifications  
+- [ ] Create “Latest Round” filter view  
+- [ ] Handle edge cases (invalid JSON, missing required fields)
+
+**Expected JSON Format from ChatGPT**
+```json
+{
+  "round": 1,
+  "recommendations": [
+    {
+      "title": "Song Name",
+      "artist": "Artist Name",
+      "album": "Album Name",
+      "year": "2024",
+      "producer": "Producer Name",
+      "reason": "Why this was recommended"
+    }
+  ]
+}
+```
+
+**Acceptance Criteria**
+- [ ] Modal opens when “Import from ChatGPT” is clicked  
+- [ ] JSON can be pasted into a text area and validated  
+- [ ] Songs are parsed and imported correctly  
+- [ ] Round numbers are auto-assigned when omitted  
+- [ ] Success notification shown on import  
+- [ ] Error messages guide user on failures  
+- [ ] Latest imported round is visible in filters
+
+**Dependencies:** Task 1
+
+---
+
+### Task 3 – Improve Song Review UI
+**Description:** Enhance the song list interface with quick action buttons, keyboard shortcuts, and visual feedback for the review workflow. Makes it faster and easier to curate songs.
+
+**Files to Modify**
+- `src/components/SongRow.tsx` (add keep/skip buttons)  
+- `src/components/FilterBar.tsx` (add review mode, progress)  
+- `src/App.tsx` (manage feedback state)
+
+**Subtasks**
+- [ ] Add Keep/Skip quick action buttons to `SongRow`  
+- [ ] Implement keyboard shortcuts (K=Keep, S=Skip)  
+- [ ] Show progress counter (e.g., “5/20 reviewed”)  
+- [ ] Add visual indicators for feedback (pending/keep/skip)  
+- [ ] Create “Review Mode” toggle for current round  
+- [ ] Add batch actions (Keep All, Skip All, Reset)  
+- [ ] Highlight unreviewed songs  
+- [ ] Test on mobile devices
+
+**UI Components Needed**
+- Keep button: green checkmark icon + tooltip  
+- Skip button: red X icon + tooltip  
+- Status indicator: yellow (pending), green (keep), red (skip)  
+- Progress bar at top of list  
+- Review Mode toggle in FilterBar
+
+**Acceptance Criteria**
+- [ ] Keep/Skip buttons are visible on each song row  
+- [ ] Keyboard shortcuts work (K and S)  
+- [ ] Progress counter updates in real time  
+- [ ] Visual indicators are clear and consistent  
+- [ ] Review mode filters to current round only  
+- [ ] Batch actions update multiple songs  
+- [ ] Unreviewed songs are clearly highlighted  
+- [ ] Mobile layout is responsive
+
+**Dependencies:** Task 1, Task 2
+
+---
+
+
+
+---
+

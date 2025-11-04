@@ -34,53 +34,76 @@ export default function FilterBar({
 
   const latestRound = availableRounds.length > 0 ? availableRounds[0] : null;
 
-  const chatgptCount = useMemo(() => {
-    return songs.filter(s => s.source === "chatgpt").length;
+  // ✅ NEW: Count songs by feedback status
+  const counts = useMemo(() => {
+    return {
+      keep: songs.filter(s => s.feedback === "keep").length,
+      skip: songs.filter(s => s.feedback === "skip").length,
+      pending: songs.filter(s => s.feedback === "pending" || !s.feedback).length,
+    };
   }, [songs]);
 
   return (
     <div className="container mx-auto px-4 py-3 bg-gray-900 border-b border-gray-700">
-      {/* ✅ Dark mode: gray-900 background */}
-      
       {/* Main Filter Row */}
       <div className="flex items-center gap-3">
-        {/* Status Filters */}
+        {/* Status Filters - ✅ UPDATED: Keep/Skip/Pending */}
         <div className="flex items-center gap-2">
-          {(["all", "liked", "toAdd", "pending", "chatgpt"] as FilterType[]).map((k) => {
-            const isChatGPT = k === "chatgpt";
-            const isActive = value === k;
-            
-            return (
-              <button
-                key={k}
-                onClick={() => onChange(k)}
-                className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
-                  isActive
-                    ? isChatGPT
-                      ? "bg-emerald-600 text-white border-emerald-600"
-                      : "bg-gray-700 text-white border-gray-700"
-                    : isChatGPT
-                    ? "bg-emerald-900/30 text-emerald-300 border-emerald-700 hover:bg-emerald-900/50"
-                    : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-750"
-                }`}
-              >
-                {k === "toAdd" 
-                  ? "To Add" 
-                  : k === "chatgpt" 
-                  ? `🤖 ChatGPT ${chatgptCount > 0 ? `(${chatgptCount})` : ''}`
-                  : k[0].toUpperCase() + k.slice(1)
-                }
-              </button>
-            );
-          })}
+          {/* All Button */}
+          <button
+            onClick={() => onChange("all")}
+            className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+              value === "all"
+                ? "bg-gray-700 text-white border-gray-700"
+                : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-750"
+            }`}
+          >
+            All ({songs.length})
+          </button>
+
+          {/* Keep Button */}
+          <button
+            onClick={() => onChange("keep")}
+            className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+              value === "keep"
+                ? "bg-green-600 text-white border-green-600"
+                : "bg-green-900/30 text-green-300 border-green-700 hover:bg-green-900/50"
+            }`}
+          >
+            ✓ Keep ({counts.keep})
+          </button>
+
+          {/* Skip Button */}
+          <button
+            onClick={() => onChange("skip")}
+            className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+              value === "skip"
+                ? "bg-red-600 text-white border-red-600"
+                : "bg-red-900/30 text-red-300 border-red-700 hover:bg-red-900/50"
+            }`}
+          >
+            ✗ Skip ({counts.skip})
+          </button>
+
+          {/* Pending Button */}
+          <button
+            onClick={() => onChange("pending")}
+            className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+              value === "pending"
+                ? "bg-gray-600 text-white border-gray-600"
+                : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-750"
+            }`}
+          >
+            ⏸ Pending ({counts.pending})
+          </button>
         </div>
 
-        {/* Search Input - ✅ WHITE background */}
+        {/* Search Input - DARK */}
         <input
           value={search}
           onChange={(e) => onSearch(e.target.value)}
           placeholder="Search title / artist / album / producer / comments / featuring"
-          className="ml-auto w-full max-w-md px-3 py-2 rounded-xl border border-gray-600 bg-white text-gray-900 placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="ml-auto w-full max-w-md px-3 py-2 rounded-xl border border-gray-500 bg-gray-600 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
         />
       </div>
 

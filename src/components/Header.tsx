@@ -11,7 +11,8 @@ export const Header = () => {
       className="border-b border-gray-700 bg-gray-900"
     >
       <div className="container mx-auto px-4 py-6">
-        <div className="flex flex-col items-start">
+        {/* ✅ Changed: items-start to items-center for centering */}
+        <div className="flex flex-col items-center">
           <div className="flex items-center gap-3">
             <FoneaLogo
               className="text-emerald-500 h-[clamp(40px,6vw,64px)] w-[clamp(40px,6vw,64px)]"

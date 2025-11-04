@@ -5,7 +5,8 @@
 
 export type Platform = "Spotify" | "YouTube" | "Bandcamp" | "SoundCloud";
 
-export type FilterType = "all" | "liked" | "toAdd" | "pending" | "chatgpt";
+// ✅ UPDATED: Filters now match feedback buttons (keep/skip/pending instead of liked/toAdd/pending)
+export type FilterType = "all" | "keep" | "skip" | "pending";
 
 export type Song = {
   id: string;
@@ -15,7 +16,7 @@ export type Song = {
   album?: string;
   year?: string;
   producer?: string;
-  comments?: string; // ChatGPT's reason for recommending (read-only from ChatGPT)
+  comments?: string;
   duration?: number; // seconds
   
   // UI state
@@ -27,7 +28,7 @@ export type Song = {
   source?: 'chatgpt' | 'manual' | 'spotify';
   round?: number;
   feedback?: 'keep' | 'skip' | 'pending'; // User's decision
-  userFeedback?: string; // ✅ NEW: User's text feedback to send back to ChatGPT
+  userFeedback?: string; // User's text feedback to send back to ChatGPT
   playlistId?: string;
   spotifyUri?: string;
   previewUrl?: string;
