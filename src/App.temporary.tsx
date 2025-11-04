@@ -3,7 +3,7 @@ import { useMemo, useState, useCallback } from "react";
 import { Header } from "./components/Header";
 import Toolbar from "./components/Toolbar";
 import FilterBar from "./components/FilterBar";
-import { ChatGPTSongRow } from "./components/ChatGPTSongRow"; // ✅ ONLY ChatGPT view now
+import { SongRow } from "./components/SongRow";
 import ImportChatGPTModal from "./components/ImportChatGPTModal";
 import type { FilterType, Song } from "./types/song";
 import { useSongsState } from "./hooks/useLocalState";
@@ -14,7 +14,7 @@ export default function App() {
   const [filterType, setFilterType] = useState<FilterType>("all");
   const [search, setSearch] = useState("");
   const [isChatGPTModalOpen, setIsChatGPTModalOpen] = useState(false);
-  const [selectedRound, setSelectedRound] = useState<number | "all">("all");
+  const [selectedRound, setSelectedRound] = useState<number | "all">("all"); // ✅ NEW: Round filter state
 
   const applyImport = useCallback(
     (incoming: Song[]) => {
@@ -26,7 +26,7 @@ export default function App() {
   const handleChatGPTImport = useCallback(
     (incoming: Song[]) => {
       setSongs([...songs, ...incoming]);
-      setFilterType("all"); // ✅ Just show all songs after import
+      // ✅ NEW: Auto-switch to the newly imported round
       if (incoming.length > 0 && incoming[0].round) {
         setSelectedRound(incoming[0].round);
       }
@@ -37,7 +37,7 @@ export default function App() {
   const onClear = useCallback(() => {
     if (confirm("Delete all songs?")) {
       setSongs([]);
-      setSelectedRound("all");
+      setSelectedRound("all"); // ✅ Reset round filter when clearing
     }
   }, [setSongs]);
 
@@ -56,13 +56,13 @@ export default function App() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     
-    // Filter by round if not "all"
+    // ✅ NEW: First filter by round if not "all"
     let base = songs;
     if (selectedRound !== "all") {
       base = songs.filter((s) => s.round === selectedRound);
     }
 
-    // Filter by search query
+    // Then filter by search query
     base = base.filter((s) => {
       const hay = [
         s.title,
@@ -78,7 +78,7 @@ export default function App() {
       return hay.includes(q);
     });
 
-    // Filter by status
+    // Finally filter by status
     switch (filterType) {
       case "liked":
         return base.filter((s) => !!s.liked);
@@ -86,67 +86,28 @@ export default function App() {
         return base.filter((s) => !!s.toAdd);
       case "pending":
         return base.filter((s) => !s.liked && !s.toAdd);
-      case "chatgpt":
-        return base.filter((s) => s.source === "chatgpt");
       default:
         return base;
     }
-  }, [songs, search, filterType, selectedRound]);
-
-  // ✅ NEW: Export feedback function
-  const handleExportFeedback = useCallback(() => {
-    // Get songs with feedback
-    const songsWithFeedback = songs.filter(
-      (s) => s.feedback && s.feedback !== "pending"
-    );
-
-    if (songsWithFeedback.length === 0) {
-      alert("No feedback to export yet. Mark some songs as Keep or Skip first!");
-      return;
-    }
-
-    // Get the latest round
-    const latestRound = Math.max(...songs.map((s) => s.round || 0));
-
-    // Create feedback JSON
-    const feedbackData = {
-      round: latestRound,
-      feedback: songsWithFeedback.map((s) => ({
-        title: s.title,
-        artist: s.artist,
-        decision: s.feedback,
-        userFeedback: s.userFeedback || "",
-      })),
-    };
-
-    // Copy to clipboard
-    const json = JSON.stringify(feedbackData, null, 2);
-    navigator.clipboard.writeText(json);
-
-    alert(
-      `✅ Feedback for ${songsWithFeedback.length} songs copied to clipboard!\n\nPaste this into ChatGPT to get better recommendations for Round ${latestRound + 1}.`
-    );
-  }, [songs]);
+  }, [songs, search, filterType, selectedRound]); // ✅ Added selectedRound dependency
 
   return (
-    <div className="min-h-screen bg-gray-800">
-      {/* ✅ Dark gray background */}
+    <div className="min-h-screen bg-gray-50">
       <Header />
       <Toolbar
         songs={songs}
         onImport={applyImport}
         onClear={onClear}
         onOpenChatGPTModal={() => setIsChatGPTModalOpen(true)}
-        onExportFeedback={handleExportFeedback} // ✅ NEW: Export feedback button
       />
       <FilterBar
         value={filterType}
         onChange={setFilterType}
         search={search}
         onSearch={setSearch}
-        songs={songs}
-        selectedRound={selectedRound}
-        onRoundChange={setSelectedRound}
+        songs={songs} // ✅ NEW: Pass songs for round calculation
+        selectedRound={selectedRound} // ✅ NEW: Pass current round
+        onRoundChange={setSelectedRound} // ✅ NEW: Pass round change handler
       />
 
       <ImportChatGPTModal
@@ -156,10 +117,9 @@ export default function App() {
         existingSongs={songs}
       />
 
-      {/* ✅ Always use ChatGPT view - no switching */}
-      <div>
+      <div className="divide-y">
         {filtered.map((s) => (
-          <ChatGPTSongRow
+          <SongRow
             key={s.id}
             song={s}
             onUpdate={(next) => updateSong(s.id, next)}
@@ -167,29 +127,19 @@ export default function App() {
           />
         ))}
         {filtered.length === 0 && (
-          <div className="container mx-auto px-4 py-12 text-center text-gray-400">
-            {filterType === "chatgpt" ? (
-              <>
-                No ChatGPT recommendations yet.
-                <button
-                  onClick={() => setIsChatGPTModalOpen(true)}
-                  className="ml-2 text-emerald-400 hover:text-emerald-300 underline"
-                >
-                  Import some now
-                </button>
-              </>
-            ) : selectedRound !== "all" ? (
+          <div className="container mx-auto px-4 py-12 text-center text-gray-500">
+            {selectedRound !== "all" ? (
               <>
                 No songs in Round {selectedRound}.
                 <button
                   onClick={() => setSelectedRound("all")}
-                  className="ml-2 text-emerald-400 hover:text-emerald-300 underline"
+                  className="ml-2 text-emerald-600 hover:text-emerald-700 underline"
                 >
                   View all rounds
                 </button>
               </>
             ) : (
-              "No songs yet. Import from ChatGPT to get started."
+              "No songs yet. Import CSV/JSON or add new entries."
             )}
           </div>
         )}

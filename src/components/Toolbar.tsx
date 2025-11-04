@@ -7,9 +7,11 @@ type Props = {
   songs: Song[];
   onImport: (incoming: Song[]) => void;
   onClear?: () => void;
+  onOpenChatGPTModal: () => void;
+  onExportFeedback: () => void; // ✅ NEW: Export feedback function
 };
 
-export default function Toolbar({ songs, onImport, onClear }: Props) {
+export default function Toolbar({ songs, onImport, onClear, onOpenChatGPTModal, onExportFeedback }: Props) {
   const csvInputRef = useRef<HTMLInputElement>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
 
@@ -58,10 +60,12 @@ export default function Toolbar({ songs, onImport, onClear }: Props) {
   };
 
   const btn =
-    "px-3 py-2 rounded-xl border shadow-sm text-sm bg-white text-gray-800 border-gray-300 hover:bg-gray-50";
+    "px-3 py-2 rounded-xl border shadow-sm text-sm bg-gray-800 text-gray-200 border-gray-700 hover:bg-gray-750 transition-colors";
 
   return (
-    <div className="container mx-auto px-4 py-4 flex items-center gap-2 border-b bg-white">
+    <div className="container mx-auto px-4 py-4 flex items-center gap-2 border-b border-gray-700 bg-gray-900">
+      {/* ✅ Dark mode: gray-900 background */}
+      
       <input
         ref={csvInputRef}
         type="file"
@@ -85,6 +89,21 @@ export default function Toolbar({ songs, onImport, onClear }: Props) {
         Import JSON (EN/ES)
       </button>
 
+      <button
+        onClick={onOpenChatGPTModal}
+        className="px-3 py-2 rounded-xl border shadow-sm text-sm bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700 font-medium transition-colors"
+      >
+        🤖 Import from ChatGPT
+      </button>
+
+      {/* ✅ NEW: Export Feedback Button */}
+      <button
+        onClick={onExportFeedback}
+        className="px-3 py-2 rounded-xl border shadow-sm text-sm bg-blue-600 text-white border-blue-600 hover:bg-blue-700 font-medium transition-colors"
+      >
+        📤 Export Feedback
+      </button>
+
       <button onClick={handleExportCSV} className={btn}>
         Export CSV (EN)
       </button>
@@ -92,7 +111,7 @@ export default function Toolbar({ songs, onImport, onClear }: Props) {
       {onClear && (
         <button
           onClick={onClear}
-          className="ml-auto px-3 py-2 rounded-xl border shadow-sm text-sm bg-white text-red-600 border-red-200 hover:bg-red-50"
+          className="ml-auto px-3 py-2 rounded-xl border shadow-sm text-sm bg-red-600 text-white border-red-600 hover:bg-red-700 transition-colors"
         >
           Delete All
         </button>

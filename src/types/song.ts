@@ -3,22 +3,31 @@
  * Supports multiple sources (manual, ChatGPT, Spotify) and recommendation workflows
  */
 
-
 export type Platform = "Spotify" | "YouTube" | "Bandcamp" | "SoundCloud";
 
-export type FilterType = "all" | "liked" | "toAdd" | "pending";
+export type FilterType = "all" | "liked" | "toAdd" | "pending" | "chatgpt";
 
 export type Song = {
   id: string;
   title: string;
   artist: string;
+  featuring?: string;
   album?: string;
+  year?: string;
+  producer?: string;
+  comments?: string; // ChatGPT's reason for recommending (read-only from ChatGPT)
   duration?: number; // seconds
+  
+  // UI state
+  liked: boolean;
+  toAdd: boolean;
+  platforms: Platform[];
   
   // ChatGPT integration fields (optional, backward compatible)
   source?: 'chatgpt' | 'manual' | 'spotify';
   round?: number;
-  feedback?: 'keep' | 'skip' | 'pending';
+  feedback?: 'keep' | 'skip' | 'pending'; // User's decision
+  userFeedback?: string; // ✅ NEW: User's text feedback to send back to ChatGPT
   playlistId?: string;
   spotifyUri?: string;
   previewUrl?: string;
