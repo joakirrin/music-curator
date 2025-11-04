@@ -3,7 +3,7 @@ import { useMemo, useState, useCallback } from "react";
 import { Header } from "./components/Header";
 import Toolbar from "./components/Toolbar";
 import FilterBar from "./components/FilterBar";
-import { ChatGPTSongRow } from "./components/ChatGPTSongRow"; // ✅ ONLY ChatGPT view now
+import { ChatGPTSongRow } from "./components/ChatGPTSongRow";
 import ImportChatGPTModal from "./components/ImportChatGPTModal";
 import type { FilterType, Song } from "./types/song";
 import { useSongsState } from "./hooks/useLocalState";
@@ -16,17 +16,10 @@ export default function App() {
   const [isChatGPTModalOpen, setIsChatGPTModalOpen] = useState(false);
   const [selectedRound, setSelectedRound] = useState<number | "all">("all");
 
-  const applyImport = useCallback(
-    (incoming: Song[]) => {
-      setSongs(incoming);
-    },
-    [setSongs]
-  );
-
   const handleChatGPTImport = useCallback(
     (incoming: Song[]) => {
       setSongs([...songs, ...incoming]);
-      setFilterType("all"); // ✅ Just show all songs after import
+      setFilterType("all");
       if (incoming.length > 0 && incoming[0].round) {
         setSelectedRound(incoming[0].round);
       }
@@ -78,24 +71,21 @@ export default function App() {
       return hay.includes(q);
     });
 
-    // Filter by status
+    // Filter by feedback status (keep/skip/pending)
     switch (filterType) {
-      case "liked":
-        return base.filter((s) => !!s.liked);
-      case "toAdd":
-        return base.filter((s) => !!s.toAdd);
+      case "keep":
+        return base.filter((s) => s.feedback === "keep");
+      case "skip":
+        return base.filter((s) => s.feedback === "skip");
       case "pending":
-        return base.filter((s) => !s.liked && !s.toAdd);
-      case "chatgpt":
-        return base.filter((s) => s.source === "chatgpt");
+        return base.filter((s) => s.feedback === "pending" || !s.feedback);
       default:
         return base;
     }
   }, [songs, search, filterType, selectedRound]);
 
-  // ✅ NEW: Export feedback function
+  // Export feedback function
   const handleExportFeedback = useCallback(() => {
-    // Get songs with feedback
     const songsWithFeedback = songs.filter(
       (s) => s.feedback && s.feedback !== "pending"
     );
@@ -105,10 +95,8 @@ export default function App() {
       return;
     }
 
-    // Get the latest round
     const latestRound = Math.max(...songs.map((s) => s.round || 0));
 
-    // Create feedback JSON
     const feedbackData = {
       round: latestRound,
       feedback: songsWithFeedback.map((s) => ({
@@ -119,7 +107,6 @@ export default function App() {
       })),
     };
 
-    // Copy to clipboard
     const json = JSON.stringify(feedbackData, null, 2);
     navigator.clipboard.writeText(json);
 
@@ -130,14 +117,12 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-800">
-      {/* ✅ Dark gray background */}
       <Header />
       <Toolbar
         songs={songs}
-        onImport={applyImport}
         onClear={onClear}
         onOpenChatGPTModal={() => setIsChatGPTModalOpen(true)}
-        onExportFeedback={handleExportFeedback} // ✅ NEW: Export feedback button
+        onExportFeedback={handleExportFeedback}
       />
       <FilterBar
         value={filterType}
@@ -156,7 +141,6 @@ export default function App() {
         existingSongs={songs}
       />
 
-      {/* ✅ Always use ChatGPT view - no switching */}
       <div>
         {filtered.map((s) => (
           <ChatGPTSongRow
@@ -168,17 +152,7 @@ export default function App() {
         ))}
         {filtered.length === 0 && (
           <div className="container mx-auto px-4 py-12 text-center text-gray-400">
-            {filterType === "chatgpt" ? (
-              <>
-                No ChatGPT recommendations yet.
-                <button
-                  onClick={() => setIsChatGPTModalOpen(true)}
-                  className="ml-2 text-emerald-400 hover:text-emerald-300 underline"
-                >
-                  Import some now
-                </button>
-              </>
-            ) : selectedRound !== "all" ? (
+            {selectedRound !== "all" ? (
               <>
                 No songs in Round {selectedRound}.
                 <button
