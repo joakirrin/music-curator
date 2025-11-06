@@ -5,7 +5,8 @@
 
 export type Platform = "Spotify" | "YouTube" | "Bandcamp" | "SoundCloud";
 
-// ✅ UPDATED: Filters now match feedback buttons (keep/skip/pending instead of liked/toAdd/pending)
+// ✅ UPDATED: Only decision-based filters (all/keep/skip/pending)
+// Note: "chatgpt" is not a filter - it's the source. All songs come from ChatGPT JSON imports.
 export type FilterType = "all" | "keep" | "skip" | "pending";
 
 export type Song = {
@@ -16,10 +17,10 @@ export type Song = {
   album?: string;
   year?: string;
   producer?: string;
-  comments?: string;
+  comments?: string; // ChatGPT's reason for recommending (read-only from ChatGPT)
   duration?: number; // seconds
   
-  // UI state
+  // UI state - LEGACY (kept for backward compatibility)
   liked: boolean;
   toAdd: boolean;
   platforms: Platform[];
@@ -27,12 +28,28 @@ export type Song = {
   // ChatGPT integration fields (optional, backward compatible)
   source?: 'chatgpt' | 'manual' | 'spotify';
   round?: number;
-  feedback?: 'keep' | 'skip' | 'pending'; // User's decision
+  feedback?: 'keep' | 'skip' | 'pending'; // ✅ User's decision (replaces liked/toAdd)
   userFeedback?: string; // User's text feedback to send back to ChatGPT
   playlistId?: string;
   spotifyUri?: string;
   previewUrl?: string;
   addedAt?: string; // ISO 8601 timestamp
+  
+  // ✅ NEW: Verification fields (Phase 1.5)
+  verificationStatus?: 'verified' | 'unverified' | 'checking' | 'failed';
+  verifiedAt?: string; // ISO 8601 timestamp
+  verificationSource?: 'spotify' | 'youtube' | 'manual';
+  verificationError?: string; // Error message if verification failed
+  
+  // ✅ NEW: Enhanced Spotify metadata (fetched during verification)
+  spotifyId?: string; // Extracted from spotifyUri
+  spotifyUrl?: string; // Full URL for verification
+  albumArt?: string; // 300x300 image URL
+  releaseDate?: string;
+  explicit?: boolean;
+  popularity?: number; // 0-100
+  durationMs?: number; // milliseconds (more accurate than duration seconds)
+  isPlayable?: boolean;
 };
 
 export type Playlist = {
