@@ -34,77 +34,81 @@ export default function FilterBar({
 
   const latestRound = availableRounds.length > 0 ? availableRounds[0] : null;
 
-  // ✅ NEW: Count songs by feedback status
-  const counts = useMemo(() => {
-    return {
-      keep: songs.filter(s => s.feedback === "keep").length,
-      skip: songs.filter(s => s.feedback === "skip").length,
-      pending: songs.filter(s => s.feedback === "pending" || !s.feedback).length,
-    };
-  }, [songs]);
+  // ✅ NEW: Calculate progress statistics
+  const progressStats = useMemo(() => {
+    // Filter songs by selected round if not "all"
+    let songsToCount = songs;
+    if (selectedRound !== "all") {
+      songsToCount = songs.filter(s => s.round === selectedRound);
+    }
+
+    const total = songsToCount.length;
+    const kept = songsToCount.filter(s => s.feedback === "keep").length;
+    const skipped = songsToCount.filter(s => s.feedback === "skip").length;
+    const reviewed = kept + skipped;
+    const pending = total - reviewed;
+    const percentage = total > 0 ? Math.round((reviewed / total) * 100) : 0;
+
+    return { total, kept, skipped, reviewed, pending, percentage };
+  }, [songs, selectedRound]);
 
   return (
     <div className="container mx-auto px-4 py-3 bg-gray-900 border-b border-gray-700">
+      {/* ✅ Dark mode: gray-900 background */}
+      
       {/* Main Filter Row */}
       <div className="flex items-center gap-3">
-        {/* Status Filters - ✅ UPDATED: Keep/Skip/Pending */}
+        {/* Status Filters */}
         <div className="flex items-center gap-2">
-          {/* All Button */}
-          <button
-            onClick={() => onChange("all")}
-            className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
-              value === "all"
-                ? "bg-gray-700 text-white border-gray-700"
-                : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-750"
-            }`}
-          >
-            All ({songs.length})
-          </button>
-
-          {/* Keep Button */}
-          <button
-            onClick={() => onChange("keep")}
-            className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
-              value === "keep"
-                ? "bg-green-600 text-white border-green-600"
-                : "bg-green-900/30 text-green-300 border-green-700 hover:bg-green-900/50"
-            }`}
-          >
-            ✓ Keep ({counts.keep})
-          </button>
-
-          {/* Skip Button */}
-          <button
-            onClick={() => onChange("skip")}
-            className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
-              value === "skip"
-                ? "bg-red-600 text-white border-red-600"
-                : "bg-red-900/30 text-red-300 border-red-700 hover:bg-red-900/50"
-            }`}
-          >
-            ✗ Skip ({counts.skip})
-          </button>
-
-          {/* Pending Button */}
-          <button
-            onClick={() => onChange("pending")}
-            className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
-              value === "pending"
-                ? "bg-gray-600 text-white border-gray-600"
-                : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-750"
-            }`}
-          >
-            ⏸ Pending ({counts.pending})
-          </button>
+          {(["all", "keep", "skip", "pending"] as FilterType[]).map((k) => {
+            const isActive = value === k;
+            
+            return (
+              <button
+                key={k}
+                onClick={() => onChange(k)}
+                className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                  isActive
+                    ? k === "keep"
+                      ? "bg-green-600 text-white border-green-600"
+                      : k === "skip"
+                      ? "bg-red-600 text-white border-red-600"
+                      : k === "pending"
+                      ? "bg-yellow-500 text-gray-900 border-yellow-500"
+                      : "bg-gray-700 text-white border-gray-700"
+                    : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-750"
+                }`}
+              >
+                {k === "keep" && "✓ Keep"}
+                {k === "skip" && "✗ Skip"}
+                {k === "pending" && "⏸ Pending"}
+                {k === "all" && "All"}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Search Input - DARK */}
+        {/* Search Input - DARK mode */}
         <input
           value={search}
           onChange={(e) => onSearch(e.target.value)}
           placeholder="Search title / artist / album / producer / comments / featuring"
-          className="ml-auto w-full max-w-md px-3 py-2 rounded-xl border border-gray-500 bg-gray-600 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+          className="ml-auto w-full max-w-md px-3 py-2 rounded-xl border border-gray-500 bg-gray-600 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
         />
+
+        {/* ✅ NEW: Progress Counter */}
+        {progressStats.total > 0 && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-800 border border-gray-600">
+            <span className="text-xs font-medium text-gray-300">
+              📊 {progressStats.reviewed}/{progressStats.total} reviewed
+            </span>
+            {progressStats.percentage > 0 && (
+              <span className="text-xs font-bold text-emerald-400">
+                ({progressStats.percentage}%)
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Round Filter Row */}

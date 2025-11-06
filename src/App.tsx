@@ -3,7 +3,7 @@ import { useMemo, useState, useCallback } from "react";
 import { Header } from "./components/Header";
 import Toolbar from "./components/Toolbar";
 import FilterBar from "./components/FilterBar";
-import { ChatGPTSongRow } from "./components/ChatGPTSongRow";
+import { ChatGPTSongRow } from "./components/ChatGPTSongRow"; // ✅ ONLY ChatGPT view now
 import ImportChatGPTModal from "./components/ImportChatGPTModal";
 import type { FilterType, Song } from "./types/song";
 import { useSongsState } from "./hooks/useLocalState";
@@ -16,10 +16,17 @@ export default function App() {
   const [isChatGPTModalOpen, setIsChatGPTModalOpen] = useState(false);
   const [selectedRound, setSelectedRound] = useState<number | "all">("all");
 
+  const applyImport = useCallback(
+    (incoming: Song[]) => {
+      setSongs(incoming);
+    },
+    [setSongs]
+  );
+
   const handleChatGPTImport = useCallback(
     (incoming: Song[]) => {
       setSongs([...songs, ...incoming]);
-      setFilterType("all");
+      setFilterType("all"); // ✅ Just show all songs after import
       if (incoming.length > 0 && incoming[0].round) {
         setSelectedRound(incoming[0].round);
       }
@@ -71,7 +78,7 @@ export default function App() {
       return hay.includes(q);
     });
 
-    // Filter by feedback status (keep/skip/pending)
+    // Filter by status - ✅ UPDATED: use feedback field (keep/skip/pending)
     switch (filterType) {
       case "keep":
         return base.filter((s) => s.feedback === "keep");
@@ -84,8 +91,9 @@ export default function App() {
     }
   }, [songs, search, filterType, selectedRound]);
 
-  // Export feedback function
+  // ✅ Export feedback function
   const handleExportFeedback = useCallback(() => {
+    // Get songs with feedback
     const songsWithFeedback = songs.filter(
       (s) => s.feedback && s.feedback !== "pending"
     );
@@ -95,8 +103,10 @@ export default function App() {
       return;
     }
 
+    // Get the latest round
     const latestRound = Math.max(...songs.map((s) => s.round || 0));
 
+    // Create feedback JSON
     const feedbackData = {
       round: latestRound,
       feedback: songsWithFeedback.map((s) => ({
@@ -107,6 +117,7 @@ export default function App() {
       })),
     };
 
+    // Copy to clipboard
     const json = JSON.stringify(feedbackData, null, 2);
     navigator.clipboard.writeText(json);
 
@@ -117,12 +128,14 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-800">
+      {/* ✅ Dark gray background */}
       <Header />
       <Toolbar
         songs={songs}
+        onImport={applyImport}
         onClear={onClear}
         onOpenChatGPTModal={() => setIsChatGPTModalOpen(true)}
-        onExportFeedback={handleExportFeedback}
+        onExportFeedback={handleExportFeedback} // ✅ Export feedback button
       />
       <FilterBar
         value={filterType}
@@ -141,6 +154,7 @@ export default function App() {
         existingSongs={songs}
       />
 
+      {/* ✅ Always use ChatGPT view - no switching */}
       <div>
         {filtered.map((s) => (
           <ChatGPTSongRow
@@ -162,12 +176,27 @@ export default function App() {
                   View all rounds
                 </button>
               </>
+            ) : filterType === "keep" ? (
+              "No songs marked as Keep yet. Click the ✓ Keep button on songs you like!"
+            ) : filterType === "skip" ? (
+              "No songs marked as Skip yet. Click the ✗ Skip button on songs you want to skip!"
+            ) : filterType === "pending" ? (
+              "No pending songs. All songs have been reviewed!"
             ) : (
-              "No songs yet. Import from ChatGPT to get started."
+              <>
+                No songs yet. Click{" "}
+                <button
+                  onClick={() => setIsChatGPTModalOpen(true)}
+                  className="text-emerald-400 hover:text-emerald-300 underline"
+                >
+                  🤖 Import from ChatGPT
+                </button>{" "}
+                to get started.
+              </>
             )}
           </div>
-        )}
-      </div>
-    </div>
-  );
-}
+            )}
+         </div>
+       </div>
+     );
+   }

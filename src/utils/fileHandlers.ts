@@ -4,7 +4,6 @@
 import type { Song, Platform } from "../types";
 
 // ---- Canonical headers (English, export order)
-// ---- Canonical headers (English, export order)
 const EN_HEADERS = [
   'title',
   'artist',
@@ -96,7 +95,7 @@ function capitalizeExact(s: string): string {
  * - Coerces booleans, normalizes platforms.
  * - Unknown platform strings are ignored.
  * - Missing strings -> "" (optional fields may remain undefined if empty).
- * - ✅ FIXED: Now preserves ChatGPT integration fields (round, source, feedback, etc.)
+ * - ✅ UPDATED: Now preserves ALL fields including verification fields
  */
 export function normalizeSong(input: unknown): Song {
   const raw = (input ?? {}) as Record<string, unknown>;
@@ -129,7 +128,7 @@ export function normalizeSong(input: unknown): Song {
 
   const id = coerceString((working as any).id) || generateId();
 
-  // ✅ NEW: Preserve ChatGPT integration fields
+  // ✅ ChatGPT integration fields
   const source = working.source as Song['source'] | undefined;
   const round = typeof working.round === 'number' ? working.round : undefined;
   const feedback = working.feedback as Song['feedback'] | undefined;
@@ -139,6 +138,22 @@ export function normalizeSong(input: unknown): Song {
   const previewUrl = coerceString(working.previewUrl) || undefined;
   const addedAt = coerceString(working.addedAt) || undefined;
   const duration = typeof working.duration === 'number' ? working.duration : undefined;
+
+  // ✅ NEW: Verification fields - PRESERVE THEM!
+  const verificationStatus = working.verificationStatus as Song['verificationStatus'] | undefined;
+  const verifiedAt = coerceString(working.verifiedAt) || undefined;
+  const verificationSource = working.verificationSource as Song['verificationSource'] | undefined;
+  const verificationError = coerceString(working.verificationError) || undefined;
+  
+  // ✅ NEW: Enhanced Spotify metadata
+  const spotifyId = coerceString(working.spotifyId) || undefined;
+  const spotifyUrl = coerceString(working.spotifyUrl) || undefined;
+  const albumArt = coerceString(working.albumArt) || undefined;
+  const releaseDate = coerceString(working.releaseDate) || undefined;
+  const explicit = typeof working.explicit === 'boolean' ? working.explicit : undefined;
+  const popularity = typeof working.popularity === 'number' ? working.popularity : undefined;
+  const durationMs = typeof working.durationMs === 'number' ? working.durationMs : undefined;
+  const isPlayable = typeof working.isPlayable === 'boolean' ? working.isPlayable : undefined;
 
   return {
     id,
@@ -152,7 +167,7 @@ export function normalizeSong(input: unknown): Song {
     liked,
     toAdd,
     comments,
-    // ✅ Include ChatGPT fields (only if they exist)
+    // ChatGPT fields (only if they exist)
     ...(source && { source }),
     ...(round !== undefined && { round }),
     ...(feedback && { feedback }),
@@ -162,6 +177,20 @@ export function normalizeSong(input: unknown): Song {
     ...(previewUrl && { previewUrl }),
     ...(addedAt && { addedAt }),
     ...(duration !== undefined && { duration }),
+    // ✅ Verification fields (only if they exist)
+    ...(verificationStatus && { verificationStatus }),
+    ...(verifiedAt && { verifiedAt }),
+    ...(verificationSource && { verificationSource }),
+    ...(verificationError && { verificationError }),
+    // ✅ Enhanced Spotify metadata (only if they exist)
+    ...(spotifyId && { spotifyId }),
+    ...(spotifyUrl && { spotifyUrl }),
+    ...(albumArt && { albumArt }),
+    ...(releaseDate && { releaseDate }),
+    ...(explicit !== undefined && { explicit }),
+    ...(popularity !== undefined && { popularity }),
+    ...(durationMs !== undefined && { durationMs }),
+    ...(isPlayable !== undefined && { isPlayable }),
   };
 }
 

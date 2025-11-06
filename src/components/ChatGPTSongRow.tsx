@@ -30,20 +30,52 @@ export const ChatGPTSongRow = ({ song, onUpdate, onDelete }: Props) => {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // ✅ NEW: Create search queries for Spotify and YouTube
-  const getSearchQuery = () => {
-    const query = `${song.artist} ${song.title}`;
-    return encodeURIComponent(query);
-  };
-
-  const searchQuery = getSearchQuery();
-  const spotifySearchUrl = `https://open.spotify.com/search/${searchQuery}`;
-  const youtubeSearchUrl = `https://www.youtube.com/results?search_query=${searchQuery}`;
-
   return (
-    <div className="container mx-auto px-4 py-4 border-b border-gray-600 bg-gray-700 hover:bg-gray-650 transition-colors">
+    <div className="container mx-auto px-4 py-4 border-b border-gray-700 bg-gray-700 hover:bg-gray-650 transition-colors">
+      {/* ✅ Dark mode: gray-700 background, darker gray card */}
+      
       {/* Header Row - Badges & Actions */}
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
+        {/* 🎨 NEW: Status Badge - PROMINENT */}
+        <span className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide border-2 ${
+          song.feedback === "keep" 
+            ? "bg-green-600 text-white border-green-500" 
+            : song.feedback === "skip"
+            ? "bg-red-600 text-white border-red-500"
+            : "bg-yellow-500 text-gray-900 border-yellow-400"
+        }`}>
+          {song.feedback === "keep" && "✓ Keep"}
+          {song.feedback === "skip" && "✗ Skip"}
+          {song.feedback === "pending" && "⏸ Pending Review"}
+        </span>
+
+        {/* ✨ NEW: Verification Badge */}
+        {song.verificationStatus && (
+          <span className={`px-2 py-1 rounded-full text-xs font-medium border ${
+            song.verificationStatus === "verified"
+              ? "bg-emerald-600 text-white border-emerald-500"
+              : song.verificationStatus === "checking"
+              ? "bg-gray-500 text-white border-gray-400"
+              : song.verificationStatus === "failed"
+              ? "bg-red-700 text-white border-red-600"
+              : "bg-orange-500 text-white border-orange-400"
+          }`}
+          title={
+            song.verificationStatus === "verified"
+              ? `Verified via ${song.verificationSource || 'Spotify'} on ${song.verifiedAt ? new Date(song.verifiedAt).toLocaleDateString() : 'unknown date'}`
+              : song.verificationStatus === "checking"
+              ? "Checking if this track exists..."
+              : song.verificationStatus === "failed"
+              ? `Verification failed: ${song.verificationError || 'Track not found'}`
+              : "Not yet verified"
+          }>
+            {song.verificationStatus === "verified" && "✓ Verified"}
+            {song.verificationStatus === "checking" && "🔄 Checking..."}
+            {song.verificationStatus === "failed" && "✗ Failed"}
+            {song.verificationStatus === "unverified" && "⚠️ Unverified"}
+          </span>
+        )}
+
         {/* Round Badge */}
         {song.round && (
           <span className="px-2 py-1 rounded-full text-xs font-medium bg-emerald-900 text-emerald-300 border border-emerald-700">
@@ -74,7 +106,7 @@ export const ChatGPTSongRow = ({ song, onUpdate, onDelete }: Props) => {
         </button>
       </div>
 
-      {/* Song Info Grid - 2 columns */}
+      {/* Song Info Grid - 2 columns with DARK inputs */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
         {/* Left Column */}
         <div className="space-y-2">
@@ -82,25 +114,25 @@ export const ChatGPTSongRow = ({ song, onUpdate, onDelete }: Props) => {
             value={song.title}
             onChange={(e) => set("title", e.target.value)}
             placeholder="Title"
-            className="w-full px-3 py-2 rounded-xl border border-gray-500 bg-gray-600 text-white placeholder-gray-400 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            className="w-full px-3 py-2 rounded-xl border border-gray-500 bg-gray-600 text-white placeholder-gray-400 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
           <input
             value={song.artist}
             onChange={(e) => set("artist", e.target.value)}
             placeholder="Artist"
-            className="w-full px-3 py-2 rounded-xl border border-gray-500 bg-gray-600 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            className="w-full px-3 py-2 rounded-xl border border-gray-500 bg-gray-600 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
           <input
             value={song.featuring ?? ""}
             onChange={(e) => set("featuring", e.target.value)}
             placeholder="Featuring"
-            className="w-full px-3 py-2 rounded-xl border border-gray-500 bg-gray-600 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            className="w-full px-3 py-2 rounded-xl border border-gray-500 bg-gray-600 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
           <input
             value={song.album ?? ""}
             onChange={(e) => set("album", e.target.value)}
             placeholder="Album"
-            className="w-full px-3 py-2 rounded-xl border border-gray-500 bg-gray-600 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            className="w-full px-3 py-2 rounded-xl border border-gray-500 bg-gray-600 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
@@ -110,34 +142,31 @@ export const ChatGPTSongRow = ({ song, onUpdate, onDelete }: Props) => {
             value={song.year ?? ""}
             onChange={(e) => set("year", e.target.value)}
             placeholder="Year"
-            className="w-full px-3 py-2 rounded-xl border border-gray-500 bg-gray-600 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            className="w-full px-3 py-2 rounded-xl border border-gray-500 bg-gray-600 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
           <input
             value={song.producer ?? ""}
             onChange={(e) => set("producer", e.target.value)}
             placeholder="Producer"
-            className="w-full px-3 py-2 rounded-xl border border-gray-500 bg-gray-600 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            className="w-full px-3 py-2 rounded-xl border border-gray-500 bg-gray-600 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
-          
-          {/* ✅ NEW: Search Buttons (Spotify + YouTube) */}
-          <div className="flex gap-2">
-            <a
-              href={spotifySearchUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 text-center px-3 py-2 rounded-lg text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
-            >
-              🔍 Search Spotify
-            </a>
-            <a
-              href={youtubeSearchUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 text-center px-3 py-2 rounded-lg text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
-            >
-              🔍 Search YouTube
-            </a>
-          </div>
+          {/* Search Buttons */}
+          <a
+            href={`https://open.spotify.com/search/${encodeURIComponent(song.artist + ' ' + song.title)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block w-full text-center px-3 py-2 rounded-lg text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
+          >
+            🔍 Search Spotify
+          </a>
+          <a
+            href={`https://www.youtube.com/results?search_query=${encodeURIComponent(song.artist + ' ' + song.title)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block w-full text-center px-3 py-2 rounded-lg text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
+          >
+            🔍 Search YouTube
+          </a>
         </div>
       </div>
 
@@ -183,7 +212,7 @@ export const ChatGPTSongRow = ({ song, onUpdate, onDelete }: Props) => {
           onChange={(e) => set("userFeedback", e.target.value)}
           placeholder="Optional: Tell ChatGPT why you kept/skipped this song, or request similar music..."
           rows={2}
-          className="w-full px-3 py-2 rounded-xl border border-gray-500 bg-gray-600 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none"
+          className="w-full px-3 py-2 rounded-xl border border-gray-500 bg-gray-600 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
         />
         <p className="text-xs text-gray-400 mt-1">
           Example: "Love the synth layers!" or "Too slow for my taste" or "More like this please!"

@@ -1,0 +1,398 @@
+================================================================================
+FONEA MUSIC CURATOR - COMPLETE TASK PLAN
+Updated: November 6, 2025
+================================================================================
+
+PROJECT STATUS: Phase 1 Complete + Phase 1.5 (Verification) In Progress
+
+================================================================================
+COMPLETED WORK (✅)
+================================================================================
+
+PHASE 1 - FOUNDATION & CORE WORKFLOW
+✅ Task 1: Data Model Enhanced
+✅ Task 2: ChatGPT Import Flow
+✅ Task 3 - Chunk 1: Keep/Skip Quick Action Buttons
+✅ Task 3 - Chunk 2: Visual Status Indicators
+✅ Task 3 - Chunk 3: Progress Counter
+
+PHASE 1.5 - VERIFICATION LAYER (NEW)
+✅ Chunk 1: Verification Status UI (badges)
+✅ Chunk 2: Link Validator (URL format checking)
+✅ Chunk 3: Spotify Verification Service (API integration)
+
+================================================================================
+NEXT STEPS - IMMEDIATE PRIORITIES
+================================================================================
+
+PHASE 1.5 - VERIFICATION LAYER (CONTINUE)
+--------------------------------------------------------------------------------
+[ ] Chunk 4: Auto-Verify on Import
+    Goal: Automatically verify songs when importing from ChatGPT
+    Files: src/components/ImportChatGPTModal.tsx
+    Tasks:
+    - Add "Verify tracks before import" checkbox (default ON)
+    - Show progress: "Verifying X/Y tracks..."
+    - Update badges in real-time as verification completes
+    - Show summary: "8/10 verified, 2 failed"
+    - Option to exclude unverified tracks
+    Time: 30-40 mins
+
+[ ] Chunk 5: Manual Re-Verification
+    Goal: Let users re-check failed tracks
+    Files: src/components/ChatGPTSongRow.tsx
+    Tasks:
+    - Add "Re-verify" button on failed tracks
+    - Show loading state
+    - Update badge when done
+    - Allow manual URL correction
+    Time: 20 mins
+
+[ ] Chunk 6: Duplicate Detection
+    Goal: Prevent importing same song twice
+    Files: src/utils/duplicateDetector.ts (new)
+           src/components/ImportChatGPTModal.tsx
+    Tasks:
+    - Check for duplicate Spotify IDs
+    - Check for duplicate Artist + Title (fuzzy match)
+    - Warn user before importing
+    - Option to skip or replace
+    Time: 30 mins
+
+[ ] Chunk 7: Verification Report
+    Goal: Show verification stats
+    Files: src/components/FilterBar.tsx
+    Tasks:
+    - Add badge: "8/10 verified"
+    - Click to see detailed report
+    - List failed tracks with reasons
+    - Bulk re-verify button
+    Time: 30 mins
+
+================================================================================
+PHASE 1 - TASK 3 REMAINING (UX IMPROVEMENTS)
+================================================================================
+
+[ ] Chunk 4: Keyboard Shortcuts
+    Goal: Speed up review with hotkeys
+    Files: src/hooks/useKeyboardShortcuts.ts (new)
+           src/App.tsx
+    Tasks:
+    - K = Keep
+    - S = Skip
+    - P = Pending
+    - Arrow keys = Navigate
+    - Visual hints
+    Time: 40 mins
+
+[ ] Chunk 5: Review Mode Toggle
+    Goal: Focus mode for pending songs
+    Files: src/components/FilterBar.tsx
+           src/App.tsx
+    Tasks:
+    - Auto-filter to pending + current round
+    - Show "X songs left to review"
+    - Auto-exit when complete
+    Time: 20 mins
+
+[ ] Chunk 6: Batch Actions
+    Goal: Quick actions for entire rounds
+    Files: src/components/BatchActions.tsx (new)
+           src/components/FilterBar.tsx
+    Tasks:
+    - "Keep All in Round" button
+    - "Skip All in Round" button
+    - "Reset Round" button
+    - Confirmation modals
+    Time: 30 mins
+
+[ ] Chunk 7: Highlight Unreviewed Songs
+    Goal: Visual emphasis on pending
+    Files: src/components/ChatGPTSongRow.tsx
+    Tasks:
+    - Pulse animation on pending badges
+    - Dim reviewed songs in Review Mode
+    Time: 15 mins
+
+================================================================================
+PHASE 2 - SPOTIFY INTEGRATION (ENHANCED)
+================================================================================
+
+[ ] Task 4: Spotify Web Playback SDK
+    Chunks:
+    - Client Credentials setup (already done!)
+    - Track metadata API (already done!)
+    - Search functionality
+    - Preview playback (30-second clips)
+    - Album art display
+    - Mobile player
+    - Rate limiting
+    Time: 2-3 hours total
+
+[ ] Task 5: Spotify Authentication (Optional)
+    Goal: OAuth for user playlists
+    Files: src/components/SpotifyAuth.tsx (new)
+           src/services/spotify.ts
+    Tasks:
+    - OAuth 2.0 PKCE flow
+    - Login/logout UI
+    - Token management
+    - Fetch user playlists
+    Time: 2 hours
+
+================================================================================
+PHASE 3 - FEEDBACK LOOP (ENHANCED)
+================================================================================
+
+[ ] Task 6: Export Feedback (Enhanced)
+    Current: Basic export exists
+    Enhancements:
+    - Include verification status in export
+    - Flag unverified tracks for GPT
+    - Better formatting
+    Time: 30 mins
+
+[ ] Task 7: Round History & Comparison
+    Files: src/components/RoundHistory.tsx (new)
+    Tasks:
+    - List all rounds with metadata
+    - Side-by-side comparison
+    - Stats (kept/skipped ratios)
+    - Timeline view
+    Time: 2 hours
+
+================================================================================
+PHASE 4 - PLAYLIST CREATION
+================================================================================
+
+[ ] Task 8: Create Spotify Playlist
+    Files: src/components/CreatePlaylistModal.tsx (new)
+           src/services/spotifyPlaylist.ts (new)
+    Tasks:
+    - "Create Playlist" button
+    - Playlist name/description input
+    - Only include verified tracks
+    - Deduplicate tracks
+    - Show success with Spotify link
+    Time: 2 hours
+
+[ ] Task 9: Playlist Management
+    Files: src/components/PlaylistManager.tsx (new)
+    Tasks:
+    - "My Playlists" view
+    - Edit playlist metadata
+    - Add/remove songs
+    - Delete/archive
+    - Sync status with Spotify
+    Time: 3 hours
+
+================================================================================
+PHASE 4.5 - PLAYLIST INSIGHTS & SONG TRAITS
+================================================================================
+
+[ ] Fetch Audio Features
+    Endpoint: GET /v1/audio-features/{id}
+    Data: danceability, energy, valence, tempo, key, loudness, etc.
+    Files: src/services/spotifyInsights.ts (new)
+    Time: 1 hour
+
+[ ] Build Analytics Dashboard
+    Files: src/components/PlaylistInsights.tsx (new)
+    Graphs:
+    - Energy vs Valence scatter plot
+    - Tempo distribution
+    - Genre breakdown
+    - Mood detection
+    - Taste evolution over time
+    Time: 3-4 hours
+
+================================================================================
+PHASE 5 - POLISH & ADVANCED FEATURES
+================================================================================
+
+[ ] Task 10: Supabase Backend Integration
+    Goal: Replace localStorage with real database
+    Tasks:
+    - Set up Supabase project
+    - Design database schema
+    - User authentication
+    - Real-time sync
+    - Offline support
+    Time: 1 week
+
+[ ] Task 11: Advanced Curation Tools
+    Features:
+    - Smart filters (BPM, genre, mood)
+    - Duplicate song detection (enhanced)
+    - Export to Apple Music / YouTube Music
+    - Collaborative playlists
+    - Playlist sharing via link
+    - AI playlist recommendations
+    Time: 2 weeks
+
+================================================================================
+RECOMMENDED EXECUTION ORDER
+================================================================================
+
+SESSION 1 (NEXT - ~2 hours):
+1. Phase 1.5 Chunk 4: Auto-Verify on Import
+2. Phase 1.5 Chunk 5: Manual Re-Verification
+3. Phase 1 Chunk 4: Keyboard Shortcuts (if time)
+
+SESSION 2 (~2 hours):
+1. Phase 1.5 Chunk 6: Duplicate Detection
+2. Phase 1.5 Chunk 7: Verification Report
+3. Phase 1 Chunk 5: Review Mode Toggle
+
+SESSION 3 (~2 hours):
+1. Phase 1 Chunk 6: Batch Actions
+2. Phase 1 Chunk 7: Highlight Unreviewed
+3. Phase 3 Task 6: Enhanced Export
+
+SESSION 4 (~3 hours):
+1. Phase 2 Task 5: Spotify OAuth
+2. Phase 4 Task 8: Create Spotify Playlist
+
+SESSION 5 (~3 hours):
+1. Phase 4.5: Fetch Audio Features
+2. Phase 4.5: Analytics Dashboard (basic graphs)
+
+SESSIONS 6+:
+- Phase 4 Task 9: Playlist Management
+- Phase 3 Task 7: Round History
+- Phase 4.5: Advanced Analytics
+- Phase 5: Supabase + Advanced Features
+
+================================================================================
+TECHNICAL NOTES
+================================================================================
+
+ENVIRONMENT VARIABLES:
+- VITE_SPOTIFY_CLIENT_ID (required for verification)
+- VITE_SPOTIFY_CLIENT_SECRET (required for verification)
+
+LOCALSTORAGE KEYS:
+- songs_v2 (main storage)
+- spotify_verification_cache (7-day cache)
+
+API RATE LIMITS:
+- Client Credentials: Generous (thousands per day)
+- User OAuth: Higher limits
+- Caching reduces API usage significantly
+
+DEPENDENCIES (ALREADY INSTALLED):
+- react, react-dom
+- framer-motion
+- @radix-ui/react-dialog
+- date-fns
+- tailwindcss
+
+DEPENDENCIES (FUTURE - NOT YET NEEDED):
+- recharts (for graphs)
+- @supabase/supabase-js (for backend)
+
+================================================================================
+KEY DESIGN DECISIONS
+================================================================================
+
+1. Dark mode is permanent (not a toggle)
+2. All inputs use bg-gray-600 with white text
+3. FilterType: "all" | "keep" | "skip" | "pending" (no "chatgpt")
+4. Verification badges only show when status exists (clean UI)
+5. Client Credentials for verification (no user login needed initially)
+6. 7-day verification cache (performance)
+7. Progressive enhancement (features work without verification)
+8. Search buttons over direct links (ChatGPT hallucinates URLs)
+
+================================================================================
+KNOWN ISSUES & SOLUTIONS
+================================================================================
+
+ISSUE: ChatGPT provides wrong Spotify URLs
+STATUS: Partially solved
+SOLUTION: Link validator + verification service detects fake tracks
+
+ISSUE: Verification badges not showing
+STATUS: Solved
+SOLUTION: Updated fileHandlers.ts normalizeSong() to preserve fields
+
+ISSUE: White inputs in dark mode
+STATUS: Solved
+SOLUTION: Changed to bg-gray-600 text-white
+
+ISSUE: "ChatGPT" filter confusion
+STATUS: Solved
+SOLUTION: Removed from FilterType - it's a source, not a filter
+
+================================================================================
+FILES STRUCTURE
+================================================================================
+
+CURRENT FILES:
+src/
+├── components/
+│   ├── ChatGPTSongRow.tsx (has verification badge)
+│   ├── FilterBar.tsx (has progress counter)
+│   ├── Header.tsx
+│   ├── FoneaLogo.tsx
+│   ├── Toolbar.tsx
+│   ├── ImportChatGPTModal.tsx
+│   └── SpotifyVerificationTest.tsx (can delete after testing)
+├── services/
+│   └── spotifyVerification.ts (Spotify API)
+├── types/
+│   └── song.ts (with verification fields)
+├── hooks/
+│   └── useLocalState.ts
+├── utils/
+│   ├── fileHandlers.ts (preserves verification fields)
+│   ├── linkValidator.ts (URL validation)
+│   └── demoData.ts
+└── App.tsx (main app logic)
+
+FILES TO CREATE NEXT:
+- src/components/ImportChatGPTModal.tsx (update for auto-verify)
+- src/utils/duplicateDetector.ts
+- src/hooks/useKeyboardShortcuts.ts
+- src/components/BatchActions.tsx
+- etc.
+
+================================================================================
+SPOTIFY API REFERENCE
+================================================================================
+
+WHAT WE CAN FETCH NOW:
+- Track metadata (title, artist, album)
+- Album art (300x300)
+- Popularity (0-100)
+- Duration
+- Preview URL (30-second MP3)
+- Release date
+- Explicit flag
+
+WHAT'S COMING (NOT YET IMPLEMENTED):
+- Audio features: danceability, energy, valence, tempo, key, loudness
+- Artist genres
+- Batch requests (up to 50 tracks at once)
+
+AVAILABLE GRAPHS (WHEN AUDIO FEATURES ARE IMPLEMENTED):
+1. Energy vs Valence scatter plot
+2. Danceability distribution
+3. Tempo (BPM) range
+4. Genre breakdown pie chart
+5. Popularity distribution
+6. Release year timeline
+7. Key distribution
+8. Mood detection
+9. Taste profile radar chart
+10. Round evolution comparison
+11-16. And many more! (See SPOTIFY_METADATA_COMPLETE.md)
+
+================================================================================
+END OF TASK PLAN
+================================================================================
+
+Last Updated: November 6, 2025
+Version: 2.0
+Status: Phase 1 Complete, Phase 1.5 In Progress (Chunk 3/7 done)
+Next Session: Phase 1.5 Chunk 4 (Auto-Verify on Import)
