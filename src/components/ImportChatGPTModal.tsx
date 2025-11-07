@@ -1,5 +1,5 @@
 // src/components/ImportChatGPTModal.tsx
-// ✅ UPDATED: Now uses Spotify Search API + Auto-closes after summary
+// ✅ PHASE 2.2 UPDATE: Removed "hide unverified" checkbox - failed tracks always hidden from main list
 
 import { useState, useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -67,19 +67,19 @@ export default function ImportChatGPTModal({
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [autoVerify, setAutoVerify] = useState(true);
-  const [excludeUnverified, setExcludeUnverified] = useState(true); // ✅ NEW: Default to true
+  // ✅ REMOVED: excludeUnverified state - now hardcoded behavior
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationProgress, setVerificationProgress] = useState<VerificationProgress | null>(null);
   const [verificationSummary, setVerificationSummary] = useState<VerificationSummary | null>(null);
 
-  // ✅ NEW: Auto-close after showing summary for 5 seconds
+  // Auto-close after showing summary for 5 seconds
   useEffect(() => {
     if (verificationSummary && open) {
       const timer = setTimeout(() => {
         setJsonText("");
         setVerificationSummary(null);
         onOpenChange(false);
-      }, 5000); // 5 seconds
+      }, 5000);
 
       return () => clearTimeout(timer);
     }
@@ -166,7 +166,6 @@ export default function ImportChatGPTModal({
             currentSong: `${song.artist} - ${song.title}`,
           });
 
-          // ✅ UPDATED: Now searches Spotify by artist+title (ignores ChatGPT's link)
           if (!song.artist || !song.title) {
             summary.skipped++;
             newSongs[i] = {
@@ -214,22 +213,12 @@ export default function ImportChatGPTModal({
         setIsVerifying(false);
         setVerificationProgress(null);
 
-        // ✅ UPDATED: Filter out unverified tracks if option enabled
-        if (excludeUnverified) {
-          const beforeCount = newSongs.length;
-          newSongs = newSongs.filter(song => song.verificationStatus === 'verified');
-          const excludedCount = beforeCount - newSongs.length;
-          
-          if (excludedCount > 0) {
-            // Update summary to show excluded count
-            summary.skipped = 0; // Not skipped, they're excluded
-          }
-        }
+        // ✅ UPDATED: ALL songs are imported (failed tracks just won't show in main list)
+        // They're kept in the data for export feedback and replacement flow
       }
 
       onImport(newSongs);
       
-      // ✅ UPDATED: Don't close immediately, show summary first
       if (!autoVerify) {
         setJsonText("");
         onOpenChange(false);
@@ -251,7 +240,6 @@ export default function ImportChatGPTModal({
     setVerificationSummary(null);
   };
 
-  // ✅ NEW: Manual close (if user wants to close before auto-close)
   const handleCloseSummary = () => {
     setJsonText("");
     setVerificationSummary(null);
@@ -286,16 +274,16 @@ export default function ImportChatGPTModal({
                 ✅ Import Complete!
               </Dialog.Title>
               
-              {/* ✅ NEW: Better notification message */}
+              {/* ✅ UPDATED: New message explaining failed tracks are hidden */}
               <p className="text-sm text-gray-600 mb-4">
-                {excludeUnverified && verificationSummary.failed > 0 ? (
+                {verificationSummary.failed > 0 ? (
                   <>
                     • {verificationSummary.verified} track{verificationSummary.verified !== 1 ? 's' : ''} verified and imported<br />
-                    • {verificationSummary.failed} track{verificationSummary.failed !== 1 ? 's' : ''} excluded (could not verify on Spotify)<br />
+                    • {verificationSummary.failed} track{verificationSummary.failed !== 1 ? 's' : ''} failed verification<br />
                     <br />
-                    <span className="text-xs text-gray-500">
-                      These may be incorrect artist names or non-existent tracks.
-                      Export feedback will help ChatGPT correct them.
+                    <span className="text-orange-600 font-medium">
+                      ⚠️ Failed tracks are hidden from the main list.
+                      Click "🔄 Get Replacements" in the toolbar to fix them.
                     </span>
                   </>
                 ) : (
@@ -303,7 +291,6 @@ export default function ImportChatGPTModal({
                 )}
               </p>
               
-              {/* Auto-close countdown */}
               <p className="text-xs text-gray-500 mb-4">
                 Closing automatically in 5 seconds... (or click Done)
               </p>
@@ -331,9 +318,7 @@ export default function ImportChatGPTModal({
                       <div className="text-2xl font-bold text-gray-700">
                         {verificationSummary.skipped}
                       </div>
-                      <div className="text-sm text-gray-600">
-                        {excludeUnverified ? '⊘ Excluded' : '⚠ Skipped'}
-                      </div>
+                      <div className="text-sm text-gray-600">⚠ Skipped</div>
                     </div>
                   )}
                   
@@ -417,24 +402,12 @@ export default function ImportChatGPTModal({
                     </span>
                   </label>
                   
-                  {autoVerify && (
-                    <label className="flex items-center gap-2 cursor-pointer ml-6">
-                      <input
-                        type="checkbox"
-                        checked={excludeUnverified}
-                        onChange={(e) => setExcludeUnverified(e.target.checked)}
-                        className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
-                        disabled={isLoading || isVerifying}
-                      />
-                      <span className="text-sm text-emerald-800">
-                        Hide unverified tracks (recommended)
-                      </span>
-                    </label>
-                  )}
+                  {/* ✅ REMOVED: "Hide unverified tracks" checkbox */}
+                  {/* Failed tracks are now always hidden from main list by design */}
                   
-                  <p className="text-xs text-emerald-700 ml-6">
+                  <p className="text-xs text-emerald-700">
                     {autoVerify 
-                      ? "We'll search Spotify for each track (ignoring ChatGPT's links)." 
+                      ? "We'll search Spotify for each track. Failed tracks will be hidden from the main list." 
                       : "Songs will be imported without verification (you can verify them later)."}
                   </p>
                 </div>

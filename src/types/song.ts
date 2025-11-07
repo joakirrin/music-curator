@@ -9,6 +9,9 @@ export type Platform = "Spotify" | "YouTube" | "Bandcamp" | "SoundCloud";
 // Note: "chatgpt" is not a filter - it's the source. All songs come from ChatGPT JSON imports.
 export type FilterType = "all" | "keep" | "skip" | "pending";
 
+// ✅ NEW: Verification status filter type (Phase 2.1)
+export type VerificationFilterType = "all" | "verified" | "unverified" | "failed";
+
 export type Song = {
   id: string;
   title: string;
