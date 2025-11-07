@@ -12,4 +12,8 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
+  server: {
+    host: '0.0.0.0', // Allow external access (e.g., via Tailscale)
+    port: 5173,      // Default port; change if you prefer another
+  },
 });

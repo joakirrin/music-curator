@@ -9,7 +9,7 @@ import { verifySong, applySongVerification } from "../services/spotifyVerificati
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onImport: (songs: Song[]) => void;
+  onImport: (songs: Song[], replaceFailedInRound?: number) => void; // ✅ NEW: Phase 2.2 - Chunk 3
   existingSongs: Song[];
 };
 
@@ -72,14 +72,14 @@ export default function ImportChatGPTModal({
   const [verificationProgress, setVerificationProgress] = useState<VerificationProgress | null>(null);
   const [verificationSummary, setVerificationSummary] = useState<VerificationSummary | null>(null);
 
-  // Auto-close after showing summary for 5 seconds
+  // Auto-close after showing summary for 10 seconds
   useEffect(() => {
     if (verificationSummary && open) {
       const timer = setTimeout(() => {
         setJsonText("");
         setVerificationSummary(null);
         onOpenChange(false);
-      }, 5000);
+      }, 10000); // ✅ UPDATED: Changed from 5000 to 10000 (10 seconds)
 
       return () => clearTimeout(timer);
     }
@@ -106,6 +106,9 @@ export default function ImportChatGPTModal({
         .filter((r): r is number => typeof r === "number");
       const maxRound = existingRounds.length > 0 ? Math.max(...existingRounds) : 0;
       const nextRound = parsed.round ?? maxRound + 1;
+
+      // ✅ MOVED: Replacement detection will happen AFTER verification
+      // This ensures user sees verification results before deciding to replace
 
       let newSongs: Song[] = parsed.recommendations.map((rec, index) => {
         if (!rec.title || !rec.artist) {
@@ -213,11 +216,37 @@ export default function ImportChatGPTModal({
         setIsVerifying(false);
         setVerificationProgress(null);
 
-        // ✅ UPDATED: ALL songs are imported (failed tracks just won't show in main list)
-        // They're kept in the data for export feedback and replacement flow
+        // ✅ NEW: Phase 2.2 - Chunk 3: Smart Replacement Detection (AFTER verification)
+        // Check if this round has failed tracks (likely replacements)
+        const failedInThisRound = existingSongs.filter(
+          (s) => s.round === nextRound && s.verificationStatus === 'failed'
+        );
+
+        let replaceFailedInRound: number | undefined = undefined;
+
+        if (failedInThisRound.length > 0) {
+          const isReplacement = window.confirm(
+            `🔄 Round ${nextRound} has ${failedInThisRound.length} failed track${failedInThisRound.length !== 1 ? 's' : ''}.\n\n` +
+            `Are these new songs replacements for the failed tracks?\n\n` +
+            `• Click "OK" to DELETE the failed tracks and import these as replacements\n` +
+            `• Click "Cancel" to KEEP both the failed tracks and import these as additional songs`
+          );
+
+          if (isReplacement) {
+            // User confirmed - these are replacements
+            replaceFailedInRound = nextRound;
+            console.log(`🔄 Replacing ${failedInThisRound.length} failed tracks in Round ${nextRound}`);
+          }
+        }
+
+        // Import with replacement info
+        onImport(newSongs, replaceFailedInRound);
+
+        // ✅ Don't auto-close if replacements were made - let user see the result
+        return;
       }
 
-      onImport(newSongs);
+      onImport(newSongs, undefined); // ✅ No verification, no replacements
       
       if (!autoVerify) {
         setJsonText("");
@@ -292,7 +321,7 @@ export default function ImportChatGPTModal({
               </p>
               
               <p className="text-xs text-gray-500 mb-4">
-                Closing automatically in 5 seconds... (or click Done)
+                Closing automatically in 10 seconds... (or click Done)
               </p>
               
               <div className="space-y-4">

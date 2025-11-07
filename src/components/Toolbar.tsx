@@ -6,7 +6,7 @@ type Props = {
   onClear?: () => void;
   onOpenChatGPTModal: () => void;
   onExportFeedback: () => void;
-  onGetReplacements: () => void; // ✅ NEW: Phase 2.2 - Chunk 1
+  onGetReplacements: () => void;
 };
 
 export default function Toolbar({ 

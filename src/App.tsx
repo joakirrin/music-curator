@@ -5,6 +5,7 @@ import Toolbar from "./components/Toolbar";
 import FilterBar from "./components/FilterBar";
 import { ChatGPTSongRow } from "./components/ChatGPTSongRow";
 import ImportChatGPTModal from "./components/ImportChatGPTModal";
+import FailedTracksModal from "./components/FailedTracksModal"; // ✅ NEW: Phase 2.2 - Chunk 2
 import type { FilterType, VerificationFilterType, Song } from "./types/song";
 import { useSongsState } from "./hooks/useLocalState";
 import { demoSongs } from "./utils/demoData";
@@ -15,6 +16,7 @@ export default function App() {
   const [verificationFilter, setVerificationFilter] = useState<VerificationFilterType>("all"); // ✅ NEW: Phase 2.1
   const [search, setSearch] = useState("");
   const [isChatGPTModalOpen, setIsChatGPTModalOpen] = useState(false);
+  const [isFailedTracksModalOpen, setIsFailedTracksModalOpen] = useState(false); // ✅ NEW: Phase 2.2 - Chunk 2
   const [selectedRound, setSelectedRound] = useState<number | "all">("all");
 
   const applyImport = useCallback(
@@ -25,8 +27,26 @@ export default function App() {
   );
 
   const handleChatGPTImport = useCallback(
-    (incoming: Song[]) => {
-      setSongs([...songs, ...incoming]);
+    (incoming: Song[], replaceFailedInRound?: number) => {
+      // ✅ NEW: Phase 2.2 - Chunk 3: Smart Replacement Logic
+      let updatedSongs = [...songs];
+
+      if (replaceFailedInRound !== undefined) {
+        // User confirmed these are replacements - delete failed tracks from this round
+        const failedTracksInRound = updatedSongs.filter(
+          (s) => s.round === replaceFailedInRound && s.verificationStatus === 'failed'
+        );
+        
+        // Remove failed tracks from the round
+        updatedSongs = updatedSongs.filter(
+          (s) => !(s.round === replaceFailedInRound && s.verificationStatus === 'failed')
+        );
+
+        console.log(`✅ Deleted ${failedTracksInRound.length} failed tracks from Round ${replaceFailedInRound}`);
+      }
+
+      // Add the new songs
+      setSongs([...updatedSongs, ...incoming]);
       setFilterType("all");
       if (incoming.length > 0 && incoming[0].round) {
         setSelectedRound(incoming[0].round);
@@ -112,9 +132,9 @@ export default function App() {
     }
   }, [songs, search, filterType, verificationFilter, selectedRound]);
 
-  // ✅ NEW: Generate replacement prompt for failed tracks (Phase 2.2 - Chunk 1)
+  // ✅ UPDATED: Open Failed Tracks Modal (Phase 2.2 - Chunk 2)
+  // Modal will handle showing failed tracks and copying the replacement prompt
   const handleGetReplacements = useCallback(() => {
-    // Get all failed verification tracks
     const failedTracks = songs.filter(
       (s) => s.verificationStatus === 'failed'
     );
@@ -123,6 +143,16 @@ export default function App() {
       alert("No failed tracks to replace! All songs are verified. 🎉");
       return;
     }
+
+    // Open the modal to show failed tracks
+    setIsFailedTracksModalOpen(true);
+  }, [songs]);
+
+  // ✅ NEW: Function to copy replacement prompt (called from modal)
+  const handleCopyReplacementPrompt = useCallback(() => {
+    const failedTracks = songs.filter(
+      (s) => s.verificationStatus === 'failed'
+    );
 
     // Group by round for better organization
     const tracksByRound = failedTracks.reduce((acc, track) => {
@@ -275,6 +305,13 @@ export default function App() {
         existingSongs={songs}
       />
 
+      <FailedTracksModal
+        open={isFailedTracksModalOpen}
+        onOpenChange={setIsFailedTracksModalOpen}
+        songs={songs}
+        onGetReplacements={handleCopyReplacementPrompt}
+      />
+
       <div>
         {filtered.map((s) => (
           <ChatGPTSongRow
@@ -291,10 +328,10 @@ export default function App() {
                 Failed tracks are hidden from the main list.
                 <br />
                 <button
-                  onClick={handleGetReplacements}
+                  onClick={() => setIsFailedTracksModalOpen(true)}
                   className="mt-3 px-4 py-2 rounded-xl bg-orange-600 text-white text-sm font-medium hover:bg-orange-700 transition-colors inline-flex items-center gap-2"
                 >
-                  🔄 Get Replacements
+                  🔄 View Failed Tracks
                 </button>
               </>
             ) : selectedRound !== "all" ? (
