@@ -3,7 +3,7 @@ import { useMemo, useState, useCallback } from "react";
 import { Header } from "./components/Header";
 import Toolbar from "./components/Toolbar";
 import FilterBar from "./components/FilterBar";
-import { ChatGPTSongRow } from "./components/ChatGPTSongRow"; // ✅ ONLY ChatGPT view now
+import { ChatGPTSongRow } from "./components/ChatGPTSongRow";
 import ImportChatGPTModal from "./components/ImportChatGPTModal";
 import type { FilterType, Song } from "./types/song";
 import { useSongsState } from "./hooks/useLocalState";
@@ -26,7 +26,7 @@ export default function App() {
   const handleChatGPTImport = useCallback(
     (incoming: Song[]) => {
       setSongs([...songs, ...incoming]);
-      setFilterType("all"); // ✅ Just show all songs after import
+      setFilterType("all");
       if (incoming.length > 0 && incoming[0].round) {
         setSelectedRound(incoming[0].round);
       }
@@ -78,7 +78,7 @@ export default function App() {
       return hay.includes(q);
     });
 
-    // Filter by status - ✅ UPDATED: use feedback field (keep/skip/pending)
+    // Filter by status
     switch (filterType) {
       case "keep":
         return base.filter((s) => s.feedback === "keep");
@@ -91,14 +91,19 @@ export default function App() {
     }
   }, [songs, search, filterType, selectedRound]);
 
-  // ✅ Export feedback function
+  // ✅ ENHANCED: Export feedback with verification details
   const handleExportFeedback = useCallback(() => {
-    // Get songs with feedback
+    // Get songs with feedback (keep/skip)
     const songsWithFeedback = songs.filter(
       (s) => s.feedback && s.feedback !== "pending"
     );
 
-    if (songsWithFeedback.length === 0) {
+    // ✅ NEW: Also get unverified/failed songs for ChatGPT to correct
+    const unverifiedSongs = songs.filter(
+      (s) => s.verificationStatus === 'failed' || s.verificationStatus === 'unverified'
+    );
+
+    if (songsWithFeedback.length === 0 && unverifiedSongs.length === 0) {
       alert("No feedback to export yet. Mark some songs as Keep or Skip first!");
       return;
     }
@@ -106,36 +111,89 @@ export default function App() {
     // Get the latest round
     const latestRound = Math.max(...songs.map((s) => s.round || 0));
 
-    // Create feedback JSON
-    const feedbackData = {
+    // ✅ ENHANCED: Create comprehensive feedback JSON
+    const feedbackData: any = {
       round: latestRound,
-      feedback: songsWithFeedback.map((s) => ({
-        title: s.title,
-        artist: s.artist,
-        decision: s.feedback,
-        userFeedback: s.userFeedback || "",
-      })),
+      summary: {
+        total: songs.length,
+        reviewed: songsWithFeedback.length,
+        kept: songsWithFeedback.filter(s => s.feedback === 'keep').length,
+        skipped: songsWithFeedback.filter(s => s.feedback === 'skip').length,
+        verified: songs.filter(s => s.verificationStatus === 'verified').length,
+        unverified: unverifiedSongs.length,
+      },
+      feedback: songsWithFeedback.map((s) => {
+        const feedback: any = {
+          requestedTitle: s.title,
+          requestedArtist: s.artist,
+          decision: s.feedback,
+          userFeedback: s.userFeedback || "",
+        };
+
+        // Add verification status
+        if (s.verificationStatus === 'verified') {
+          feedback.verification = {
+            status: 'verified',
+            spotifyUrl: s.spotifyUrl,
+            album: s.album,
+            popularity: s.popularity,
+          };
+        }
+
+        return feedback;
+      }),
     };
+
+    // ✅ NEW: Add unverified tracks section with helpful questions
+    if (unverifiedSongs.length > 0) {
+      feedbackData.unverifiedTracks = unverifiedSongs.map((s) => {
+        const unverified: any = {
+          requestedTitle: s.title,
+          requestedArtist: s.artist,
+          status: 'could_not_verify',
+          error: s.verificationError || 'Track not found on Spotify',
+        };
+
+        // ✅ NEW: Add question to help ChatGPT self-correct
+        if (s.verificationError?.includes('mismatch')) {
+          unverified.question = `Did you mean a different artist, or a different song by ${s.artist}?`;
+        } else {
+          unverified.question = `Does this track exist on Spotify? If not, please suggest an alternative.`;
+        }
+
+        return unverified;
+      });
+
+      feedbackData.instructions = 
+        `⚠️ ${unverifiedSongs.length} track${unverifiedSongs.length > 1 ? 's' : ''} could not be verified on Spotify. ` +
+        `Please review and provide corrections or alternatives that exist on Spotify.`;
+    }
 
     // Copy to clipboard
     const json = JSON.stringify(feedbackData, null, 2);
     navigator.clipboard.writeText(json);
 
-    alert(
-      `✅ Feedback for ${songsWithFeedback.length} songs copied to clipboard!\n\nPaste this into ChatGPT to get better recommendations for Round ${latestRound + 1}.`
-    );
+    // ✅ ENHANCED: Better alert message
+    const message = unverifiedSongs.length > 0
+      ? `✅ Feedback copied to clipboard!\n\n` +
+        `• ${songsWithFeedback.length} reviewed song${songsWithFeedback.length !== 1 ? 's' : ''}\n` +
+        `• ${unverifiedSongs.length} unverified track${unverifiedSongs.length !== 1 ? 's' : ''} (for correction)\n\n` +
+        `Paste into ChatGPT for better recommendations in Round ${latestRound + 1}!`
+      : `✅ Feedback for ${songsWithFeedback.length} songs copied to clipboard!\n\n` +
+        `Paste this into ChatGPT to get better recommendations for Round ${latestRound + 1}.`;
+
+    alert(message);
   }, [songs]);
 
   return (
     <div className="min-h-screen bg-gray-800">
-      {/* ✅ Dark gray background */}
       <Header />
       <Toolbar
         songs={songs}
         onImport={applyImport}
         onClear={onClear}
         onOpenChatGPTModal={() => setIsChatGPTModalOpen(true)}
-        onExportFeedback={handleExportFeedback} // ✅ Export feedback button
+        onExportFeedback={handleExportFeedback}
       />
       <FilterBar
         value={filterType}
@@ -154,7 +212,6 @@ export default function App() {
         existingSongs={songs}
       />
 
-      {/* ✅ Always use ChatGPT view - no switching */}
       <div>
         {filtered.map((s) => (
           <ChatGPTSongRow
@@ -195,8 +252,8 @@ export default function App() {
               </>
             )}
           </div>
-            )}
-         </div>
-       </div>
-     );
-   }
+        )}
+      </div>
+    </div>
+  );
+}
