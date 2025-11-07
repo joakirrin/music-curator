@@ -6,9 +6,19 @@ type Props = {
   onClear?: () => void;
   onOpenChatGPTModal: () => void;
   onExportFeedback: () => void;
+  onGetReplacements: () => void; // ✅ NEW: Phase 2.2 - Chunk 1
 };
 
-export default function Toolbar({ songs, onClear, onOpenChatGPTModal, onExportFeedback }: Props) {
+export default function Toolbar({ 
+  songs, 
+  onClear, 
+  onOpenChatGPTModal, 
+  onExportFeedback,
+  onGetReplacements,
+}: Props) {
+  // ✅ NEW: Calculate failed tracks count for button display
+  const failedCount = songs.filter(s => s.verificationStatus === 'failed').length;
+
   return (
     <div className="container mx-auto px-4 py-4 flex items-center gap-2 border-b border-gray-700 bg-gray-900">
       {/* ChatGPT Import Button */}
@@ -26,6 +36,21 @@ export default function Toolbar({ songs, onClear, onOpenChatGPTModal, onExportFe
       >
         📤 Export Feedback
       </button>
+
+      {/* ✅ NEW: Get Replacements Button (Phase 2.2 - Chunk 1) */}
+      {failedCount > 0 && (
+        <button
+          onClick={onGetReplacements}
+          className="px-3 py-2 rounded-xl border shadow-sm text-sm bg-orange-600 text-white border-orange-600 hover:bg-orange-700 font-medium transition-colors"
+          title={`Get replacements for ${failedCount} failed track${failedCount !== 1 ? 's' : ''}`}
+        >
+          🔄 Get Replacements {failedCount > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 rounded-full bg-orange-700 text-xs font-bold">
+              {failedCount}
+            </span>
+          )}
+        </button>
+      )}
 
       {/* Delete All Button */}
       {onClear && (

@@ -1,10 +1,12 @@
 // src/components/FilterBar.tsx
 import { useMemo } from "react";
-import type { FilterType, Song } from "../types/song";
+import type { FilterType, VerificationFilterType, Song } from "../types/song";
 
 type Props = {
   value: FilterType;
   onChange: (next: FilterType) => void;
+  verificationFilter: VerificationFilterType; // ✅ NEW: Phase 2.1
+  onVerificationFilterChange: (next: VerificationFilterType) => void; // ✅ NEW: Phase 2.1
   search: string;
   onSearch: (q: string) => void;
   songs: Song[];
@@ -15,6 +17,8 @@ type Props = {
 export default function FilterBar({
   value,
   onChange,
+  verificationFilter,
+  onVerificationFilterChange,
   search,
   onSearch,
   songs,
@@ -34,7 +38,7 @@ export default function FilterBar({
 
   const latestRound = availableRounds.length > 0 ? availableRounds[0] : null;
 
-  // ✅ NEW: Calculate progress statistics
+  // ✅ Calculate progress statistics
   const progressStats = useMemo(() => {
     // Filter songs by selected round if not "all"
     let songsToCount = songs;
@@ -52,14 +56,29 @@ export default function FilterBar({
     return { total, kept, skipped, reviewed, pending, percentage };
   }, [songs, selectedRound]);
 
+  // ✅ NEW: Calculate verification statistics (Phase 2.1)
+  const verificationStats = useMemo(() => {
+    // Filter songs by selected round if not "all"
+    let songsToCount = songs;
+    if (selectedRound !== "all") {
+      songsToCount = songs.filter(s => s.round === selectedRound);
+    }
+
+    const total = songsToCount.length;
+    const verified = songsToCount.filter(s => s.verificationStatus === "verified").length;
+    const failed = songsToCount.filter(s => s.verificationStatus === "failed").length;
+    const unverified = songsToCount.filter(s => s.verificationStatus === "unverified" || !s.verificationStatus).length;
+
+    return { total, verified, failed, unverified };
+  }, [songs, selectedRound]);
+
   return (
     <div className="container mx-auto px-4 py-3 bg-gray-900 border-b border-gray-700">
-      {/* ✅ Dark mode: gray-900 background */}
-      
-      {/* Main Filter Row */}
+      {/* Main Filter Row - Status Filters */}
       <div className="flex items-center gap-3">
         {/* Status Filters */}
         <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-gray-400 mr-1">Status:</span>
           {(["all", "keep", "skip", "pending"] as FilterType[]).map((k) => {
             const isActive = value === k;
             
@@ -88,7 +107,7 @@ export default function FilterBar({
           })}
         </div>
 
-        {/* Search Input - DARK mode */}
+        {/* Search Input */}
         <input
           value={search}
           onChange={(e) => onSearch(e.target.value)}
@@ -96,7 +115,7 @@ export default function FilterBar({
           className="ml-auto w-full max-w-md px-3 py-2 rounded-xl border border-gray-500 bg-gray-600 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
         />
 
-        {/* ✅ NEW: Progress Counter */}
+        {/* Progress Counter */}
         {progressStats.total > 0 && (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-800 border border-gray-600">
             <span className="text-xs font-medium text-gray-300">
@@ -111,10 +130,78 @@ export default function FilterBar({
         )}
       </div>
 
+      {/* ✅ NEW: Verification Status Filter Row (Phase 2.1) */}
+      {verificationStats.total > 0 && (
+        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-700">
+          <span className="text-xs font-medium text-gray-400 mr-1">Verification:</span>
+          
+          <button
+            onClick={() => onVerificationFilterChange("all")}
+            className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+              verificationFilter === "all"
+                ? "bg-gray-700 text-white border-gray-700"
+                : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-750"
+            }`}
+          >
+            All {verificationStats.total > 0 && (
+              <span className="ml-1 text-xs opacity-75">({verificationStats.total})</span>
+            )}
+          </button>
+
+          <button
+            onClick={() => onVerificationFilterChange("verified")}
+            className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+              verificationFilter === "verified"
+                ? "bg-emerald-600 text-white border-emerald-600"
+                : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-750"
+            }`}
+          >
+            ✓ Verified {verificationStats.verified > 0 && (
+              <span className="ml-1 text-xs opacity-75">({verificationStats.verified})</span>
+            )}
+          </button>
+
+          <button
+            onClick={() => onVerificationFilterChange("unverified")}
+            className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+              verificationFilter === "unverified"
+                ? "bg-orange-500 text-white border-orange-500"
+                : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-750"
+            }`}
+          >
+            ⚠️ Unverified {verificationStats.unverified > 0 && (
+              <span className="ml-1 text-xs opacity-75">({verificationStats.unverified})</span>
+            )}
+          </button>
+
+          <button
+            onClick={() => onVerificationFilterChange("failed")}
+            className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+              verificationFilter === "failed"
+                ? "bg-red-600 text-white border-red-600"
+                : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-750"
+            }`}
+          >
+            ✗ Failed {verificationStats.failed > 0 && (
+              <span className="ml-1 text-xs opacity-75">({verificationStats.failed})</span>
+            )}
+          </button>
+
+          {/* Verification Success Rate */}
+          {verificationStats.verified > 0 && (
+            <div className="ml-auto flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-900/30 border border-emerald-700">
+              <span className="text-xs font-medium text-emerald-300">
+                ✓ {Math.round((verificationStats.verified / verificationStats.total) * 100)}% verified
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Round Filter Row */}
       {availableRounds.length > 0 && (
         <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-700">
-          <span className="text-sm font-medium text-gray-400">Rounds:</span>
+          <span className="text-xs font-medium text-gray-400 mr-1">Rounds:</span>
           
           <button
             onClick={() => onRoundChange("all")}
