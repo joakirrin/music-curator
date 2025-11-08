@@ -13,7 +13,9 @@ type GuideDrawerProps = {
 const GuideDrawer: React.FC<GuideDrawerProps> = ({ open, onClose }) => {
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [open]);
 
   if (!open) return null;
@@ -26,17 +28,24 @@ const GuideDrawer: React.FC<GuideDrawerProps> = ({ open, onClose }) => {
             <span className="dot" />
             <span>Getting Started</span>
           </div>
-          <button className="fonea-guide_close" onClick={onClose} aria-label="Close">×</button>
+          <button className="fonea-guide_close" onClick={onClose} aria-label="Close">
+            ×
+          </button>
         </header>
 
         <div className="fonea-guide_content">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {guideMd}
-          </ReactMarkdown>
+          {/* Wrap markdown so we can style paragraphs/lists */}
+          <div className="markdown">
+            <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml={false}>
+              {guideMd}
+            </ReactMarkdown>
+          </div>
         </div>
 
         <footer className="fonea-guide_footer">
-          <button className="btn btn-primary" onClick={onClose}>Got it</button>
+          <button className="btn btn-primary" onClick={onClose}>
+            Got it
+          </button>
         </footer>
       </aside>
     </div>,

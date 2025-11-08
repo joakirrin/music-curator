@@ -1,6 +1,9 @@
 // src/components/Toolbar.tsx
 import type { Song } from "../types/song";
 
+const GPT_URL =
+  "https://chatgpt.com/g/g-69095d95449c8191a6e34a297676dae2-fonea-companion-gpt";
+
 type Props = {
   songs: Song[];
   onClear?: () => void;
@@ -36,6 +39,16 @@ export default function Toolbar({
       >
         📤 Export Feedback
       </button>
+      <a
+        href={GPT_URL}
+        target="_blank"
+        rel="noreferrer"
+        className="px-3 py-2 rounded-xl border shadow-sm text-sm bg-purple-600 text-white border-purple-600 hover:bg-purple-700 font-medium transition-colors"
+        title="Open the Fonea Companion GPT in a new tab"
+        >
+        🧠 Open Companion GPT
+      </a>
+
 
       {/* ✅ NEW: Get Replacements Button (Phase 2.2 - Chunk 1) */}
       {failedCount > 0 && (

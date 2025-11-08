@@ -55,3 +55,44 @@ color: var(--fonea-accent); border: 1px solid var(--fonea-border); padding: 4px 
 .btn:hover { filter: brightness(1.1); }
 .btn-primary { background: linear-gradient(45deg, var(--fonea-accent), var(--fonea-accent-2)); color: #0b0c10; font-weight: 700; }
 .btn-ghost { background: transparent; }
+/* ---- Markdown spacing/typography inside the guide ---- */
+.markdown p {
+  margin: 0.5rem 0;
+  line-height: 1.65;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4 {
+  margin-top: 1.25rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.25;
+}
+
+.markdown ul,
+.markdown ol {
+  margin: 0.75rem 0 0.75rem 1.25rem;
+  padding-left: 1rem;
+}
+
+.markdown li {
+  margin: 0.25rem 0;
+}
+
+.markdown blockquote {
+  margin: 0.75rem 0;
+  padding-left: 0.75rem;
+  border-left: 3px solid #4b5563; /* slate-600 */
+  color: #cbd5e1; /* slate-300 */
+}
+
+.markdown a {
+  text-decoration: underline;
+  color: #34d399; /* emerald-400 */
+}
+
+.markdown hr {
+  margin: 1rem 0;
+  border-color: #374151; /* gray-700 */
+}
