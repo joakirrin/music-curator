@@ -1,0 +1,57 @@
+:root {
+--fonea-bg: #0b0c10;
+--fonea-panel: #111218;
+--fonea-card: #161821;
+--fonea-text: #e6e6f0;
+--fonea-subtle: #b9bbd2;
+--fonea-accent: #6ee7ff;
+--fonea-accent-2: #9b6bff;
+--fonea-border: #222534;
+--radius-xl: 20px;
+}
+
+
+/* Drawer */
+.fonea-guide_overlay {
+position: fixed; inset: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(2px);
+display: grid; place-items: center; z-index: 1000;
+}
+.fonea-guide_panel {
+width: min(860px, 92vw); max-height: 84vh; overflow: hidden; background: var(--fonea-panel);
+color: var(--fonea-text); border: 1px solid var(--fonea-border); border-radius: var(--radius-xl);
+display: grid; grid-template-rows: auto 1fr auto;
+box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+}
+.fonea-guide_header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--fonea-border);
+background: linear-gradient(90deg, rgba(110,231,255,0.06), rgba(155,107,255,0.06)); }
+.fonea-guide_title { display: inline-flex; gap: 10px; align-items: center; font-weight: 600; letter-spacing: .2px; }
+.fonea-guide_title .dot { width: 8px; height: 8px; border-radius: 999px; background: linear-gradient(45deg, var(--fonea-accent), var(--fonea-accent-2)); box-shadow: 0 0 12px rgba(110,231,255,.6); }
+.fonea-guide_close { background: transparent; border: none; font-size: 20px; color: var(--fonea-subtle); cursor: pointer; }
+.fonea-guide_close:hover { color: var(--fonea-text); }
+.fonea-guide_content { overflow: auto; padding: 18px 22px; }
+.fonea-guide_content h1, .fonea-guide_content h2, .fonea-guide_content h3 { color: var(--fonea-text); }
+.fonea-guide_content p, .fonea-guide_content li { color: var(--fonea-subtle); }
+.fonea-guide_content code { background: #0f1117; padding: 2px 6px; border-radius: 6px; }
+.fonea-guide_footer { display: flex; justify-content: flex-end; gap: 10px; padding: 12px 18px; border-top: 1px solid var(--fonea-border); }
+
+
+/* Empty State */
+.fonea-empty_root { display: grid; place-items: center; padding: 8vh 20px; }
+.fonea-empty_card {
+width: min(880px, 96vw); background: var(--fonea-card); border: 1px solid var(--fonea-border); border-radius: var(--radius-xl);
+padding: 28px; color: var(--fonea-text); text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+}
+.fonea-empty_badge { display: inline-block; margin-bottom: 8px; font-size: 12px; letter-spacing: .6px; text-transform: uppercase;
+color: var(--fonea-accent); border: 1px solid var(--fonea-border); padding: 4px 8px; border-radius: 999px; background: rgba(110,231,255,0.06); }
+.fonea-empty_title { margin: 6px 0 10px; font-size: 28px; }
+.fonea-empty_desc { margin: 0 auto 18px; max-width: 48ch; color: var(--fonea-subtle); }
+.fonea-empty_actions { display: flex; gap: 12px; justify-content: center; margin-bottom: 16px; flex-wrap: wrap; }
+.fonea-empty_steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.fonea-empty_steps .num { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 999px; background: linear-gradient(45deg, var(--fonea-accent), var(--fonea-accent-2)); color: #0b0c10; font-weight: 700; margin-right: 8px; }
+
+
+/* Buttons */
+.btn { border: 1px solid var(--fonea-border); background: #0f1117; color: var(--fonea-text); padding: 10px 14px; border-radius: 12px; cursor: pointer; }
+.btn:hover { filter: brightness(1.1); }
+.btn-primary { background: linear-gradient(45deg, var(--fonea-accent), var(--fonea-accent-2)); color: #0b0c10; font-weight: 700; }
+.btn-ghost { background: transparent; }

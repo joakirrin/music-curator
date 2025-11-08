@@ -1,0 +1,204 @@
+# 📋 FONEA SOUND CURATOR – PENDING + COMPLETED TASKS (Consolidated)
+Repository: https://github.com/joakirrin/music-curator/
+Date: 2025-11-07
+
+---
+## 🚧 PENDING TASKS (PHASES 3–5)
+
+### **PHASE 3: SPOTIFY OAUTH & PLAYLISTS (P1)**
+#### Task 3.0.1: OAuth Login (PKCE)
+- [ ] Implement OAuth PKCE login flow for Spotify
+- [ ] Store short-lived access token securely
+- [ ] Handle token refresh and expiry
+- [ ] Add Logout option in the UI
+- [ ] Error handling for denied scopes
+**Priority**: HIGH | **Dependencies**: None
+**Files**: App.tsx, SpotifyAuth.ts, Toolbar.tsx
+
+#### Task 3.0.2: Create Playlist from Keep Songs
+- [ ] Map “Keep” songs to Spotify track URIs
+- [ ] POST new playlist to user’s account
+- [ ] Add progress feedback and success confirmation
+- [ ] Error handling for invalid URIs or rate limits
+**Priority**: HIGH | **Dependencies**: 3.0.1
+**Files**: App.tsx, Toolbar.tsx, spotifyService.ts
+
+#### Task 3.0.3: In-App Track Previews
+- [ ] Add preview button to SongRow
+- [ ] Use Spotify `preview_url` when available
+- [ ] Fallback: Web Playback SDK if preview unavailable
+- [ ] Compact inline player with mute/volume
+**Priority**: HIGH | **Dependencies**: 3.0.1
+**Files**: SongRow.tsx, SpotifyPlayer.tsx
+
+#### Task 3.0.4: Import User Playlist
+- [ ] Import existing Spotify playlists as seed data
+- [ ] Parse metadata per track
+- [ ] Deduplicate & map into rounds
+- [ ] Modal for playlist selection
+**Priority**: MEDIUM | **Dependencies**: 3.0.1
+**Files**: ImportPlaylistModal.tsx, spotifyService.ts
+
+### **PHASE 3.1: METADATA & GRAPHS (P2)**
+#### Task 3.1.1: Fetch & Cache Audio Features
+- [ ] Persist audio features (energy, valence, tempo, danceability, etc.)
+- [ ] Cache responses locally with 7-day expiry
+- [ ] Background fetch without blocking UI
+**Priority**: MEDIUM | **Dependencies**: 3.0.1
+**Files**: spotifyService.ts, utils/cache.ts
+
+#### Task 3.1.2: Create Metadata Graphs
+- [ ] Recharts: Energy×Valence, BPM Histogram, Year Distribution
+- [ ] Filters per round
+- [ ] Fast rendering + empty states
+**Priority**: MEDIUM | **Dependencies**: 3.1.1
+**Files**: AnalyticsDashboard.tsx
+
+### **PHASE 4: CHATGPT API LOOP (P1)**
+#### Task 4.0.1: ChatGPT API Client
+- [ ] API key handling (env)
+- [ ] Rate limiting & error UX
+- [ ] Token cost estimation UI
+**Priority**: HIGH | **Dependencies**: Phase 3 completion
+**Files**: gptService.ts, App.tsx
+
+#### Task 4.0.2: One‑Click Send & Auto‑Import JSON
+- [ ] Button to send feedback prompt
+- [ ] Receive & parse JSON automatically
+- [ ] Schema validation + confirm before import
+- [ ] Diff view (old vs new)
+**Priority**: HIGH | **Dependencies**: 4.0.1
+**Files**: App.tsx, Toolbar.tsx
+
+### **PHASE 4.1: EMBEDDED COMPANION GPT (P2)**
+#### Task 4.1.1: Chat Pane Integration
+- [ ] Collapsible chat panel
+- [ ] Maintain current round context
+- [ ] Enforce JSON schema in replies
+- [ ] “Use this selection” actions
+**Priority**: MEDIUM | **Dependencies**: 4.0.1
+**Files**: ChatPane.tsx, App.tsx
+
+### **PHASE 5: SECONDARY PLATFORMS (P3)**
+#### Task 5.0.1: YouTube Playlist Export
+- [ ] YouTube Data API v3 auth
+- [ ] Track search/match policy
+- [ ] Create playlist; progress + mismatch report
+**Priority**: LOW | **Dependencies**: Phase 3 completion
+**Files**: youtubeService.ts, Toolbar.tsx
+
+#### Task 5.0.2: Apple Music Playlist Export
+- [ ] MusicKit JS auth
+- [ ] Track search/match policy
+- [ ] Create playlist; progress + mismatch report
+**Priority**: LOW | **Dependencies**: Phase 3 completion
+**Files**: appleMusicService.ts, Toolbar.tsx
+
+---
+## ✅ COMPLETED TASKS (HISTORICAL)
+
+### **PHASE 2: FEEDBACK & LEARNING** (Complete)
+#### Task 2.1: Verification Status Filter
+- [x] Add filter buttons: All / Verified / Unverified / Failed
+- [x] Show counts for each status
+- [x] Integrate with existing FilterBar UI
+- [x] Add new filter row
+- [x] Update filtered songs logic in App.tsx
+- [x] Style buttons with appropriate colors
+
+#### Task 2.2: Smart Replacement Suggestions
+- [x] Analyze failed verifications
+- [x] Generate ChatGPT prompt for replacements
+- [x] Copy prompt to clipboard
+- [x] Preview replacements modal (FailedTracksModal)
+- [x] Track which suggestions were accepted (via import‑replace flow)
+- [x] Toolbar button: “Get Replacements”
+
+> Note: “gustos”/personalized‑taste feature canceled during Phase 2.
+
+### **PHASE 1.6: ENHANCED FEEDBACK LOOP** (100% Complete)
+#### Task 1.6.1: Fallback Search Strategies
+- [x] normalizeString()
+- [x] Handle accented characters
+- [x] Strategies: Strict / Simple / Normalized / Album‑based
+- [x] Try strategies in order; log which worked
+
+#### Task 1.6.2: Strict Artist Matching
+- [x] stringSimilarity() (Levenshtein)
+- [x] 60% threshold
+- [x] Reject below threshold; log scores
+- [x] Track rejected matches
+
+#### Task 1.6.3: Smart Exclusion
+- [x] “Hide unverified” checkbox (default ON)
+- [x] Better summary messages
+- [x] Educational text + export guidance
+
+#### Task 1.6.4: Enhanced Export
+- [x] Include unverified tracks section + errors
+- [x] Add guiding questions for ChatGPT
+- [x] Add instructions & improved alerts
+
+### **PHASE 1.5: VERIFICATION LAYER** (100% Complete)
+#### Task 1.5.1: Spotify API (Client Credentials)
+- [x] Token with auto‑refresh
+- [x] Search API (NOT link verification)
+- [x] Artist+title search; parse metadata
+- [x] Rate limiting (100ms delay)
+
+#### Task 1.5.2: Verification UI
+- [x] Badges: Verified / Failed / Unverified
+- [x] Timestamps & source
+- [x] Tooltips with details
+
+#### Task 1.5.3: Auto‑Verify on Import
+- [x] Toggle (default ON)
+- [x] Progress bar
+- [x] Live counters & summary
+- [x] Option to exclude unverified
+
+#### Task 1.5.4: Modal Improvements
+- [x] Better design & progress tracking
+- [x] Summary statistics & success rate
+- [x] Failed tracks expandable list
+- [x] Auto‑close after 5s
+
+#### Task 1.5.5: Caching System
+- [x] Cache results in localStorage
+- [x] 7‑day expiry
+- [x] Cache key: artist+title
+- [x] Avoid re‑verification
+
+### **PHASE 1: CORE FUNCTIONALITY** (100% Complete)
+#### Task 1.1: Basic Song Management
+- [x] Song type; list view
+- [x] Add/delete songs; delete all + confirm
+- [x] LocalStorage persistence
+
+#### Task 1.2: ChatGPT Integration
+- [x] Import JSON from ChatGPT; parse recommendations
+- [x] Support rounds; optional fields; schema validation
+
+#### Task 1.3: Review System
+- [x] Keep/Skip/Pending + visual badges
+- [x] User feedback text; read‑only GPT reason
+
+#### Task 1.4: Filtering & Search
+- [x] By status, round, and free text
+- [x] Progress counter + clear indicators
+
+#### Task 1.5: Export Feedback
+- [x] Feedback JSON + copy to clipboard
+- [x] Include decisions + user feedback
+- [x] Ready to paste back to ChatGPT
+
+#### Task 1.6: UI/UX Polish
+- [x] Dark mode; professional styling; responsive
+- [x] Smooth animations; clear button states
+- [x] Helpful placeholder text
+
+---
+## Notes
+- Phase ordering decision kept: **Spotify OAuth → Playlists → Previews → Graphs**, then **ChatGPT API**, then **Secondary platforms**.
+- Labels in GitHub standardized to existing scheme (e.g., `phase:3`, `phase-4-playlist`, priorities/status/types).
+- Use scripts in `/scripts` to create issues with existing labels only.

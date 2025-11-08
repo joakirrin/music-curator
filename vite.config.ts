@@ -13,7 +13,12 @@ export default defineConfig({
     exclude: ['lucide-react'],
   },
   server: {
-    host: '0.0.0.0', // Allow external access (e.g., via Tailscale)
-    port: 5173,      // Default port; change if you prefer another
+    host: '0.0.0.0',
+    port: 5173,
+    allowedHosts: ['*'], // or ['jbm-macbook-air-m1','localhost','.local']
+  },
+  preview: {
+    host: '0.0.0.0',
+    port: 4173,
   },
 });
