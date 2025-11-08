@@ -5,11 +5,10 @@
 
 export type Platform = "Spotify" | "YouTube" | "Bandcamp" | "SoundCloud";
 
-// ✅ UPDATED: Only decision-based filters (all/keep/skip/pending)
-// Note: "chatgpt" is not a filter - it's the source. All songs come from ChatGPT JSON imports.
+// Decision filters used in the UI
 export type FilterType = "all" | "keep" | "skip" | "pending";
 
-// ✅ NEW: Verification status filter type (Phase 2.1)
+// Verification status filter (Phase 2.1+)
 export type VerificationFilterType = "all" | "verified" | "unverified" | "failed";
 
 export type Song = {
@@ -20,39 +19,40 @@ export type Song = {
   album?: string;
   year?: string;
   producer?: string;
-  comments?: string; // ChatGPT's reason for recommending (read-only from ChatGPT)
-  duration?: number; // seconds
-  
-  // UI state - LEGACY (kept for backward compatibility)
-  liked: boolean;
-  toAdd: boolean;
-  platforms: Platform[];
-  
-  // ChatGPT integration fields (optional, backward compatible)
-  source?: 'chatgpt' | 'manual' | 'spotify';
+  comments?: string;        // ChatGPT's reason (read-only from ChatGPT)
+  duration?: number;        // seconds (coarse)
+  durationMs?: number;      // milliseconds (accurate)
+
+  // Source + workflow
+  source?: "chatgpt" | "manual" | "spotify";
   round?: number;
-  feedback?: 'keep' | 'skip' | 'pending'; // ✅ User's decision (replaces liked/toAdd)
-  userFeedback?: string; // User's text feedback to send back to ChatGPT
+  feedback?: "keep" | "skip" | "pending";  // replaces legacy liked/toAdd
+  userFeedback?: string;                   // user's text feedback to send back to ChatGPT
   playlistId?: string;
-  spotifyUri?: string;
-  previewUrl?: string;
-  addedAt?: string; // ISO 8601 timestamp
-  
-  // ✅ NEW: Verification fields (Phase 1.5)
-  verificationStatus?: 'verified' | 'unverified' | 'checking' | 'failed';
-  verifiedAt?: string; // ISO 8601 timestamp
-  verificationSource?: 'spotify' | 'youtube' | 'manual';
-  verificationError?: string; // Error message if verification failed
-  
-  // ✅ NEW: Enhanced Spotify metadata (fetched during verification)
-  spotifyId?: string; // Extracted from spotifyUri
-  spotifyUrl?: string; // Full URL for verification
-  albumArt?: string; // 300x300 image URL
+
+  // Spotify linkage
+  spotifyUri?: string;      // "spotify:track:..."
+  spotifyId?: string;       // extracted from spotifyUri or API ("3n3Ppam7vgaVa1iaRUc9Lp")
+  spotifyUrl?: string;      // https://open.spotify.com/track/...
+  previewUrl?: string;      // 30s preview URL
+  albumArt?: string;        // image URL (e.g., 300x300)
   releaseDate?: string;
   explicit?: boolean;
-  popularity?: number; // 0-100
-  durationMs?: number; // milliseconds (more accurate than duration seconds)
+  popularity?: number;      // 0–100
   isPlayable?: boolean;
+
+  addedAt?: string;         // ISO 8601
+
+  // Verification (Phase 1.5+)
+  verificationStatus?: "verified" | "unverified" | "checking" | "failed";
+  verifiedAt?: string;      // ISO 8601
+  verificationSource?: "spotify" | "youtube" | "manual";
+  verificationError?: string;
+
+  // ---- Deprecated (kept optional for backward compatibility) ----
+  liked?: boolean;          // DEPRECATED legacy UI flag
+  toAdd?: boolean;          // DEPRECATED legacy UI flag
+  platforms?: Platform[];   // DEPRECATED legacy multi-platform shape
 };
 
 export type Playlist = {
@@ -60,13 +60,13 @@ export type Playlist = {
   name: string;
   description?: string;
   songIds: string[];
-  createdAt?: string; // ISO 8601 timestamp
-  updatedAt?: string; // ISO 8601 timestamp
+  createdAt?: string; // ISO 8601
+  updatedAt?: string; // ISO 8601
 };
 
 export type RecommendationRound = {
-  id: string; // e.g., "round-1"
-  round: number; // 1, 2, 3, ...
-  createdAt: string; // ISO 8601 timestamp
+  id: string;       // e.g., "round-1"
+  round: number;    // 1, 2, 3, ...
+  createdAt: string; // ISO 8601
   notes?: string;
 };

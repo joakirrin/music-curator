@@ -135,72 +135,58 @@
 
 ---
 
-## 🔄 IN PROGRESS TASKS
 
-**None currently** - Phase 1.6 is complete!
-
----
-
-## 📅 PENDING TASKS (ROADMAP)
 
 ### **PHASE 2: FEEDBACK & LEARNING** (Next Up)
 
 #### Task 2.1: Verification Status Filter (15-20 min) 🎯 NEXT
-- [ ] Add filter buttons: All/Verified/Unverified/Failed
-- [ ] Show counts for each status
-- [ ] Integrate with existing FilterBar UI
-- [ ] Add new filter row
-- [ ] Update filtered songs logic in App.tsx
-- [ ] Style buttons with appropriate colors
+- [x ] Add filter buttons: All/Verified/Unverified/Failed
+- [x ] Show counts for each status
+- [x ] Integrate with existing FilterBar UI
+- [x ] Add new filter row
+- [x ] Update filtered songs logic in App.tsx
+- [x ] Style buttons with appropriate colors
 
 **Priority**: HIGH
 **Dependencies**: None
 **Files to modify**: FilterBar.tsx, App.tsx
 
 #### Task 2.2: Smart Replacement Suggestions (30-40 min)
-- [ ] Analyze failed verifications
-- [ ] Generate ChatGPT prompt for replacements
-- [ ] Format: "These X tracks weren't found: [...]. Suggest alternatives."
-- [ ] Copy prompt to clipboard
-- [ ] Show preview before copying
-- [ ] Track which suggestions were accepted
-- [ ] Add button to Toolbar
+- [x ] Analyze failed verifications
+- [x ] Generate ChatGPT prompt for replacements
+- [x ] Format: "These X tracks weren't found: [...]. Suggest alternatives."
+- [x ] Copy prompt to clipboard
+- [x ] Show preview before copying
+- [x ] Track which suggestions were accepted
+- [x ] Add button to Toolbar
 
 **Priority**: MEDIUM
 **Dependencies**: Task 2.1 (optional)
 **Files to modify**: App.tsx, Toolbar.tsx (new component?)
 
-#### Task 2.3: Taste Profile Analysis (20-30 min)
-- [ ] Analyze Keep vs Skip patterns
-- [ ] Extract common characteristics:
-  - [ ] Genres (from Spotify metadata)
-  - [ ] Energy levels
-  - [ ] BPM ranges
-  - [ ] Popularity scores
-  - [ ] Explicit vs clean
-- [ ] Generate taste profile summary
-- [ ] Format for ChatGPT prompt
-- [ ] Add "Copy Taste Profile" button
 
-**Priority**: MEDIUM
-**Dependencies**: Task 2.1
-**Files to modify**: New analysis utility, Toolbar.tsx
-
-#### Task 2.4: Feedback Quality Metrics (20-30 min)
-- [ ] Track ChatGPT accuracy per round
-- [ ] Calculate hit rate: (verified + kept) / total
-- [ ] Show improvement over time
-- [ ] Round-by-round statistics
-- [ ] Visual dashboard component
-- [ ] Export metrics with feedback
 
 **Priority**: LOW
 **Dependencies**: Multiple rounds of data
 **Files to modify**: New dashboard component, App.tsx
 
+
+## PendingTASKS
+
 ---
 
-### **PHASE 3: ADVANCED VISUALIZATION** (Future)
+### **PHASE 3: INTEGRATION WITH SPOTIFY
+
+task 3.0.
+
+#### Task 3.0.1: Playlist Management (2 hours)
+- [ ] Create playlists from Keep songs
+- [ ] Export to Spotify playlist (via API)
+- [ ] Requires user Spotify login (OAuth)
+- [ ] Sync with Spotify account
+- [ ] Share playlist links
+
+- [ ]Pull song metadata for task 3.1
 
 #### Task 3.1: Spotify Metadata Graphs (1-2 hours)
 - [ ] Energy vs Valence scatter plot
@@ -209,6 +195,7 @@
 - [ ] Genre breakdown pie chart
 - [ ] Release year distribution
 - [ ] Explicit content percentage
+- [ ] Review other values that could be interesting for the user
 
 **Priority**: LOW
 **Dependencies**: Phase 2 complete
@@ -236,9 +223,19 @@
 **Dependencies**: Task 2.3, 3.1
 **Files to modify**: ChatGPTSongRow.tsx, new insight component
 
+
+### **PHASE 4: CHATGPT API AUTOMATION** (Future)
+
+#### Task 4.1: API Integration (1 hour)
+- [ ] Set up ChatGPT API client
+- [ ] Store API key securely
+- [ ] Handle API errors gracefully
+- [ ] Implement rate limiting
+- [ ] Track token usage
+
 ---
 
-### **PHASE 4: INTEGRATIONS** (Future)
+### **PHASE 5: OTHER INTEGRATIONS** (Future)
 
 #### Task 4.1: YouTube Verification (1-2 hours)
 - [ ] Add YouTube Data API integration
@@ -251,23 +248,15 @@
 **Dependencies**: Phase 2 complete
 **API**: YouTube Data API v3
 
-#### Task 4.2: Bandcamp Integration (1 hour)
-- [ ] Search Bandcamp for indie artists
-- [ ] Get purchase links
-- [ ] Support independent musicians
-- [ ] Display Bandcamp badges
-- [ ] Direct buy links
 
-**Priority**: VERY LOW
-**Dependencies**: None
-**API**: Bandcamp (no official API - may need scraping)
+#### Task 4.2: Apple Music Verification (1-2 hours)
+- [ ] Add Apple Music Data API integration
+- [ ] Search Apple Music for songs
+- [ ] Fallback when Spotify fails
+- [ ] Get video links and metadata
+- [ ] Add YouTube badges to song rows
 
-#### Task 4.3: Playlist Management (2 hours)
-- [ ] Create playlists from Keep songs
-- [ ] Export to Spotify playlist (via API)
-- [ ] Requires user Spotify login (OAuth)
-- [ ] Sync with Spotify account
-- [ ] Share playlist links
+
 
 **Priority**: MEDIUM
 **Dependencies**: None
@@ -286,14 +275,7 @@
 
 ---
 
-### **PHASE 5: CHATGPT API AUTOMATION** (Future)
 
-#### Task 5.1: API Integration (1 hour)
-- [ ] Set up ChatGPT API client
-- [ ] Store API key securely
-- [ ] Handle API errors gracefully
-- [ ] Implement rate limiting
-- [ ] Track token usage
 
 **Priority**: LOW
 **Dependencies**: ChatGPT API key + credits
