@@ -16,8 +16,9 @@ Date: 2025-11-07
 **Files**: App.tsx, SpotifyAuth.ts, Toolbar.tsx
 
 #### Task 3.0.2: Create Playlist from Keep Songs
-- [ ] Map “Keep” songs to Spotify track URIs
-- [ ] POST new playlist to user’s account
+For this task, we need to do two things: 1st is to manage playlists locally in Fonea with a name, description and the songs that are included. 
+Once we have created the playlist in Fonea, map these songs to Spotify Track URIs and have a button to create the playlist in Spotify and post it to the user's account. 
+This functionality must be able to add songs to an existing playlist. This playlist can exist on Spotify or on Fonea. 
 - [ ] Add progress feedback and success confirmation
 - [ ] Error handling for invalid URIs or rate limits
 **Priority**: HIGH | **Dependencies**: 3.0.1

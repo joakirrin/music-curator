@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback } from "react";
 
 import { Header } from "./components/Header";
 import Toolbar from "./components/Toolbar";

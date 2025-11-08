@@ -3,4 +3,4 @@
  * Central export point for all type definitions
  */
 
-export type { Song, Playlist, RecommendationRound } from './song';
+export type { Song, Playlist, RecommendationRound, Platform, FilterType, VerificationFilterType } from './song';
