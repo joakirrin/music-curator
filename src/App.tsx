@@ -36,12 +36,6 @@ export default function App() {
   const hasContent = songs.length > 0;
 
   // --- Import / Replace flows ---
-  const applyImport = useCallback(
-    (incoming: Song[]) => {
-      setSongs(incoming);
-    },
-    [setSongs]
-  );
 
   const handleChatGPTImport = useCallback(
     (incoming: Song[], replaceFailedInRound?: number) => {
@@ -276,7 +270,6 @@ export default function App() {
         <>
           <Toolbar
             songs={songs}
-            onImport={applyImport}
             onClear={onClear}
             onOpenChatGPTModal={() => setIsChatGPTModalOpen(true)}
             onExportFeedback={handleExportFeedback}
