@@ -24,7 +24,7 @@ export default function App() {
   const { open: onboardingOpen, close: onboardingClose } = useOnboardingFlag();
 
   // --- Core state ---
-  const { songs, setSongs } = useSongsState(demoSongs ?? []);
+  const { songs, setSongs } = useSongsState([]);
   const [filterType, setFilterType] = useState<FilterType>("all");
   const [verificationFilter, setVerificationFilter] = useState<VerificationFilterType>("all"); // ✅ Phase 2.1
   const [search, setSearch] = useState("");
@@ -254,7 +254,7 @@ export default function App() {
   const handleImportFromEmpty = () => setIsChatGPTModalOpen(true);
 
   return (
-    <div className="min-h-screen bg-gray-800">
+    <div className="min-h-screen bg-gray-800 flex flex-col">
       {/* Top bar with Help button */}
       <div style={{ display: "flex", justifyContent: "flex-end", padding: "12px" }}>
         <button className="btn" onClick={() => setDrawerOpen(true)}>
@@ -288,7 +288,7 @@ export default function App() {
             onRoundChange={setSelectedRound}
           />
 
-          <div>
+          <div className="flex-1 pb-8">
             {filtered.map((s) => (
               <ChatGPTSongRow
                 key={s.id}

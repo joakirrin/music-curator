@@ -31,7 +31,7 @@ export const ChatGPTSongRow = ({ song, onUpdate, onDelete }: Props) => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-4 border-b border-gray-700 bg-gray-700 hover:bg-gray-650 transition-colors">
+    <div className="container mx-auto px-4 py-4 border-b border-gray-700 bg-gray-700 hover:bg-gray-650 transition-colors overflow-hidden">
       {/* ✅ Dark mode: gray-700 background, darker gray card */}
       
       {/* Header Row - Badges & Actions */}
@@ -114,7 +114,7 @@ export const ChatGPTSongRow = ({ song, onUpdate, onDelete }: Props) => {
             value={song.title}
             onChange={(e) => set("title", e.target.value)}
             placeholder="Title"
-            className="w-full px-3 py-2 rounded-xl border border-gray-500 bg-gray-600 text-white placeholder-gray-400 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 rounded-xl border border-gray-500 bg-gray-600 text-white placeholder-gray-400 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 break-words"
           />
           <input
             value={song.artist}
