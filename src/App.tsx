@@ -19,6 +19,8 @@ import EmptyState from "@/components/EmptyState";
 import { useOnboardingFlag } from "@/hooks/useOnboardingFlag";
 import "@/styles/guide.css";
 
+const DEV = import.meta.env.DEV;
+
 export default function App() {
   // --- Onboarding / Guide ---
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -38,17 +40,45 @@ export default function App() {
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get("code");
     const state = urlParams.get("state");
+    const error = urlParams.get("error");
+    const errorDescription = urlParams.get("error_description");
 
+    // Handle OAuth errors
+    if (error) {
+      if (DEV) {
+        console.error("[App] OAuth error:", error, errorDescription);
+      }
+      alert(`❌ Spotify login error: ${error}\n${errorDescription || ''}`);
+      window.history.replaceState({}, "", window.location.pathname);
+      return;
+    }
+
+    // Handle OAuth success
     if (code && state) {
-      console.log("🔄 OAuth callback detected");
+      if (DEV) {
+        console.log("[App] 🔄 OAuth callback detected");
+        console.log("[App] Code:", code.substring(0, 20) + "...");
+        console.log("[App] State:", state);
+      }
+      
       spotifyAuth.handleCallback(code, state).then((success) => {
-        // Clear URL parameters so we don’t re-run on refresh
+        // Clear URL parameters so we don't re-run on refresh
         window.history.replaceState({}, "", window.location.pathname);
+        
         if (success) {
+          if (DEV) console.log("[App] ✅ Login successful");
           alert("✅ Successfully logged in to Spotify!");
+          
+          // Optionally trigger a re-render or state update here
+          // to show user info in UI
         } else {
-          alert("❌ Login failed. Please try again.");
+          if (DEV) console.error("[App] ❌ Login failed");
+          alert("❌ Login failed. Please check console and try again.");
         }
+      }).catch((err) => {
+        if (DEV) console.error("[App] ❌ Callback handler exception:", err);
+        alert("❌ Login error. Please check console and try again.");
+        window.history.replaceState({}, "", window.location.pathname);
       });
     }
   }, []);
@@ -160,13 +190,13 @@ export default function App() {
       return acc;
     }, {} as Record<number, Song[]>);
 
-    let prompt = `🔄 REPLACEMENT REQUEST\n\n`;
+    let prompt = `📄 REPLACEMENT REQUEST\n\n`;
     prompt += `I need help replacing ${failedTracks.length} track${
       failedTracks.length !== 1 ? "s" : ""
     } that couldn't be verified on Spotify.\n\n`;
 
     Object.entries(tracksByRound).forEach(([round, tracks]) => {
-      prompt += `📀 Round ${round}:\n`;
+      prompt += `🔀 Round ${round}:\n`;
       tracks.forEach((track) => {
         prompt += `  • "${track.title}" by ${track.artist}\n`;
         if (track.verificationError) prompt += `    ❌ Error: ${track.verificationError}\n`;
