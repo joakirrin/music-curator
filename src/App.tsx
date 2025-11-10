@@ -1,5 +1,5 @@
 // src/App.tsx
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { spotifyAuth } from "./services/spotifyAuth";
 import { SpotifyLoginButton } from "./components/SpotifyLoginButton";
 
@@ -35,8 +35,17 @@ export default function App() {
   const [isFailedTracksModalOpen, setIsFailedTracksModalOpen] = useState(false);
   const [selectedRound, setSelectedRound] = useState<number | "all">("all");
 
+  // ✅ FIX: Use ref to prevent double OAuth callback in React Strict Mode
+  const callbackHandledRef = useRef(false);
+
   // --- OAuth callback (runs once) ---
   useEffect(() => {
+    // ✅ Prevent double execution in React Strict Mode
+    if (callbackHandledRef.current) {
+      if (DEV) console.log("[App] ⏭️ Skipping duplicate callback (already handled)");
+      return;
+    }
+
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get("code");
     const state = urlParams.get("state");
@@ -55,6 +64,9 @@ export default function App() {
 
     // Handle OAuth success
     if (code && state) {
+      // ✅ Mark as handled immediately to prevent double execution
+      callbackHandledRef.current = true;
+
       if (DEV) {
         console.log("[App] 🔄 OAuth callback detected");
         console.log("[App] Code:", code.substring(0, 20) + "...");
@@ -81,7 +93,7 @@ export default function App() {
         window.history.replaceState({}, "", window.location.pathname);
       });
     }
-  }, []);
+  }, []); // Empty deps - run once on mount
 
   const hasContent = songs.length > 0;
 
