@@ -1,23 +1,14 @@
 # 🎧 Welcome to Fonea
+
+For Fonea to work, the user must log into spotify in the Fonea App - above anything. Otherwise the app will not verify the songs and nothing makes sense. They can access the Fonea App here https://music-curator-self.vercel.app/ 
+
 Two pieces work together:
 
 
 1) **Fonea Companion GPT** → proposes songs, according to your vibes andgenerates curated track lists in JSON
 2) **Fonea Sound Curator App** → imports JSON, verifies tracks, collects your feedback, and exports it back.
 
-
-
-<!-- Optional button-style link -->
-<p align="center">
-  <a href="https://chatgpt.com/g/g-69095d95449c8191a6e34a297676dae2-fonea-companion-gpt"
-     target="_blank" rel="noopener noreferrer"
-     style="background-color:#10a37f;color:white;padding:10px 20px;
-            border-radius:8px;text-decoration:none;font-weight:bold;">
-     🤖 Open Fonea Companion GPT
-  </a>
-</p>
-
-
+> Open the Fonea Companion GPT here: [https://chatgpt.com/g/g-69095d95449c8191a6e34a297676dae2-fonea-companion-gpt](https://chatgpt.com/g/g-69095d95449c8191a6e34a297676dae2-fonea-companion-gpt)
 
 ---
 

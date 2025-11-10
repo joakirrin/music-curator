@@ -18,7 +18,7 @@ return (
 Start by importing a playlist JSON from the Companion GPT, or open the guide to see the workflow.
 </p>
 <div className="fonea-empty_actions">
-<button className="btn btn-primary" onClick={onImport}>Import from ChatGPT</button>
+<button className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors" onClick={onImport}>Import from ChatGPT</button>
 <button className="btn btn-ghost" onClick={onOpenGuide}>Open Guide</button>
 </div>
 <ul className="fonea-empty_steps">

@@ -4,6 +4,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import guideMd from "@/content/guide.md?raw";
 import "../styles/guide.css";
+import rehypeRaw from "rehype-raw";
+
 
 type GuideDrawerProps = {
   open: boolean;
@@ -36,14 +38,17 @@ const GuideDrawer: React.FC<GuideDrawerProps> = ({ open, onClose }) => {
         <div className="fonea-guide_content">
           {/* Wrap markdown so we can style paragraphs/lists */}
           <div className="markdown">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml={false}>
+            <ReactMarkdown 
+             remarkPlugins={[remarkGfm]} skipHtml={false}
+             rehypePlugins={[rehypeRaw]}
+             >
               {guideMd}
             </ReactMarkdown>
           </div>
         </div>
 
         <footer className="fonea-guide_footer">
-          <button className="btn btn-primary" onClick={onClose}>
+          <button className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors" onClick={onClose}>
             Got it
           </button>
         </footer>
