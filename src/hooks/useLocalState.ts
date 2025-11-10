@@ -1,53 +1,37 @@
 // src/hooks/useLocalState.ts
-// LocalStorage-backed songs state with one-time migration (songs -> songs_v2)
+import { useEffect, useState } from "react";
+import type { Song } from "@/types/song";
 
-import { useEffect, useState, useCallback } from "react";
-import type { Song } from "../types/song";
-import { normalizeSong } from "../utils/fileHandlers";
+const STORAGE_KEY = "fonea.songs.v1";
 
-const NEW_KEY = "songs_v2";
-const OLD_KEY = "songs";
-
-function safeParse(json: string | null): unknown {
-  if (!json) return null;
-  try {
-    return JSON.parse(json);
-  } catch {
-    return null;
-  }
-}
-
+/**
+ * Local-storage backed songs state without render loops.
+ * - Loads once via lazy initializer (no effect + setState on mount).
+ * - Persists on changes.
+ */
 export function useSongsState(initial: Song[] = []) {
-  const [songs, setSongs] = useState<Song[]>([]);
+  const [songs, setSongs] = useState<Song[]>(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Song[];
+        // very light validation
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {
+      /* ignore parse errors and fall back to initial */
+    }
+    return initial;
+  });
 
+  // Persist only when songs actually change
   useEffect(() => {
-    // Phase 1: Try new storage
-    const v2Raw = safeParse(localStorage.getItem(NEW_KEY));
-    if (Array.isArray(v2Raw)) {
-      const normalized = v2Raw.map(normalizeSong);
-      setSongs(normalized);
-      return;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(songs));
+    } catch {
+      /* ignore quota errors */
     }
+  }, [songs]);
 
-    // Phase 2: Migrate from old key if present
-    const v1Raw = safeParse(localStorage.getItem(OLD_KEY));
-    if (Array.isArray(v1Raw)) {
-      const normalized = v1Raw.map(normalizeSong);
-      setSongs(normalized);
-      // Write through to new key
-      localStorage.setItem(NEW_KEY, JSON.stringify(normalized));
-      return;
-    }
-
-    // Phase 3: Use provided initial
-    setSongs(initial.map(normalizeSong));
-  }, [initial]);
-
-  const saveSongs = useCallback((next: Song[]) => {
-    const normalized = next.map(normalizeSong);
-    setSongs(normalized);
-    localStorage.setItem(NEW_KEY, JSON.stringify(normalized));
-  }, []);
-
-  return { songs, setSongs: saveSongs, storageKey: NEW_KEY };
+  return { songs, setSongs };
 }

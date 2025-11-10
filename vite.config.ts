@@ -15,7 +15,7 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
-    allowedHosts: ['*'], // or ['jbm-macbook-air-m1','localhost','.local']
+    allowedHosts: ['*'], // or ['jbm-macbook-air-m1','localhost', 'http://127.0.0.1:5173','.local']
   },
   preview: {
     host: '0.0.0.0',

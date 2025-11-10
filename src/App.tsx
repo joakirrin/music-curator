@@ -1,16 +1,17 @@
 // src/App.tsx
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
+import { spotifyAuth } from "./services/spotifyAuth";
+import { SpotifyLoginButton } from "./components/SpotifyLoginButton";
 
 import { Header } from "./components/Header";
 import Toolbar from "./components/Toolbar";
 import FilterBar from "./components/FilterBar";
 import { ChatGPTSongRow } from "./components/ChatGPTSongRow";
 import ImportChatGPTModal from "./components/ImportChatGPTModal";
-import FailedTracksModal from "./components/FailedTracksModal"; // ✅ Phase 2.2 - Chunk 2
+import FailedTracksModal from "./components/FailedTracksModal";
 
 import type { FilterType, VerificationFilterType, Song } from "./types/song";
 import { useSongsState } from "./hooks/useLocalState";
-import { demoSongs } from "./utils/demoData";
 
 // Guide / Empty state onboarding
 import GuideDrawer from "@/components/GuideDrawer";
@@ -24,35 +25,45 @@ export default function App() {
   const { open: onboardingOpen, close: onboardingClose } = useOnboardingFlag();
 
   // --- Core state ---
-  const { songs, setSongs } = useSongsState([]);
+  const { songs, setSongs } = useSongsState([]); // start empty
   const [filterType, setFilterType] = useState<FilterType>("all");
-  const [verificationFilter, setVerificationFilter] = useState<VerificationFilterType>("all"); // ✅ Phase 2.1
+  const [verificationFilter, setVerificationFilter] = useState<VerificationFilterType>("all");
   const [search, setSearch] = useState("");
   const [isChatGPTModalOpen, setIsChatGPTModalOpen] = useState(false);
-  const [isFailedTracksModalOpen, setIsFailedTracksModalOpen] = useState(false); // ✅ Phase 2.2 - Chunk 2
+  const [isFailedTracksModalOpen, setIsFailedTracksModalOpen] = useState(false);
   const [selectedRound, setSelectedRound] = useState<number | "all">("all");
 
-  // Empty state condition: no songs loaded yet
+  // --- OAuth callback (runs once) ---
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get("code");
+    const state = urlParams.get("state");
+
+    if (code && state) {
+      console.log("🔄 OAuth callback detected");
+      spotifyAuth.handleCallback(code, state).then((success) => {
+        // Clear URL parameters so we don’t re-run on refresh
+        window.history.replaceState({}, "", window.location.pathname);
+        if (success) {
+          alert("✅ Successfully logged in to Spotify!");
+        } else {
+          alert("❌ Login failed. Please try again.");
+        }
+      });
+    }
+  }, []);
+
   const hasContent = songs.length > 0;
 
   // --- Import / Replace flows ---
-
   const handleChatGPTImport = useCallback(
     (incoming: Song[], replaceFailedInRound?: number) => {
-      // ✅ Phase 2.2 - Chunk 3: Smart Replacement Logic
       let updatedSongs = [...songs];
 
       if (replaceFailedInRound !== undefined) {
-        const failedTracksInRound = updatedSongs.filter(
-          (s) => s.round === replaceFailedInRound && s.verificationStatus === "failed"
-        );
-
-        // Remove failed tracks from that round
         updatedSongs = updatedSongs.filter(
           (s) => !(s.round === replaceFailedInRound && s.verificationStatus === "failed")
         );
-
-        console.log(`✅ Deleted ${failedTracksInRound.length} failed tracks from Round ${replaceFailedInRound}`);
       }
 
       setSongs([...updatedSongs, ...incoming]);
@@ -83,11 +94,10 @@ export default function App() {
     [songs, setSongs]
   );
 
-  // --- Filters (Phase 2.1 + 2.2 rule: failed never in main list) ---
+  // --- Filters (hide failed in main list) ---
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
 
-    // Always hide failed in main list
     let base = songs.filter((s) => s.verificationStatus !== "failed");
 
     if (selectedRound !== "all") {
@@ -109,7 +119,6 @@ export default function App() {
       return hay.includes(q);
     });
 
-    // Verification filter
     switch (verificationFilter) {
       case "verified":
         base = base.filter((s) => s.verificationStatus === "verified");
@@ -118,12 +127,9 @@ export default function App() {
         base = base.filter((s) => s.verificationStatus === "unverified" || !s.verificationStatus);
         break;
       case "failed":
-        // We hide failed by design; clicking this shows empty + hint to modal
         return [];
-      // default: "all" (already excluding failed)
     }
 
-    // Feedback filter
     switch (filterType) {
       case "keep":
         return base.filter((s) => s.feedback === "keep");
@@ -136,7 +142,6 @@ export default function App() {
     }
   }, [songs, search, filterType, verificationFilter, selectedRound]);
 
-  // --- Failed tracks modal trigger ---
   const handleGetReplacements = useCallback(() => {
     const failedTracks = songs.filter((s) => s.verificationStatus === "failed");
     if (failedTracks.length === 0) {
@@ -146,10 +151,8 @@ export default function App() {
     setIsFailedTracksModalOpen(true);
   }, [songs]);
 
-  // --- Replacement prompt copy ---
   const handleCopyReplacementPrompt = useCallback(() => {
     const failedTracks = songs.filter((s) => s.verificationStatus === "failed");
-
     const tracksByRound = failedTracks.reduce((acc, track) => {
       const round = track.round || 0;
       if (!acc[round]) acc[round] = [];
@@ -158,52 +161,25 @@ export default function App() {
     }, {} as Record<number, Song[]>);
 
     let prompt = `🔄 REPLACEMENT REQUEST\n\n`;
-    prompt += `I need help replacing ${failedTracks.length} track${failedTracks.length !== 1 ? "s" : ""} that couldn't be verified on Spotify.\n\n`;
+    prompt += `I need help replacing ${failedTracks.length} track${
+      failedTracks.length !== 1 ? "s" : ""
+    } that couldn't be verified on Spotify.\n\n`;
 
     Object.entries(tracksByRound).forEach(([round, tracks]) => {
       prompt += `📀 Round ${round}:\n`;
       tracks.forEach((track) => {
         prompt += `  • "${track.title}" by ${track.artist}\n`;
-        if (track.verificationError) {
-          prompt += `    ❌ Error: ${track.verificationError}\n`;
-        }
-        if (track.comments) {
-          prompt += `    💡 Original reason: "${track.comments}"\n`;
-        }
+        if (track.verificationError) prompt += `    ❌ Error: ${track.verificationError}\n`;
+        if (track.comments) prompt += `    💡 Original reason: "${track.comments}"\n`;
       });
       prompt += `\n`;
     });
 
-    prompt += `\n🎯 INSTRUCTIONS:\n`;
-    prompt += `Please suggest replacement tracks that:\n`;
-    prompt += `1. Exist on Spotify (verify before suggesting)\n`;
-    prompt += `2. Match the original vibe/reason for recommendation\n`;
-    prompt += `3. Keep the same round number as the original\n\n`;
-    prompt += `Format your response as JSON:\n`;
-    prompt += `{\n`;
-    prompt += `  "round": [round_number],\n`;
-    prompt += `  "recommendations": [\n`;
-    prompt += `    {\n`;
-    prompt += `      "title": "Song Name",\n`;
-    prompt += `      "artist": "Artist Name",\n`;
-    prompt += `      "reason": "Why this replaces the failed track"\n`;
-    prompt += `    }\n`;
-    prompt += `  ]\n`;
-    prompt += `}\n\n`;
-    prompt += `✨ Thanks for helping improve the recommendations!`;
-
+    prompt += `🎯 Please suggest verified Spotify replacements with the same vibe and round.\n`;
     navigator.clipboard.writeText(prompt);
-
-    const roundCount = Object.keys(tracksByRound).length;
-    alert(
-      `✅ Replacement prompt copied to clipboard!\n\n` +
-        `• ${failedTracks.length} failed track${failedTracks.length !== 1 ? "s" : ""}\n` +
-        `• Across ${roundCount} round${roundCount !== 1 ? "s" : ""}\n\n` +
-        `Paste this into ChatGPT to get better alternatives!`
-    );
+    alert("✅ Replacement prompt copied to clipboard!");
   }, [songs]);
 
-  // --- Export feedback (learning loop) ---
   const handleExportFeedback = useCallback(() => {
     const songsWithFeedback = songs.filter((s) => s.feedback && s.feedback !== "pending");
     if (songsWithFeedback.length === 0) {
@@ -212,7 +188,6 @@ export default function App() {
     }
 
     const latestRound = Math.max(...songs.map((s) => s.round || 0));
-
     const feedbackData: any = {
       round: latestRound,
       summary: {
@@ -222,35 +197,23 @@ export default function App() {
         skipped: songsWithFeedback.filter((s) => s.feedback === "skip").length,
         verified: songs.filter((s) => s.verificationStatus === "verified").length,
       },
-      feedback: songsWithFeedback.map((s) => {
-        const item: any = {
-          requestedTitle: s.title,
-          requestedArtist: s.artist,
-          decision: s.feedback,
-          userFeedback: s.userFeedback || "",
-        };
-        if (s.verificationStatus === "verified") {
-          item.verification = {
-            status: "verified",
-            spotifyUrl: s.spotifyUrl,
-            album: s.album,
-            popularity: s.popularity,
-          };
-        }
-        return item;
-      }),
+      feedback: songsWithFeedback.map((s) => ({
+        requestedTitle: s.title,
+        requestedArtist: s.artist,
+        decision: s.feedback,
+        userFeedback: s.userFeedback || "",
+        verification:
+          s.verificationStatus === "verified"
+            ? { status: "verified", spotifyUrl: s.spotifyUrl, album: s.album, popularity: s.popularity }
+            : undefined,
+      })),
       instructions: `Use this feedback to improve future recommendations for Round ${latestRound + 1}.`,
     };
 
     navigator.clipboard.writeText(JSON.stringify(feedbackData, null, 2));
-    alert(
-      `✅ Feedback for ${songsWithFeedback.length} songs copied to clipboard!\n\n` +
-        `Paste this into ChatGPT to get better recommendations for Round ${latestRound + 1}.\n\n` +
-        `💡 Tip: Use "Get Replacements" to fix failed tracks separately.`
-    );
+    alert("✅ Feedback copied to clipboard!");
   }, [songs]);
 
-  // --- Guide: open on first visit or via button ---
   const handleImportFromEmpty = () => setIsChatGPTModalOpen(true);
 
   return (
@@ -260,6 +223,11 @@ export default function App() {
         <button className="btn" onClick={() => setDrawerOpen(true)}>
           Open Guide
         </button>
+      </div>
+
+      {/* Spotify login button */}
+      <div className="container mx-auto px-4 py-4 flex justify-end">
+        <SpotifyLoginButton />
       </div>
 
       {/* Always show header */}
