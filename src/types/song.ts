@@ -14,11 +14,13 @@ export type VerificationFilterType = "all" | "verified" | "unverified" | "failed
 export type Song = {
   id: string;
   title: string;
+  albumArtUrl?: string;
   artist: string;
   featuring?: string;
   album?: string;
   year?: string;
   producer?: string;
+  albumArtUrl?: string | null;
   comments?: string;        // ChatGPT's reason (read-only from ChatGPT)
   duration?: number;        // seconds (coarse)
   durationMs?: number;      // milliseconds (accurate)

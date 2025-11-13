@@ -117,12 +117,32 @@ export const ChatGPTSongRow = ({ song, onUpdate, onDelete }: Props) => {
       */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3 md:auto-rows-min">
         {/* Fila 1 */}
+        {song.albumArtUrl && (
+  <div className="flex justify-center mb-3 md:col-span-2">
+    <img
+      src={song.albumArtUrl}
+      alt={`${song.title} album cover`}
+      className="w-20 h-20 rounded-xl object-cover shadow-md border border-gray-600"
+    />
+  </div>
+)}
+
         <input
           value={song.title}
           onChange={(e) => set("title", e.target.value)}
           placeholder="Title"
           className="w-full px-3 py-2 rounded-xl border border-gray-500 bg-gray-600 text-white placeholder-gray-400 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 break-words md:col-start-1 md:row-start-1"
         />
+        {song.albumArtUrl && (
+  <div className="flex justify-center mb-2">
+    <img
+      src={song.albumArtUrl}
+      alt={`${song.title} album cover`}
+      className="w-20 h-20 rounded-xl object-cover shadow-md border border-gray-600"
+    />
+  </div>
+)}
+
         <input
           value={song.year ?? ""}
           onChange={(e) => set("year", e.target.value)}
