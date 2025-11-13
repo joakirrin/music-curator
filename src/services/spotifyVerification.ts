@@ -183,15 +183,16 @@ export async function verifySong(input: Song): Promise<Partial<Song>> {
       log(`Track ID: ${best.id}`);
       log(`URI: ${best.uri}`);
 
+      // ✅ Use service-agnostic field names and albumArtUrl
       return {
         verificationStatus: 'verified',
         verifiedAt: new Date().toISOString(),
         verificationSource: 'spotify',
-        spotifyId: best.id,
-        spotifyUri: best.uri,
-        spotifyUrl: `https://open.spotify.com/track/${best.id}`,
+        serviceId: best.id,
+        serviceUri: best.uri,
+        serviceUrl: `https://open.spotify.com/track/${best.id}`,
         previewUrl: best.preview_url ?? input.previewUrl,
-        albumArt: best.album?.images?.[0]?.url ?? input.albumArt,
+        albumArtUrl: best.album?.images?.[0]?.url ?? input.albumArtUrl,
         durationMs: input.durationMs,
         isPlayable: best.is_playable ?? input.isPlayable,
         popularity: best.popularity ?? input.popularity,

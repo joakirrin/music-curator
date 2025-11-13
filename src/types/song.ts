@@ -1,6 +1,6 @@
 /**
  * Core Song type definition
- * Supports multiple sources (manual, ChatGPT, Spotify) and recommendation workflows
+ * Supports multiple sources (manual, ChatGPT, Spotify, YouTube, Apple Music) and recommendation workflows
  */
 
 export type Platform = "Spotify" | "YouTube" | "Bandcamp" | "SoundCloud";
@@ -14,47 +14,49 @@ export type VerificationFilterType = "all" | "verified" | "unverified" | "failed
 export type Song = {
   id: string;
   title: string;
-  albumArtUrl?: string;
   artist: string;
-  featuring?: string;
   album?: string;
   year?: string;
   producer?: string;
-  albumArtUrl?: string | null;
   comments?: string;        // ChatGPT's reason (read-only from ChatGPT)
   duration?: number;        // seconds (coarse)
   durationMs?: number;      // milliseconds (accurate)
 
   // Source + workflow
-  source?: "chatgpt" | "manual" | "spotify";
+  source?: "chatgpt" | "manual" | "spotify" | "youtube" | "applemusic";
   round?: number;
   feedback?: "keep" | "skip" | "pending";  // replaces legacy liked/toAdd
   userFeedback?: string;                   // user's text feedback to send back to ChatGPT
   playlistId?: string;
 
-  // Spotify linkage
-  spotifyUri?: string;      // "spotify:track:..."
-  spotifyId?: string;       // extracted from spotifyUri or API ("3n3Ppam7vgaVa1iaRUc9Lp")
-  spotifyUrl?: string;      // https://open.spotify.com/track/...
+  // Service-agnostic metadata (works for Spotify, YouTube, Apple Music, etc.)
+  serviceUri?: string;      // Service-specific URI (e.g., "spotify:track:..." or "youtube:video:...")
+  serviceId?: string;       // Service-specific ID extracted from URI/URL
+  serviceUrl?: string;      // Direct URL to track on service (e.g., https://open.spotify.com/track/...)
   previewUrl?: string;      // 30s preview URL
-  albumArt?: string;        // image URL (e.g., 300x300)
-  releaseDate?: string;
-  explicit?: boolean;
-  popularity?: number;      // 0–100
-  isPlayable?: boolean;
+  albumArtUrl?: string;     // Album artwork image URL (e.g., 300x300)
+  releaseDate?: string;     // Release date (YYYY-MM-DD)
+  explicit?: boolean;       // Explicit content flag
+  popularity?: number;      // Popularity score (0-100, platform-specific)
+  isPlayable?: boolean;     // Whether track is playable in user's region
 
   addedAt?: string;         // ISO 8601
 
   // Verification (Phase 1.5+)
   verificationStatus?: "verified" | "unverified" | "checking" | "failed";
   verifiedAt?: string;      // ISO 8601
-  verificationSource?: "spotify" | "youtube" | "manual";
+  verificationSource?: "spotify" | "youtube" | "applemusic" | "manual";
   verificationError?: string;
 
   // ---- Deprecated (kept optional for backward compatibility) ----
+  featuring?: string;       // DEPRECATED - kept for backward compatibility only
   liked?: boolean;          // DEPRECATED legacy UI flag
   toAdd?: boolean;          // DEPRECATED legacy UI flag
   platforms?: Platform[];   // DEPRECATED legacy multi-platform shape
+  spotifyUri?: string;      // DEPRECATED - use serviceUri
+  spotifyId?: string;       // DEPRECATED - use serviceId
+  spotifyUrl?: string;      // DEPRECATED - use serviceUrl
+  albumArt?: string;        // DEPRECATED - use albumArtUrl
 };
 
 export type Playlist = {

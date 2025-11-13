@@ -1,5 +1,5 @@
 // src/components/ImportChatGPTModal.tsx
-// ✅ PHASE 2.2 UPDATE: Removed "hide unverified" checkbox - failed tracks always hidden from main list
+// ✅ PHASE 2.2 UPDATE: Uses service-agnostic field names (serviceUri, serviceId, serviceUrl)
 
 import { useState, useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -9,22 +9,24 @@ import { verifySong, applySongVerification } from "../services/spotifyVerificati
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onImport: (songs: Song[], replaceFailedInRound?: number) => void; // ✅ NEW: Phase 2.2 - Chunk 3
+  onImport: (songs: Song[], replaceFailedInRound?: number) => void;
   existingSongs: Song[];
 };
 
 type ChatGPTRecommendation = {
   title: string;
   artist: string;
-  featuring?: string;
   album?: string;
   year?: string;
   producer?: string;
-  spotifyUri?: string;
-  spotifyUrl?: string;
+  serviceUri?: string;  // Generic: "spotify:track:..." or "youtube:video:..." etc.
+  serviceUrl?: string;  // Generic: full URL to track on any service
   previewUrl?: string;
   reason?: string;
   duration?: number;
+  // Legacy Spotify fields for backward compatibility
+  spotifyUri?: string;
+  spotifyUrl?: string;
 };
 
 type ChatGPTFormat = {
@@ -48,12 +50,31 @@ type VerificationSummary = {
   failedSongs: Array<{ title: string; artist: string; error: string }>;
 };
 
-function normalizeSpotifyLink(input?: string): string | undefined {
+/**
+ * Normalizes service link to URI format
+ * Supports Spotify, YouTube, Apple Music URLs and converts them to URIs
+ */
+function normalizeServiceLink(input?: string): string | undefined {
   if (!input) return undefined;
-  if (input.startsWith('spotify:track:')) return input;
-  const urlMatch = input.match(/spotify\.com\/track\/([a-zA-Z0-9]+)/);
-  if (urlMatch) return `spotify:track:${urlMatch[1]}`;
+  
+  // Already a URI format
+  if (input.includes(':')) return input;
+  
+  // Spotify URL
+  const spotifyMatch = input.match(/spotify\.com\/track\/([a-zA-Z0-9]+)/);
+  if (spotifyMatch) return `spotify:track:${spotifyMatch[1]}`;
+  
+  // YouTube URL
+  const youtubeMatch = input.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
+  if (youtubeMatch) return `youtube:video:${youtubeMatch[1]}`;
+  
+  // Apple Music URL
+  const appleMusicMatch = input.match(/music\.apple\.com\/.*\/album\/.*\/(\d+)\?i=(\d+)/);
+  if (appleMusicMatch) return `applemusic:track:${appleMusicMatch[2]}`;
+  
+  // Just an ID (assume Spotify for backward compatibility)
   if (input.match(/^[a-zA-Z0-9]{22}$/)) return `spotify:track:${input}`;
+  
   return input;
 }
 
@@ -67,7 +88,6 @@ export default function ImportChatGPTModal({
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [autoVerify, setAutoVerify] = useState(true);
-  // ✅ REMOVED: excludeUnverified state - now hardcoded behavior
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationProgress, setVerificationProgress] = useState<VerificationProgress | null>(null);
   const [verificationSummary, setVerificationSummary] = useState<VerificationSummary | null>(null);
@@ -79,7 +99,7 @@ export default function ImportChatGPTModal({
         setJsonText("");
         setVerificationSummary(null);
         onOpenChange(false);
-      }, 10000); // ✅ UPDATED: Changed from 5000 to 10000 (10 seconds)
+      }, 10000);
 
       return () => clearTimeout(timer);
     }
@@ -107,28 +127,27 @@ export default function ImportChatGPTModal({
       const maxRound = existingRounds.length > 0 ? Math.max(...existingRounds) : 0;
       const nextRound = parsed.round ?? maxRound + 1;
 
-      // ✅ MOVED: Replacement detection will happen AFTER verification
-      // This ensures user sees verification results before deciding to replace
-
       let newSongs: Song[] = parsed.recommendations.map((rec, index) => {
         if (!rec.title || !rec.artist) {
           throw new Error(`Recommendation #${index + 1} is missing required fields (title or artist)`);
         }
 
-        const spotifyLink = normalizeSpotifyLink(rec.spotifyUri || rec.spotifyUrl);
+        // ✅ Support both new service-agnostic fields and legacy Spotify fields
+        const serviceLink = normalizeServiceLink(
+          rec.serviceUri || rec.serviceUrl || rec.spotifyUri || rec.spotifyUrl
+        );
 
         return {
           id: `chatgpt-${Date.now()}-${index}`,
           title: rec.title,
           artist: rec.artist,
-          featuring: rec.featuring,
           album: rec.album,
           year: rec.year,
           producer: rec.producer,
           source: "chatgpt" as const,
           round: nextRound,
           feedback: "pending" as const,
-          spotifyUri: spotifyLink,
+          serviceUri: serviceLink,
           previewUrl: rec.previewUrl,
           addedAt: new Date().toISOString(),
           comments: rec.reason,
@@ -216,8 +235,7 @@ export default function ImportChatGPTModal({
         setIsVerifying(false);
         setVerificationProgress(null);
 
-        // ✅ NEW: Phase 2.2 - Chunk 3: Smart Replacement Detection (AFTER verification)
-        // Check if this round has failed tracks (likely replacements)
+        // ✅ Smart Replacement Detection (AFTER verification)
         const failedInThisRound = existingSongs.filter(
           (s) => s.round === nextRound && s.verificationStatus === 'failed'
         );
@@ -233,20 +251,16 @@ export default function ImportChatGPTModal({
           );
 
           if (isReplacement) {
-            // User confirmed - these are replacements
             replaceFailedInRound = nextRound;
             console.log(`🔄 Replacing ${failedInThisRound.length} failed tracks in Round ${nextRound}`);
           }
         }
 
-        // Import with replacement info
         onImport(newSongs, replaceFailedInRound);
-
-        // ✅ Don't auto-close if replacements were made - let user see the result
         return;
       }
 
-      onImport(newSongs, undefined); // ✅ No verification, no replacements
+      onImport(newSongs, undefined);
       
       if (!autoVerify) {
         setJsonText("");
@@ -303,7 +317,6 @@ export default function ImportChatGPTModal({
                 ✅ Import Complete!
               </Dialog.Title>
               
-              {/* ✅ UPDATED: New message explaining failed tracks are hidden */}
               <p className="text-sm text-gray-600 mb-4">
                 {verificationSummary.failed > 0 ? (
                   <>
@@ -430,9 +443,6 @@ export default function ImportChatGPTModal({
                       ✓ Auto-verify with Spotify Search API
                     </span>
                   </label>
-                  
-                  {/* ✅ REMOVED: "Hide unverified tracks" checkbox */}
-                  {/* Failed tracks are now always hidden from main list by design */}
                   
                   <p className="text-xs text-emerald-700">
                     {autoVerify 
