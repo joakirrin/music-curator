@@ -2,7 +2,6 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { spotifyAuth } from "./services/spotifyAuth";
 import { SpotifyLoginButton } from "./components/SpotifyLoginButton";
-import { usePlaylistsState } from './hooks/usePlaylistsState';
 
 import { Header } from "./components/Header";
 import Toolbar from "./components/Toolbar";
