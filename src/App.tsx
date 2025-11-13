@@ -2,6 +2,7 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { spotifyAuth } from "./services/spotifyAuth";
 import { SpotifyLoginButton } from "./components/SpotifyLoginButton";
+import { usePlaylistsState } from './hooks/usePlaylistsState';
 
 import { Header } from "./components/Header";
 import Toolbar from "./components/Toolbar";
@@ -9,7 +10,7 @@ import FilterBar from "./components/FilterBar";
 import { ChatGPTSongRow } from "./components/ChatGPTSongRow";
 import ImportChatGPTModal from "./components/ImportChatGPTModal";
 import FailedTracksModal from "./components/FailedTracksModal";
-
+import { FeedbackFAB } from "./components/FeedbackFAB";
 import type { FilterType, VerificationFilterType, Song } from "./types/song";
 import { useSongsState } from "./hooks/useLocalState";
 
@@ -380,6 +381,8 @@ export default function App() {
           onboardingClose();
         }}
       />
+      {/* Feedback FAB - Always visible */}
+      <FeedbackFAB onOpenGuide={() => setDrawerOpen(true)} />
     </div>
   );
 }

@@ -12,7 +12,11 @@ export const ChatGPTSongRow = ({ song, onUpdate, onDelete }: Props) => {
   const set = <K extends keyof Song>(key: K, value: Song[K]) =>
     onUpdate({ ...song, [key]: value });
 
-  const feedbackOptions: Array<"keep" | "skip" | "pending"> = ["keep", "skip", "pending"];
+  const feedbackOptions: Array<"keep" | "skip" | "pending"> = [
+    "keep",
+    "skip",
+    "pending",
+  ];
 
   const formatTimestamp = (isoString?: string) => {
     if (!isoString) return null;
@@ -30,24 +34,17 @@ export const ChatGPTSongRow = ({ song, onUpdate, onDelete }: Props) => {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  const spotifyHref = `https://open.spotify.com/search/${encodeURIComponent(
+    `${song.artist} ${song.title}`,
+  )}`;
+  const youtubeHref = `https://www.youtube.com/results?search_query=${encodeURIComponent(
+    `${song.artist} ${song.title}`,
+  )}`;
+
   return (
     <div className="container mx-auto px-4 py-4 border-b border-gray-700 bg-gray-700 hover:bg-gray-650 transition-colors overflow-hidden">
-      {/* HEADER */}
+      {/* TOP META ROW */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
-        <span
-          className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide border-2 ${
-            song.feedback === "keep"
-              ? "bg-green-600 text-white border-green-500"
-              : song.feedback === "skip"
-              ? "bg-red-600 text-white border-red-500"
-              : "bg-yellow-500 text-gray-900 border-yellow-400"
-          }`}
-        >
-          {song.feedback === "keep" && "✓ Keep"}
-          {song.feedback === "skip" && "✗ Skip"}
-          {song.feedback === "pending" && "⏸ Pending Review"}
-        </span>
-
         {song.verificationStatus && (
           <span
             className={`px-2 py-1 rounded-full text-xs font-medium border ${
@@ -59,19 +56,6 @@ export const ChatGPTSongRow = ({ song, onUpdate, onDelete }: Props) => {
                 ? "bg-red-700 text-white border-red-600"
                 : "bg-orange-500 text-white border-orange-400"
             }`}
-            title={
-              song.verificationStatus === "verified"
-                ? `Verified via ${song.verificationSource || "Spotify"} on ${
-                    song.verifiedAt
-                      ? new Date(song.verifiedAt).toLocaleDateString()
-                      : "unknown date"
-                  }`
-                : song.verificationStatus === "checking"
-                ? "Checking if this track exists..."
-                : song.verificationStatus === "failed"
-                ? `Verification failed: ${song.verificationError || "Track not found"}`
-                : "Not yet verified"
-            }
           >
             {song.verificationStatus === "verified" && "✓ Verified"}
             {song.verificationStatus === "checking" && "🔄 Checking..."}
@@ -92,7 +76,40 @@ export const ChatGPTSongRow = ({ song, onUpdate, onDelete }: Props) => {
           </span>
         )}
 
-        {/* Timestamp + Delete in header (right side) */}
+        {/* Platform badges */}
+        <div className="flex items-center gap-3">
+  <a
+    href={spotifyHref}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="inline-flex items-center justify-center h-8 px-3 rounded-full bg-[#1DB954] text-white shadow-md hover:shadow-xl hover:bg-[#1ed760] transition-all active:scale-95"
+    title="Search on Spotify"
+  >
+    <svg
+      viewBox="0 0 24 24"
+      className="w-4 h-4 fill-current"
+    >
+      <path d="M12 0a12 12 0 100 24 12 12 0 000-24Zm5.2 16.7a.9.9 0 01-1.2.3c-3.2-2-7.6-2.5-12.3-1.3a.9.9 0 01-.4-1.7c5.1-1.3 10.2-.7 13.9 1.6a.9.9 0 01.4 1.1Zm1.7-3.6a1 1 0 01-1.3.3c-3.7-2.3-9.3-3-13.5-1.6a1 1 0 11-.6-1.9c4.9-1.5 11.2-.7 15.5 2a1 1 0 01-.1 1.2Zm.1-3.8c-4.3-2.6-11.4-2.8-15.8-1.5a1.2 1.2 0 11-.7-2.2c5.1-1.5 13-1.2 18 1.8a1.2 1.2 0 01-1.3 2Z" />
+    </svg>
+  </a>
+
+  <a
+    href={youtubeHref}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="inline-flex items-center justify-center h-8 px-3 rounded-full bg-[#FF0000] text-white shadow-md hover:shadow-xl hover:bg-[#e60000] transition-all active:scale-95"
+    title="Search on YouTube"
+  >
+    <svg
+      viewBox="0 0 24 24"
+      className="w-4 h-4 fill-current"
+    >
+      <path d="M23 7.5s-.2-2-1-2.8c-.8-.9-1.7-1-2.2-1C16.3 3.3 12 3.3 12 3.3s-4.3 0-7.8.4c-.5 0-1.4.1-2.2 1C1.2 5.5 1 7.5 1 7.5S.8 9.7.8 12s.2 4.5.2 4.5.2 2 1 2.8 1.7 1 2.2 1c3.5.4 7.8.4 7.8.4s4.3 0 7.8-.4c.5 0 1.4-.1 2.2-1 .8-.8 1-2.8 1-2.8s.2-2.3.2-4.5-.2-4.5-.2-4.5ZM9.8 15.6V8.4l6.2 3.6-6.2 3.6Z" />
+    </svg>
+  </a>
+</div>
+
+
         <div className="flex items-center gap-3 ml-auto">
           {song.addedAt && (
             <span className="text-xs text-gray-400">
@@ -108,9 +125,8 @@ export const ChatGPTSongRow = ({ song, onUpdate, onDelete }: Props) => {
         </div>
       </div>
 
-      {/* MAIN CONTENT - Album Art + Fields */}
+      {/* MAIN CONTENT */}
       <div className="flex gap-4">
-        {/* Album Art - Left Side */}
         {song.albumArtUrl && (
           <div className="flex-shrink-0">
             <img
@@ -121,53 +137,48 @@ export const ChatGPTSongRow = ({ song, onUpdate, onDelete }: Props) => {
           </div>
         )}
 
-        {/* Fields Grid - Right Side */}
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+        <div className="flex-1 mb-3">
           {/* Title */}
           <input
             value={song.title}
             onChange={(e) => set("title", e.target.value)}
             placeholder="Title"
-            className="w-full px-3 py-2 rounded-xl border border-gray-500 bg-gray-600 text-white placeholder-gray-400 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 break-words"
+            className="w-full px-0 py-1 border-b border-gray-500/60 bg-transparent text-white placeholder-gray-500 text-lg font-bold focus:outline-none focus:border-emerald-500"
           />
 
-          {/* Year */}
-          <input
-            value={song.year ?? ""}
-            onChange={(e) => set("year", e.target.value)}
-            placeholder="Year"
-            className="w-full px-3 py-2 rounded-xl border border-gray-500 bg-gray-600 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          />
+          {/* Artist · Album · Year - unified size */}
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+            <input
+              value={song.artist}
+              onChange={(e) => set("artist", e.target.value)}
+              placeholder="Artist"
+              className="bg-transparent border-b border-transparent focus:border-emerald-500 text-white px-0 py-0.5 focus:outline-none"
+            />
 
-          {/* Artist */}
-          <input
-            value={song.artist}
-            onChange={(e) => set("artist", e.target.value)}
-            placeholder="Artist"
-            className="w-full px-3 py-2 rounded-xl border border-gray-500 bg-gray-600 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          />
+            {song.album && <span className="text-gray-500">·</span>}
 
-          {/* Producer */}
-          <input
-            value={song.producer ?? ""}
-            onChange={(e) => set("producer", e.target.value)}
-            placeholder="Producer"
-            className="w-full px-3 py-2 rounded-xl border border-gray-500 bg-gray-600 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          />
+            <input
+              value={song.album ?? ""}
+              onChange={(e) => set("album", e.target.value)}
+              placeholder="Album"
+              className="bg-transparent border-b border-transparent focus:border-emerald-500 text-gray-300 px-0 py-0.5 focus:outline-none"
+            />
 
-          {/* Album */}
-          <input
-            value={song.album ?? ""}
-            onChange={(e) => set("album", e.target.value)}
-            placeholder="Album"
-            className="w-full px-3 py-2 rounded-xl border border-gray-500 bg-gray-600 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          />
+            {song.year && <span className="text-gray-500">·</span>}
 
-          {/* WHY ChatGPT recommended - spans 2 columns on desktop */}
+            <input
+              value={song.year ?? ""}
+              onChange={(e) => set("year", e.target.value)}
+              placeholder="Year"
+              className="bg-transparent border-b border-transparent focus:border-emerald-500 text-gray-400 px-0 py-0.5 focus:outline-none w-14"
+            />
+          </div>
+
+          {/* WHY ChatGPT recommended */}
           {song.comments && (
-            <div className="md:col-span-2 p-3 bg-amber-900/30 border border-amber-700/50 rounded-lg">
+            <div className="mt-3 p-3 bg-amber-900/30 border border-amber-700/50 rounded-lg">
               <p className="text-xs font-medium text-amber-400 mb-1">
-                💡 Why ChatGPT recommended:
+                Why ChatGPT recommended:
               </p>
               <p className="text-sm text-gray-300 italic">"{song.comments}"</p>
             </div>
@@ -175,90 +186,53 @@ export const ChatGPTSongRow = ({ song, onUpdate, onDelete }: Props) => {
         </div>
       </div>
 
-      {/* FEEDBACK */}
-      <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-300">Your decision:</span>
-          {feedbackOptions.map((option) => (
-            <button
-              key={option}
-              onClick={() => set("feedback", option)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                song.feedback === option
-                  ? option === "keep"
-                    ? "bg-green-600 text-white border-green-600"
-                    : option === "skip"
-                    ? "bg-red-600 text-white border-red-600"
-                    : "bg-gray-600 text-white border-gray-600"
-                  : "bg-gray-800 text-gray-300 border-gray-600 hover:bg-gray-700"
-              }`}
-            >
-              {option === "keep" && "✓ Keep"}
-              {option === "skip" && "✗ Skip"}
-              {option === "pending" && "⏸ Pending"}
-            </button>
-          ))}
-        </div>
-
-        {/* SEARCH BUTTONS - right aligned */}
-        <div className="flex items-center gap-3">
-          <a
-            href={`https://open.spotify.com/search/${encodeURIComponent(song.artist + " " + song.title)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center w-auto px-4 py-2 rounded-full bg-[#1DB954] text-white font-semibold text-sm shadow-md hover:shadow-lg hover:bg-[#1ed760] transition-all"
+      {/* DECISION BUTTONS */}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <span className="text-sm font-medium text-gray-300">Your decision:</span>
+        {feedbackOptions.map((option) => (
+          <button
+            key={option}
+            onClick={() => set("feedback", option)}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+              song.feedback === option
+                ? option === "keep"
+                  ? "bg-green-600 text-white border-green-600"
+                  : option === "skip"
+                  ? "bg-red-600 text-white border-red-600"
+                  : "bg-gray-600 text-white border-gray-600"
+                : "bg-gray-800 text-gray-300 border-gray-600 hover:bg-gray-700"
+            }`}
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 168 168"
-              className="w-4 h-4 mr-2 fill-current"
-              aria-hidden="true"
-            >
-              <path d="M84 0a84 84 0 1 0 0 168 84 84 0 0 0 0-168Zm38.1 121.8a5.2 5.2 0 0 1-7.1 1.6c-19.3-11.8-43.7-14.4-72.4-7.6a5.2 5.2 0 0 1-2.4-10.1c31.2-7.3 58.4-4.4 80.4 8.3a5.2 5.2 0 0 1 1.5 7.8Zm9.8-21.8a6.5 6.5 0 0 1-8.9 2.1c-22.1-13.5-55.9-17.4-82.1-9.3a6.5 6.5 0 0 1-3.8-12.4c29.6-9.1 66.9-5 91.6 10.2a6.5 6.5 0 0 1 3.2 9.4Zm1-23.3C106.3 60 64.5 58.7 42 65.8a7.8 7.8 0 1 1-4.6-14.9c25.9-8 72.3-6.6 103.4 12.1a7.8 7.8 0 0 1-8 13.7Z" />
-            </svg>
-            Search on Spotify
-          </a>
-
-          <a
-            href={`https://www.youtube.com/results?search_query=${encodeURIComponent(song.artist + " " + song.title)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center w-auto px-4 py-2 rounded-full bg-[#FF0000] text-white font-semibold text-sm shadow-md hover:shadow-lg hover:bg-[#e60000] transition-all"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              className="w-5 h-5 mr-2 fill-current"
-              aria-hidden="true"
-            >
-              <path d="M23.5 6.2s-.2-1.7-.9-2.5c-.8-.9-1.7-.9-2.1-1C16.9 2.3 12 2.3 12 2.3h0s-4.9 0-8.5.4c-.4 0-1.4.1-2.1 1-.7.8-.9 2.5-.9 2.5S0 8.2 0 10.3v1.8c0 2.1.2 4.1.2 4.1s.2 1.7.9 2.5c.8.9 1.9.9 2.4 1 1.7.2 7.2.4 7.2.4s4.9 0 8.5-.4c.4 0 1.4-.1 2.1-1 .7-.8.9-2.5.9-2.5s.2-2 .2-4.1v-1.8c0-2.1-.2-4.1-.2-4.1ZM9.6 14.9V8.6l6.4 3.2-6.4 3.1Z" />
-            </svg>
-            Search on YouTube
-          </a>
-        </div>
+            {option === "keep" && "✓ Keep"}
+            {option === "skip" && "✗ Skip"}
+            {option === "pending" && "⏸ Pending"}
+          </button>
+        ))}
       </div>
 
-      {/* USER FEEDBACK TEXTAREA */}
-      <div className="mb-3">
+      {/* FEEDBACK */}
+      <div className="mt-3 mb-2">
         <label className="block text-sm font-medium text-gray-300 mb-1">
           📝 Your feedback (will be sent back to ChatGPT):
         </label>
         <textarea
           value={song.userFeedback ?? ""}
           onChange={(e) => set("userFeedback", e.target.value)}
-          placeholder="Optional: Tell ChatGPT why you kept/skipped this song, or request similar music..."
+          placeholder="Tell ChatGPT why you kept/skipped this song, or what you'd like more of..."
           rows={2}
           className="w-full px-3 py-2 rounded-xl border border-gray-500 bg-gray-600 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
         />
         <p className="text-xs text-gray-400 mt-1">
-          Example: "Love the synth layers!" or "Too slow for my taste" or "More like this please!"
+          Example: "Love the groove" · "Too slow for this context" · "More like this please".
         </p>
       </div>
 
-      {/* PLATFORM BADGES */}
+      {/* EXTRA platform metadata if exists */}
       {song.platforms && song.platforms.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium text-gray-400">Available on:</span>
+        <div className="flex flex-wrap items-center gap-2 mt-1">
+          <span className="text-xs font-medium text-gray-400">
+            Available on:
+          </span>
           {song.platforms.map((platform) => (
             <span
               key={platform}
