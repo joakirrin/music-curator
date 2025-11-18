@@ -91,20 +91,20 @@ Already implemented with PKCE flow in `spotifyAuth.ts`
 
 **In Progress**:
 - [ ] **PlaylistsDrawer component**:
-  - [ ] Slides in from right side
-  - [ ] Shows all playlists in card grid
-  - [ ] Each card shows: name, description, song count, duration, sync status
-  - [ ] Delete button with confirmation
-  - [ ] Spotify link (if synced)
-  - [ ] Public/Private indicator
-  - [ ] Created date
-  - [ ] Empty state with "Create Playlist" CTA
-  - [ ] "Create New Playlist" button in footer
-  - [ ] Click outside or X to close
+  - [x] Slides in from right side
+  - [x] Shows all playlists in card grid
+  - [x] Each card shows: name, description, song count, duration, sync status
+  - [x] Delete button with confirmation
+  - [ ] Spotify link (if synced) - Pending
+  - [ ] Public/Private indicator -Don't prioritize
+  - [x] Created date
+  - [x] Empty state with "Create Playlist" CTA
+  - [x] "Create New Playlist" button in footer
+  - [x] Click outside or X to close
 
 
-- [ ] Wire up drawer to Toolbar playlist counter button
-- [ ] Test drawer opens/closes correctly
+- [x] Wire up drawer to Toolbar playlist counter button
+- [x] Test drawer opens/closes correctly
 
 **Files**: 
 - `src/components/PlaylistsDrawer.tsx` ✅ (created, needs integration)
@@ -113,7 +113,7 @@ Already implemented with PKCE flow in `spotifyAuth.ts`
 ---
 
 #### Task 3.1.4: Add Songs to Playlists (Individual) 🚧 IN PROGRESS
-**Status**: 🚧 Chunk 3A - 50% complete
+**Status**: 🚧 Chunk 3A - 80% complete
 
 **Completed**:
 - [x] **AddToPlaylistDropdown component**:
@@ -126,12 +126,12 @@ Already implemented with PKCE flow in `spotifyAuth.ts`
   - [x] Multi-playlist support (one song → multiple playlists)
 
 **In Progress**:
-- [ ] Update ChatGPTSongRow to show dropdown when Keep is clicked
+- [X] Update ChatGPTSongRow to show modal when Keep is clicked
 - [ ] Wire up add/remove functionality to usePlaylistsState
 - [ ] Test add/remove songs from playlists
 
 **Files**: 
-- `src/components/AddToPlaylistDropdown.tsx` ✅ (created, needs integration)
+- `src/components/AddToPlaylistModal.tsx` ✅ (created, needs integration with Spotify)
 - `src/components/ChatGPTSongRow.tsx` (needs update)
 
 **Design Decision**:
@@ -140,7 +140,8 @@ Already implemented with PKCE flow in `spotifyAuth.ts`
 
 ---
 
-#### Task 3.1.5: Bulk Actions (Add Multiple Songs) ⏳ NEXT
+
+#### Task 3.1.8: Bulk Actions (Add Multiple Songs) ⏳ LET'S PUSH THIS FOR LATER. 
 **Status**: ⏳ Planned for Chunk 3B
 
 **Requirements**:
@@ -166,12 +167,12 @@ Already implemented with PKCE flow in `spotifyAuth.ts`
 **Status**: ⏳ Planned for Chunk 3B
 
 **Requirements**:
-- [ ] **Individual Song Delete**:
+- [X] **Individual Song Delete**:
   - Current behavior: Delete removes from song list
   - New behavior: Confirm that song stays in playlists
   - No modal needed, just behavior clarification
   
-- [ ] **Delete All Modal**:
+- [X] **Delete All Modal**:
   - Warning message:
     ```
     ⚠️ Delete all songs from library?
@@ -185,7 +186,7 @@ Already implemented with PKCE flow in `spotifyAuth.ts`
     ```
   - Emphasize that playlists are preserved
   
-- [ ] **Delete Playlist**:
+- [x] **Delete Playlist**:
   - Already implemented with confirmation
   - Clarify: "This will NOT delete songs from your library"
 
