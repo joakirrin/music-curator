@@ -5,32 +5,21 @@
  */
 
 import type { Playlist } from "../types/playlist";
-import type { Song } from "../types/song";
 
 type Props = {
   playlists: Playlist[];
-  songs: Song[];
   onDeletePlaylist: (id: string) => void;
 };
 
-export function PlaylistsView({ playlists, songs, onDeletePlaylist }: Props) {
-  // Helper to get songs for a playlist
-  const getSongsForPlaylist = (playlist: Playlist): Song[] => {
-    const songMap = new Map(songs.map(s => [s.id, s]));
-    return playlist.songIds
-      .map(id => songMap.get(id))
-      .filter((s): s is Song => s !== undefined);
-  };
-
+export function PlaylistsView({ playlists, onDeletePlaylist }: Props) {
   // Calculate total duration for a playlist (in minutes)
   const getTotalDuration = (playlist: Playlist): number => {
-    const playlistSongs = getSongsForPlaylist(playlist);
-    const totalSeconds = playlistSongs.reduce((sum, song) => sum + (song.duration || 0), 0);
+    const totalSeconds = playlist.songs.reduce((sum, song) => sum + (song.duration || 0), 0);
     return Math.round(totalSeconds / 60);
   };
 
   const handleDelete = (playlist: Playlist) => {
-    const songCount = playlist.songIds.length;
+    const songCount = playlist.songs.length;
     const message = playlist.synced
       ? `⚠️ Delete "${playlist.name}"?\n\nThis has ${songCount} song${songCount !== 1 ? 's' : ''}.\n\nNote: This will only delete the local copy. The playlist will remain on Spotify.`
       : `⚠️ Delete "${playlist.name}"?\n\nThis has ${songCount} song${songCount !== 1 ? 's' : ''} and is not synced to Spotify.\n\nThis cannot be undone!`;
@@ -52,7 +41,7 @@ export function PlaylistsView({ playlists, songs, onDeletePlaylist }: Props) {
         </div>
       </div>
     );
-  }
+  };
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -62,16 +51,13 @@ export function PlaylistsView({ playlists, songs, onDeletePlaylist }: Props) {
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {playlists.map(playlist => {
-          const playlistSongs = getSongsForPlaylist(playlist);
           const duration = getTotalDuration(playlist);
-          const missingCount = playlist.songIds.length - playlistSongs.length;
 
           return (
             <div
               key={playlist.id}
               className="bg-gray-700 border border-gray-600 rounded-xl p-4 hover:bg-gray-650 transition-colors"
             >
-              {/* Header */}
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1 min-w-0">
                   <h3 className="text-lg font-semibold text-white truncate">
@@ -84,7 +70,6 @@ export function PlaylistsView({ playlists, songs, onDeletePlaylist }: Props) {
                   )}
                 </div>
                 
-                {/* Sync Status Badge */}
                 {playlist.synced ? (
                   <span className="ml-2 px-2 py-1 rounded-full text-xs bg-emerald-600 text-white flex-shrink-0">
                     🟢 Synced
@@ -96,16 +81,10 @@ export function PlaylistsView({ playlists, songs, onDeletePlaylist }: Props) {
                 )}
               </div>
 
-              {/* Stats */}
               <div className="space-y-2 mb-4">
                 <div className="flex items-center gap-2 text-sm text-gray-300">
                   <span>🎵</span>
-                  <span>{playlistSongs.length} song{playlistSongs.length !== 1 ? 's' : ''}</span>
-                  {missingCount > 0 && (
-                    <span className="text-orange-400 text-xs">
-                      ({missingCount} missing)
-                    </span>
-                  )}
+                  <span>{playlist.songs.length} song{playlist.songs.length !== 1 ? 's' : ''}</span>
                 </div>
                 
                 {duration > 0 && (
@@ -120,7 +99,6 @@ export function PlaylistsView({ playlists, songs, onDeletePlaylist }: Props) {
                 </div>
               </div>
 
-              {/* Spotify Link */}
               {playlist.spotifyUrl && (
                 <a
                   href={playlist.spotifyUrl}
@@ -132,7 +110,6 @@ export function PlaylistsView({ playlists, songs, onDeletePlaylist }: Props) {
                 </a>
               )}
 
-              {/* Actions */}
               <div className="flex gap-2">
                 <button
                   onClick={() => handleDelete(playlist)}
@@ -141,7 +118,6 @@ export function PlaylistsView({ playlists, songs, onDeletePlaylist }: Props) {
                   Delete
                 </button>
                 
-                {/* Placeholder for future "Edit" button */}
                 <button
                   disabled
                   className="flex-1 px-3 py-2 rounded-lg bg-gray-600 text-gray-400 text-sm cursor-not-allowed"
@@ -151,7 +127,6 @@ export function PlaylistsView({ playlists, songs, onDeletePlaylist }: Props) {
                 </button>
               </div>
 
-              {/* Created date */}
               <div className="mt-3 text-xs text-gray-500">
                 Created {new Date(playlist.createdAt).toLocaleDateString()}
               </div>
