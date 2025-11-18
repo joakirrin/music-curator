@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from 'react';
 import type { Playlist } from '@/types/playlist';
-import type { Song } from '@/types/song';
+
 import { pushPlaylistToSpotify, type PushResult } from '@/services/spotifyPlaylistService';
 
 type Props = {
