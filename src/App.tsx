@@ -1,7 +1,9 @@
 // src/App.tsx
 import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { spotifyAuth } from "./services/spotifyAuth";
-import { SpotifyLoginButton } from "./components/SpotifyLoginButton";
+import { usePlaylistsState } from "./hooks/usePlaylistsState";
+import { CreatePlaylistModal } from "./components/CreatePlaylistModal";
+import { PlaylistsDrawer } from "./components/PlaylistsDrawer";
 
 import { Header } from "./components/Header";
 import Toolbar from "./components/Toolbar";
@@ -12,11 +14,6 @@ import FailedTracksModal from "./components/FailedTracksModal";
 import { FeedbackFAB } from "./components/FeedbackFAB";
 import type { FilterType, VerificationFilterType, Song } from "./types/song";
 import { useSongsState } from "./hooks/useLocalState";
-
-// Playlist imports
-import { usePlaylistsState } from "./hooks/usePlaylistsState";
-import { CreatePlaylistModal } from "./components/CreatePlaylistModal";
-import { PlaylistsDrawer } from "./components/PlaylistsDrawer";
 
 // Guide / Empty state onboarding
 import GuideDrawer from "@/components/GuideDrawer";
@@ -32,7 +29,7 @@ export default function App() {
   const { open: onboardingOpen, close: onboardingClose } = useOnboardingFlag();
 
   // --- Core state ---
-  const { songs, setSongs } = useSongsState([]);
+  const { songs, setSongs } = useSongsState([]); // start empty
   const [filterType, setFilterType] = useState<FilterType>("all");
   const [verificationFilter, setVerificationFilter] = useState<VerificationFilterType>("all");
   const [search, setSearch] = useState("");
@@ -40,23 +37,14 @@ export default function App() {
   const [isFailedTracksModalOpen, setIsFailedTracksModalOpen] = useState(false);
   const [selectedRound, setSelectedRound] = useState<number | "all">("all");
 
-  // Playlist state
-  const {
-    playlists,
-    createPlaylist,
-    deletePlaylist,
-    addSongsToPlaylist,
-    removeSongsFromPlaylist,
-  } = usePlaylistsState();
-
-  // Playlist modal states
-  const [isCreatePlaylistModalOpen, setIsCreatePlaylistModalOpen] = useState(false);
-  const [isPlaylistsDrawerOpen, setIsPlaylistsDrawerOpen] = useState(false);
-
-  // OAuth callback handler
+  
+  
+  // ✅ FIX: Use ref to prevent double OAuth callback in React Strict Mode
   const callbackHandledRef = useRef(false);
 
+  // --- OAuth callback (runs once) ---
   useEffect(() => {
+    // ✅ Prevent double execution in React Strict Mode
     if (callbackHandledRef.current) {
       if (DEV) console.log("[App] ⏭️ Skipping duplicate callback (already handled)");
       return;
@@ -68,6 +56,7 @@ export default function App() {
     const error = urlParams.get("error");
     const errorDescription = urlParams.get("error_description");
 
+    // Handle OAuth errors
     if (error) {
       if (DEV) {
         console.error("[App] OAuth error:", error, errorDescription);
@@ -77,7 +66,9 @@ export default function App() {
       return;
     }
 
+    // Handle OAuth success
     if (code && state) {
+      // ✅ Mark as handled immediately to prevent double execution
       callbackHandledRef.current = true;
 
       if (DEV) {
@@ -87,6 +78,7 @@ export default function App() {
       }
       
       spotifyAuth.handleCallback(code, state).then((success) => {
+        // Clear URL parameters so we don't re-run on refresh
         window.history.replaceState({}, "", window.location.pathname);
         
         if (success) {
@@ -102,10 +94,11 @@ export default function App() {
         window.history.replaceState({}, "", window.location.pathname);
       });
     }
-  }, []);
+  }, []); // Empty deps - run once on mount
 
   const hasContent = songs.length > 0;
 
+  // --- Import / Replace flows ---
   const handleChatGPTImport = useCallback(
     (incoming: Song[], replaceFailedInRound?: number) => {
       let updatedSongs = [...songs];
@@ -126,7 +119,7 @@ export default function App() {
   );
 
   const onClear = useCallback(() => {
-    if (confirm("Delete all songs from library?\n\nNote: Songs in playlists will NOT be deleted.")) {
+    if (confirm("Delete all songs?")) {
       setSongs([]);
       setSelectedRound("all");
     }
@@ -139,56 +132,12 @@ export default function App() {
     [songs, setSongs]
   );
 
-  /**
-   * Delete song from library
-   * Song will be removed from the library view, but will stay in playlists
-   */
   const deleteSong = useCallback(
-    (id: string) => {
-      const song = songs.find(s => s.id === id);
-      if (!song) return;
-
-      // Check if song is in any playlist
-      const isInPlaylists = playlists.some(p => p.songs.some(s => s.id === id));
-
-      const message = isInPlaylists
-        ? `Delete "${song.title}" from library?\n\n` +
-          `⚠️ This song is in ${playlists.filter(p => p.songs.some(s => s.id === id)).length} playlist(s).\n\n` +
-          `It will be removed from your library but will stay in your playlists.`
-        : `Delete "${song.title}" from library?`;
-
-      if (confirm(message)) {
-        setSongs(songs.filter((s) => s.id !== id));
-        
-        if (isInPlaylists) {
-          console.log(`[App] Song "${song.title}" deleted from library but preserved in playlists`);
-        }
-      }
-    },
-    [songs, setSongs, playlists]
+    (id: string) => setSongs(songs.filter((s) => s.id !== id)),
+    [songs, setSongs]
   );
 
-  /**
-   * Add song to playlist (now passes full Song object)
-   */
-  const handleAddToPlaylist = useCallback((playlistId: string, songId: string) => {
-    const song = songs.find(s => s.id === songId);
-    if (!song) {
-      console.error('[App] Song not found:', songId);
-      return;
-    }
-    
-    // Pass full song object to playlist
-    addSongsToPlaylist(playlistId, [song]);
-  }, [songs, addSongsToPlaylist]);
-
-  /**
-   * Remove song from playlist (by ID)
-   */
-  const handleRemoveFromPlaylist = useCallback((playlistId: string, songId: string) => {
-    removeSongsFromPlaylist(playlistId, [songId]);
-  }, [removeSongsFromPlaylist]);
-
+  // --- Filters (hide failed in main list) ---
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
 
@@ -254,13 +203,13 @@ export default function App() {
       return acc;
     }, {} as Record<number, Song[]>);
 
-    let prompt = `🔄 REPLACEMENT REQUEST\n\n`;
+    let prompt = `📄 REPLACEMENT REQUEST\n\n`;
     prompt += `I need help replacing ${failedTracks.length} track${
       failedTracks.length !== 1 ? "s" : ""
     } that couldn't be verified on Spotify.\n\n`;
 
     Object.entries(tracksByRound).forEach(([round, tracks]) => {
-      prompt += `💿 Round ${round}:\n`;
+      prompt += `🔀 Round ${round}:\n`;
       tracks.forEach((track) => {
         prompt += `  • "${track.title}" by ${track.artist}\n`;
         if (track.verificationError) prompt += `    ❌ Error: ${track.verificationError}\n`;
@@ -298,7 +247,7 @@ export default function App() {
         userFeedback: s.userFeedback || "",
         verification:
           s.verificationStatus === "verified"
-            ? { status: "verified", spotifyUrl: s.spotifyUrl, album: s.album, popularity: s.popularity }
+            ? { status: "verified", spotifyUrl: s.serviceUrl, album: s.album, popularity: s.popularity }
             : undefined,
       })),
       instructions: `Use this feedback to improve future recommendations for Round ${latestRound + 1}.`,
@@ -311,32 +260,20 @@ export default function App() {
   const handleImportFromEmpty = () => setIsChatGPTModalOpen(true);
 
   return (
-    <div className="min-h-screen bg-gray-800 flex flex-col">
-      {/* Top bar with Help button */}
-      <div style={{ display: "flex", justifyContent: "flex-end", padding: "12px" }}>
-        <button className="btn" onClick={() => setDrawerOpen(true)}>
-          Open Guide
-        </button>
-      </div>
+    <div className="min-h-screen w-full bg-gray-800 flex flex-col overflow-x-hidden">
+      {/* ✅ Header with integrated utility buttons (Sign in + Guide) */}
+      <Header onOpenGuide={() => setDrawerOpen(true)} />
 
-      {/* Spotify login button */}
-      <div className="container mx-auto px-4 py-4 flex justify-end">
-        <SpotifyLoginButton />
-      </div>
-
-      <Header />
-
+      {/* Main content or empty state */}
       {hasContent ? (
         <>
+          {/* ✅ Toolbar with primary actions (Import, Export, Open GPT) */}
           <Toolbar
             songs={songs}
-            playlists={playlists}
             onClear={onClear}
             onOpenChatGPTModal={() => setIsChatGPTModalOpen(true)}
             onExportFeedback={handleExportFeedback}
             onGetReplacements={handleGetReplacements}
-            onOpenPlaylistsDrawer={() => setIsPlaylistsDrawerOpen(true)}
-            onOpenCreatePlaylist={() => setIsCreatePlaylistModalOpen(true)}
           />
 
           <FilterBar
@@ -351,22 +288,18 @@ export default function App() {
             onRoundChange={setSelectedRound}
           />
 
-          <div className="flex-1 pb-8">
+          <div className="flex-1 pb-8 w-full">
             {filtered.map((s) => (
               <ChatGPTSongRow
                 key={s.id}
                 song={s}
                 onUpdate={(next) => updateSong(s.id, next)}
                 onDelete={() => deleteSong(s.id)}
-                onOpenCreatePlaylist={() => setIsCreatePlaylistModalOpen(true)}
-                playlists={playlists}
-                onAddToPlaylist={handleAddToPlaylist}
-                onRemoveFromPlaylist={handleRemoveFromPlaylist}
               />
             ))}
 
             {filtered.length === 0 && (
-              <div className="container mx-auto px-4 py-12 text-center text-gray-400">
+              <div className="w-full px-4 py-12 text-center text-gray-400">
                 {verificationFilter === "failed" ? (
                   <>
                     Failed tracks are hidden from the main list.
@@ -429,26 +362,7 @@ export default function App() {
         onGetReplacements={handleCopyReplacementPrompt}
       />
 
-      <CreatePlaylistModal
-        open={isCreatePlaylistModalOpen}
-        onOpenChange={setIsCreatePlaylistModalOpen}
-        songs={songs}
-        onCreatePlaylist={createPlaylist}
-        existingPlaylists={playlists}
-      />
-
-      <PlaylistsDrawer
-        open={isPlaylistsDrawerOpen}
-        onOpenChange={setIsPlaylistsDrawerOpen}
-        playlists={playlists}
-        onDeletePlaylist={deletePlaylist}
-        onOpenCreatePlaylist={() => {
-          setIsCreatePlaylistModalOpen(true);
-          setIsPlaylistsDrawerOpen(false);
-        }}
-        onRemoveSongFromPlaylist={handleRemoveFromPlaylist}
-      />
-
+      {/* Guide drawer */}
       <GuideDrawer
         open={drawerOpen || onboardingOpen}
         onClose={() => {
@@ -456,7 +370,7 @@ export default function App() {
           onboardingClose();
         }}
       />
-      
+      {/* Feedback FAB - Always visible */}
       <FeedbackFAB onOpenGuide={() => setDrawerOpen(true)} />
     </div>
   );
