@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from 'react';
 import type { Playlist } from '@/types/playlist';
 import { formatDistanceToNow } from 'date-fns';
 import { PlaylistDetailModal } from './PlaylistDetailModal';
-import { PushPlaylistModal } from './PushPlaylistModal';
 
 type Props = {
   open: boolean;
@@ -12,7 +11,6 @@ type Props = {
   onDeletePlaylist: (id: string) => void;
   onOpenCreatePlaylist: () => void;
   onRemoveSongFromPlaylist: (playlistId: string, songId: string) => void;
-  onMarkAsSynced: (playlistId: string, spotifyPlaylistId: string, spotifyUrl: string) => void;
 };
 
 export const PlaylistsDrawer = ({
@@ -22,49 +20,42 @@ export const PlaylistsDrawer = ({
   onDeletePlaylist,
   onOpenCreatePlaylist,
   onRemoveSongFromPlaylist,
-  onMarkAsSynced,
 }: Props) => {
   const drawerRef = useRef<HTMLDivElement>(null);
   
   // State for playlist detail modal
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  
-  // State for push to Spotify modal
-  const [playlistToPush, setPlaylistToPush] = useState<string | null>(null);
-  const [isPushModalOpen, setIsPushModalOpen] = useState(false);
 
   // CRITICAL FIX: Reset modal state when drawer closes
   useEffect(() => {
     if (!open) {
       setIsDetailModalOpen(false);
       setSelectedPlaylistId(null);
-      setIsPushModalOpen(false);
-      setPlaylistToPush(null);
     }
   }, [open]);
 
-  // Close on Escape key - but only if modals are not open
+  // Close on Escape key - but only if modal is not open
   useEffect(() => {
     if (!open) return;
 
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !isDetailModalOpen && !isPushModalOpen) {
+      if (e.key === 'Escape' && !isDetailModalOpen) {
         onOpenChange(false);
       }
     };
 
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [open, isDetailModalOpen, isPushModalOpen, onOpenChange]);
+  }, [open, isDetailModalOpen, onOpenChange]);
 
-  // Click outside to close - but NOT if modals are open
+  // Click outside to close - but NOT if modal is open
   useEffect(() => {
     if (!open) return;
 
     const handleClickOutside = (e: MouseEvent) => {
-      // CRITICAL: Don't close drawer if modals are open!
-      if (isDetailModalOpen || isPushModalOpen) return;
+      // CRITICAL: Don't close drawer if modal is open!
+      if (isDetailModalOpen) return;
       
       if (drawerRef.current && !drawerRef.current.contains(e.target as Node)) {
         onOpenChange(false);
@@ -79,7 +70,7 @@ export const PlaylistsDrawer = ({
       clearTimeout(timer);
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [open, isDetailModalOpen, isPushModalOpen, onOpenChange]);
+  }, [open, isDetailModalOpen, onOpenChange]);
 
   const getPlaylistStats = (playlist: Playlist) => {
     const songCount = playlist.songs.length;
@@ -130,24 +121,8 @@ export const PlaylistsDrawer = ({
     setIsDetailModalOpen(true);
   };
 
-  const handlePushToSpotify = (e: React.MouseEvent, playlistId: string) => {
-    e.stopPropagation(); // Prevent opening detail modal
-    setPlaylistToPush(playlistId);
-    setIsPushModalOpen(true);
-  };
-
-  const handlePushSuccess = (playlistId: string, spotifyPlaylistId: string, spotifyUrl: string) => {
-    onMarkAsSynced(playlistId, spotifyPlaylistId, spotifyUrl);
-    setIsPushModalOpen(false);
-    setPlaylistToPush(null);
-  };
-
   const selectedPlaylist = selectedPlaylistId 
     ? playlists.find(p => p.id === selectedPlaylistId) || null 
-    : null;
-    
-  const playlistToPushObj = playlistToPush
-    ? playlists.find(p => p.id === playlistToPush) || null
     : null;
 
   if (!open) return null;
@@ -310,8 +285,7 @@ export const PlaylistsDrawer = ({
 
                     {/* Action buttons */}
                     <div className="flex items-center gap-2">
-                      {playlist.synced && playlist.spotifyUrl ? (
-                        // Already synced - show link to Spotify
+                      {playlist.spotifyUrl ? (
                         <a
                           href={playlist.spotifyUrl}
                           target="_blank"
@@ -325,17 +299,9 @@ export const PlaylistsDrawer = ({
                           <span>Open in Spotify</span>
                         </a>
                       ) : (
-                        // Not synced yet - show push button
-                        <button
-                          onClick={(e) => handlePushToSpotify(e, playlist.id)}
-                          disabled={songCount === 0}
-                          className="flex-1 px-4 py-2 rounded-lg bg-[#1DB954] text-white text-sm font-medium hover:bg-[#1ed760] disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center gap-2"
-                        >
-                          <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current">
-                            <path d="M12 0a12 12 0 100 24 12 12 0 000-24Zm5.2 16.7a.9.9 0 01-1.2.3c-3.2-2-7.6-2.5-12.3-1.3a.9.9 0 01-.4-1.7c5.1-1.3 10.2-.7 13.9 1.6a.9.9 0 01.4 1.1Zm1.7-3.6a1 1 0 01-1.3.3c-3.7-2.3-9.3-3-13.5-1.6a1 1 0 11-.6-1.9c4.9-1.5 11.2-.7 15.5 2a1 1 0 01-.1 1.2Zm.1-3.8c-4.3-2.6-11.4-2.8-15.8-1.5a1.2 1.2 0 11-.7-2.2c5.1-1.5 13-1.2 18 1.8a1.2 1.2 0 01-1.3 2Z" />
-                          </svg>
-                          <span>Push to Spotify</span>
-                        </button>
+                        <div className="flex-1 px-4 py-2 rounded-lg bg-gray-700 text-gray-400 text-sm text-center">
+                          Not synced to Spotify yet
+                        </div>
                       )}
                       
                       <button
@@ -360,14 +326,6 @@ export const PlaylistsDrawer = ({
         onOpenChange={setIsDetailModalOpen}
         playlist={selectedPlaylist}
         onRemoveSong={onRemoveSongFromPlaylist}
-      />
-      
-      {/* Push to Spotify Modal */}
-      <PushPlaylistModal
-        open={isPushModalOpen}
-        onOpenChange={setIsPushModalOpen}
-        playlist={playlistToPushObj}
-        onSuccess={handlePushSuccess}
       />
     </>
   );

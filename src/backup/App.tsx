@@ -47,7 +47,6 @@ export default function App() {
     deletePlaylist,
     addSongsToPlaylist,
     removeSongsFromPlaylist,
-    markAsSynced, // ✅ NEW: For Spotify integration
   } = usePlaylistsState();
 
   // Playlist modal states
@@ -190,18 +189,6 @@ export default function App() {
     removeSongsFromPlaylist(playlistId, [songId]);
   }, [removeSongsFromPlaylist]);
 
-  /**
-   * ✅ NEW: Mark playlist as synced after successful Spotify push
-   */
-  const handleMarkAsSynced = useCallback((
-    playlistId: string,
-    spotifyPlaylistId: string,
-    spotifyUrl: string
-  ) => {
-    markAsSynced(playlistId, spotifyPlaylistId, spotifyUrl);
-    console.log(`[App] ✅ Playlist marked as synced: ${playlistId}`);
-  }, [markAsSynced]);
-
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
 
@@ -325,6 +312,18 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-800 flex flex-col">
+      {/* Top bar with Help button */}
+      <div style={{ display: "flex", justifyContent: "flex-end", padding: "12px" }}>
+        <button className="btn" onClick={() => setDrawerOpen(true)}>
+          Open Guide
+        </button>
+      </div>
+
+      {/* Spotify login button */}
+      <div className="container mx-auto px-4 py-4 flex justify-end">
+        <SpotifyLoginButton />
+      </div>
+
       <Header onOpenGuide={() => setDrawerOpen(true)} />
 
       {hasContent ? (
@@ -448,7 +447,6 @@ export default function App() {
           setIsPlaylistsDrawerOpen(false);
         }}
         onRemoveSongFromPlaylist={handleRemoveFromPlaylist}
-        onMarkAsSynced={handleMarkAsSynced} // ✅ NEW: Wire in Spotify sync handler
       />
 
       <GuideDrawer
