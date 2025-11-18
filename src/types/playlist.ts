@@ -1,13 +1,18 @@
 // src/types/playlist.ts
 /**
  * Playlist type definition for local and Spotify playlists
+ * 
+ * IMPORTANT: Playlists store FULL song data, not just IDs
+ * This allows songs to persist in playlists even after deletion from library
  */
+
+import type { Song } from './song';
 
 export type Playlist = {
   id: string;                    // Unique ID (generated locally)
   name: string;                  // User-defined name
   description?: string;          // Optional description
-  songIds: string[];             // References to Song.id from songs state
+  songs: Song[];                 // FULL song objects (not just IDs!)
   
   // Spotify integration fields
   spotifyPlaylistId?: string;    // ID once pushed to Spotify
@@ -27,7 +32,7 @@ export type Playlist = {
 export type CreatePlaylistInput = {
   name: string;
   description?: string;
-  songIds?: string[];            // Can start empty or with selected songs
+  songs?: Song[];                // Can start empty or with selected songs
   isPublic?: boolean;            // Default: false (private)
 };
 

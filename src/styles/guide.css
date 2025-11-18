@@ -39,22 +39,108 @@ background: linear-gradient(90deg, rgba(110,231,255,0.06), rgba(155,107,255,0.06
 .fonea-empty_root { display: grid; place-items: center; padding: 8vh 20px; }
 .fonea-empty_card {
 width: min(880px, 96vw); background: var(--fonea-card); border: 1px solid var(--fonea-border); border-radius: var(--radius-xl);
-padding: 28px; color: var(--fonea-text); text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+padding: 48px 32px; color: var(--fonea-text); text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.35);
 }
-.fonea-empty_badge { display: inline-block; margin-bottom: 8px; font-size: 12px; letter-spacing: .6px; text-transform: uppercase;
-color: var(--fonea-accent); border: 1px solid var(--fonea-border); padding: 4px 8px; border-radius: 999px; background: rgba(110,231,255,0.06); }
-.fonea-empty_title { margin: 6px 0 10px; font-size: 28px; }
-.fonea-empty_desc { margin: 0 auto 18px; max-width: 48ch; color: var(--fonea-subtle); }
-.fonea-empty_actions { display: flex; gap: 12px; justify-content: center; margin-bottom: 16px; flex-wrap: wrap; }
-.fonea-empty_steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
-.fonea-empty_steps .num { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 999px; background: linear-gradient(45deg, var(--fonea-accent), var(--fonea-accent-2)); color: #0b0c10; font-weight: 700; margin-right: 8px; }
+.fonea-empty_badge { 
+display: inline-block; margin-bottom: 16px; font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 6px 12px; border-radius: 999px; 
+background: rgba(16, 185, 129, 0.1); font-weight: 600;
+}
 
+/* Title using header font, 2x bigger */
+.fonea-empty_title_header {
+margin: 12px 0 8px;
+font-size: clamp(64px, 10vw, 104px);
+font-weight: 800;
+line-height: 1;
+letter-spacing: -0.03em;
+color: white;
+font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+}
+
+/* Subtitle */
+.fonea-empty_subtitle {
+margin: 0 0 24px;
+font-size: clamp(18px, 2vw, 22px);
+font-weight: 500;
+color: #9ca3af;
+line-height: 1.4;
+}
+
+.fonea-empty_desc { 
+margin: 0 auto 32px; 
+max-width: 52ch; 
+color: #9ca3af;
+font-size: clamp(15px, 1.5vw, 17px);
+line-height: 1.6;
+}
+
+.fonea-empty_actions { 
+display: flex; 
+gap: 16px; 
+justify-content: center; 
+margin-bottom: 40px; 
+flex-wrap: wrap; 
+}
+
+/* Instructions container - centered on screen */
+.fonea-instructions-container {
+display: flex;
+justify-content: center;
+width: 100%;
+margin-top: 40px;
+}
+
+/* Instructions list - left-aligned content */
+.fonea-instructions-list-proper {
+list-style: none;
+padding: 0;
+margin: 0;
+display: flex;
+flex-direction: column;
+gap: 16px;
+max-width: 500px;
+width: 100%;
+}
+
+.fonea-instructions-list-proper li {
+display: flex;
+align-items: center;
+gap: 20px;
+text-align: left;
+}
+
+/* Circle with number - emerald with white number */
+.instruction-circle {
+display: inline-flex;
+align-items: center;
+justify-content: center;
+width: 40px;
+height: 40px;
+min-width: 40px;
+border-radius: 50%;
+background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+color: white;
+font-weight: 700;
+font-size: 18px;
+flex-shrink: 0;
+box-shadow: 0 2px 12px rgba(16, 185, 129, 0.4);
+}
+
+/* Instruction text - proper spacing */
+.instruction-content {
+color: #e5e7eb;
+font-size: 16px;
+line-height: 1.5;
+flex: 1;
+}
 
 /* Buttons */
 .btn { border: 1px solid var(--fonea-border); background: #0f1117; color: var(--fonea-text); padding: 10px 14px; border-radius: 12px; cursor: pointer; }
 .btn:hover { filter: brightness(1.1); }
 .btn-primary { background: linear-gradient(45deg, var(--fonea-accent), var(--fonea-accent-2)); color: #0b0c10; font-weight: 700; }
 .btn-ghost { background: transparent; }
+
 /* ---- Markdown spacing/typography inside the guide ---- */
 .markdown p {
   margin: 0.5rem 0;

@@ -7,6 +7,7 @@ Two pieces work together:
 
 
 
+
 <!-- Optional button-style link -->
 <p align="center">
   <a href="https://chatgpt.com/g/g-69095d95449c8191a6e34a297676dae2-fonea-companion-gpt"
@@ -37,6 +38,24 @@ Two pieces work together:
 
 ## 1) Log into your Spotify Account
 Click the Log In with Spotify and verify your credentials
+
+<p align="center">
+  <a href="/"
+     style="
+       background-color:#1DB954;
+       color:white;
+       padding:14px 28px;
+       border-radius:10px;
+       text-decoration:none;
+       font-size:18px;
+       font-weight:bold;
+       display:inline-block;
+       box-shadow:0 4px 10px rgba(0,0,0,0.25);
+     ">
+     Sign in with Spotify
+  </a>
+</p>
+
 
 ## 2) Start with a Vibe Brief (in GPT)
 Begin here in the **Fonea Companion GPT**.

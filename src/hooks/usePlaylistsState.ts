@@ -2,10 +2,13 @@
 /**
  * Playlist state management hook
  * Provides CRUD operations and state persistence
+ * 
+ * IMPORTANT: Playlists now store FULL song objects, not IDs
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import type { Playlist, CreatePlaylistInput, UpdatePlaylistInput } from '@/types/playlist';
+import type { Song } from '@/types/song';
 import { loadPlaylists, savePlaylists } from '@/utils/playlistStorage';
 
 /**
@@ -48,7 +51,7 @@ export function usePlaylistsState() {
       id: generatePlaylistId(),
       name: input.name.trim(),
       description: input.description?.trim(),
-      songIds: input.songIds || [],
+      songs: input.songs || [], // Full song objects
       synced: false,
       createdAt: now,
       updatedAt: now,
@@ -85,25 +88,25 @@ export function usePlaylistsState() {
   }, []);
 
   /**
-   * Add songs to a playlist
+   * Add songs to a playlist (now takes full Song objects)
    */
-  const addSongsToPlaylist = useCallback((playlistId: string, songIds: string[]): void => {
+  const addSongsToPlaylist = useCallback((playlistId: string, songs: Song[]): void => {
     setPlaylists(prev =>
       prev.map(playlist => {
         if (playlist.id !== playlistId) return playlist;
 
-        // Avoid duplicates
-        const existingIds = new Set(playlist.songIds);
-        const newSongIds = songIds.filter(id => !existingIds.has(id));
+        // Avoid duplicates by song.id
+        const existingIds = new Set(playlist.songs.map(s => s.id));
+        const newSongs = songs.filter(song => !existingIds.has(song.id));
 
-        if (newSongIds.length === 0) {
+        if (newSongs.length === 0) {
           console.warn('[usePlaylistsState] All songs already in playlist');
           return playlist;
         }
 
         return {
           ...playlist,
-          songIds: [...playlist.songIds, ...newSongIds],
+          songs: [...playlist.songs, ...newSongs],
           updatedAt: new Date().toISOString(),
         };
       })
@@ -111,7 +114,7 @@ export function usePlaylistsState() {
   }, []);
 
   /**
-   * Remove songs from a playlist
+   * Remove songs from a playlist (by song IDs)
    */
   const removeSongsFromPlaylist = useCallback((playlistId: string, songIds: string[]): void => {
     const idsToRemove = new Set(songIds);
@@ -122,7 +125,7 @@ export function usePlaylistsState() {
 
         return {
           ...playlist,
-          songIds: playlist.songIds.filter(id => !idsToRemove.has(id)),
+          songs: playlist.songs.filter(song => !idsToRemove.has(song.id)),
           updatedAt: new Date().toISOString(),
         };
       })
@@ -153,14 +156,41 @@ export function usePlaylistsState() {
   );
 
   /**
-   * Get playlists containing a specific song
+   * Get playlists containing a specific song (by song ID)
    */
   const getPlaylistsForSong = useCallback(
     (songId: string): Playlist[] => {
-      return playlists.filter(p => p.songIds.includes(songId));
+      return playlists.filter(p => p.songs.some(s => s.id === songId));
     },
     [playlists]
   );
+
+  /**
+   * Check if a song exists in any playlist (by song ID)
+   */
+  const isSongInAnyPlaylist = useCallback(
+    (songId: string): boolean => {
+      return playlists.some(p => p.songs.some(s => s.id === songId));
+    },
+    [playlists]
+  );
+
+  /**
+   * Get all unique songs across all playlists
+   */
+  const getAllPlaylistSongs = useCallback((): Song[] => {
+    const songMap = new Map<string, Song>();
+    
+    playlists.forEach(playlist => {
+      playlist.songs.forEach(song => {
+        if (!songMap.has(song.id)) {
+          songMap.set(song.id, song);
+        }
+      });
+    });
+    
+    return Array.from(songMap.values());
+  }, [playlists]);
 
   /**
    * Mark playlist as synced with Spotify
@@ -206,7 +236,7 @@ export function usePlaylistsState() {
     updatePlaylist,
     deletePlaylist,
     
-    // Song operations
+    // Song operations (now work with full Song objects)
     addSongsToPlaylist,
     removeSongsFromPlaylist,
     
@@ -214,6 +244,8 @@ export function usePlaylistsState() {
     getPlaylist,
     playlistNameExists,
     getPlaylistsForSong,
+    isSongInAnyPlaylist,
+    getAllPlaylistSongs,
     
     // Sync operations
     markAsSynced,

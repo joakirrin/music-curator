@@ -1,8 +1,13 @@
 // src/components/Header.tsx
 import { motion } from "framer-motion";
 import { FoneaLogo } from "./FoneaLogo";
+import { SpotifyLoginButton } from "./SpotifyLoginButton";
 
-export const Header = () => {
+type HeaderProps = {
+  onOpenGuide: () => void;
+};
+
+export const Header = ({ onOpenGuide }: HeaderProps) => {
   return (
     <motion.header
       initial={{ y: -12, opacity: 0 }}
@@ -11,17 +16,35 @@ export const Header = () => {
       className="border-b border-gray-700 bg-gray-900"
     >
       <div className="container mx-auto px-4 py-6">
-        {/* ✅ Changed: items-start to items-center for centering */}
-        <div className="flex flex-col items-center">
-          <div className="flex items-center gap-3">
-            <FoneaLogo
-              className="text-emerald-500 h-[clamp(40px,6vw,64px)] w-[clamp(40px,6vw,64px)]"
-              labelClassName="text-[clamp(32px,5.2vw,52px)] font-extrabold tracking-tight text-white"
-            />
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          {/* Left: Logo and tagline */}
+          <div className="flex flex-col items-start">
+            <div className="flex items-center gap-3">
+              <FoneaLogo
+                className="text-emerald-500 h-[clamp(40px,6vw,64px)] w-[clamp(40px,6vw,64px)]"
+                labelClassName="text-[clamp(32px,5.2vw,52px)] font-extrabold tracking-tight text-white"
+              />
+            </div>
+            <p className="mt-2 text-[clamp(14px,1.5vw,18px)] text-gray-400 font-medium leading-snug">
+              Sound Curator
+            </p>
           </div>
-          <p className="mt-2 text-[clamp(14px,1.5vw,18px)] text-gray-400 font-medium leading-snug">
-            Sound Curator
-          </p>
+
+          {/* Right: Utility buttons */}
+          <div className="flex items-center gap-3">
+            {/* Sign in with Spotify - Secondary style */}
+            <SpotifyLoginButton />
+
+            {/* Open Guide - Tertiary style with emoji icon */}
+            <button
+              onClick={onOpenGuide}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-600 bg-transparent text-gray-300 text-sm font-medium hover:bg-gray-700 hover:text-white hover:border-gray-500 transition-colors"
+              title="Open getting started guide"
+            >
+              <span className="text-base">📖</span>
+              <span className="hidden sm:inline">Guide</span>
+            </button>
+          </div>
         </div>
       </div>
     </motion.header>

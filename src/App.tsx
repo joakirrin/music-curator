@@ -13,6 +13,11 @@ import { FeedbackFAB } from "./components/FeedbackFAB";
 import type { FilterType, VerificationFilterType, Song } from "./types/song";
 import { useSongsState } from "./hooks/useLocalState";
 
+// Playlist imports
+import { usePlaylistsState } from "./hooks/usePlaylistsState";
+import { CreatePlaylistModal } from "./components/CreatePlaylistModal";
+import { PlaylistsDrawer } from "./components/PlaylistsDrawer";
+
 // Guide / Empty state onboarding
 import GuideDrawer from "@/components/GuideDrawer";
 import EmptyState from "@/components/EmptyState";
@@ -27,7 +32,7 @@ export default function App() {
   const { open: onboardingOpen, close: onboardingClose } = useOnboardingFlag();
 
   // --- Core state ---
-  const { songs, setSongs } = useSongsState([]); // start empty
+  const { songs, setSongs } = useSongsState([]);
   const [filterType, setFilterType] = useState<FilterType>("all");
   const [verificationFilter, setVerificationFilter] = useState<VerificationFilterType>("all");
   const [search, setSearch] = useState("");
@@ -35,12 +40,23 @@ export default function App() {
   const [isFailedTracksModalOpen, setIsFailedTracksModalOpen] = useState(false);
   const [selectedRound, setSelectedRound] = useState<number | "all">("all");
 
-  // ✅ FIX: Use ref to prevent double OAuth callback in React Strict Mode
+  // Playlist state
+  const {
+    playlists,
+    createPlaylist,
+    deletePlaylist,
+    addSongsToPlaylist,
+    removeSongsFromPlaylist,
+  } = usePlaylistsState();
+
+  // Playlist modal states
+  const [isCreatePlaylistModalOpen, setIsCreatePlaylistModalOpen] = useState(false);
+  const [isPlaylistsDrawerOpen, setIsPlaylistsDrawerOpen] = useState(false);
+
+  // OAuth callback handler
   const callbackHandledRef = useRef(false);
 
-  // --- OAuth callback (runs once) ---
   useEffect(() => {
-    // ✅ Prevent double execution in React Strict Mode
     if (callbackHandledRef.current) {
       if (DEV) console.log("[App] ⏭️ Skipping duplicate callback (already handled)");
       return;
@@ -52,7 +68,6 @@ export default function App() {
     const error = urlParams.get("error");
     const errorDescription = urlParams.get("error_description");
 
-    // Handle OAuth errors
     if (error) {
       if (DEV) {
         console.error("[App] OAuth error:", error, errorDescription);
@@ -62,9 +77,7 @@ export default function App() {
       return;
     }
 
-    // Handle OAuth success
     if (code && state) {
-      // ✅ Mark as handled immediately to prevent double execution
       callbackHandledRef.current = true;
 
       if (DEV) {
@@ -74,15 +87,11 @@ export default function App() {
       }
       
       spotifyAuth.handleCallback(code, state).then((success) => {
-        // Clear URL parameters so we don't re-run on refresh
         window.history.replaceState({}, "", window.location.pathname);
         
         if (success) {
           if (DEV) console.log("[App] ✅ Login successful");
           alert("✅ Successfully logged in to Spotify!");
-          
-          // Optionally trigger a re-render or state update here
-          // to show user info in UI
         } else {
           if (DEV) console.error("[App] ❌ Login failed");
           alert("❌ Login failed. Please check console and try again.");
@@ -93,11 +102,10 @@ export default function App() {
         window.history.replaceState({}, "", window.location.pathname);
       });
     }
-  }, []); // Empty deps - run once on mount
+  }, []);
 
   const hasContent = songs.length > 0;
 
-  // --- Import / Replace flows ---
   const handleChatGPTImport = useCallback(
     (incoming: Song[], replaceFailedInRound?: number) => {
       let updatedSongs = [...songs];
@@ -118,7 +126,7 @@ export default function App() {
   );
 
   const onClear = useCallback(() => {
-    if (confirm("Delete all songs?")) {
+    if (confirm("Delete all songs from library?\n\nNote: Songs in playlists will NOT be deleted.")) {
       setSongs([]);
       setSelectedRound("all");
     }
@@ -131,12 +139,56 @@ export default function App() {
     [songs, setSongs]
   );
 
+  /**
+   * Delete song from library
+   * Song will be removed from the library view, but will stay in playlists
+   */
   const deleteSong = useCallback(
-    (id: string) => setSongs(songs.filter((s) => s.id !== id)),
-    [songs, setSongs]
+    (id: string) => {
+      const song = songs.find(s => s.id === id);
+      if (!song) return;
+
+      // Check if song is in any playlist
+      const isInPlaylists = playlists.some(p => p.songs.some(s => s.id === id));
+
+      const message = isInPlaylists
+        ? `Delete "${song.title}" from library?\n\n` +
+          `⚠️ This song is in ${playlists.filter(p => p.songs.some(s => s.id === id)).length} playlist(s).\n\n` +
+          `It will be removed from your library but will stay in your playlists.`
+        : `Delete "${song.title}" from library?`;
+
+      if (confirm(message)) {
+        setSongs(songs.filter((s) => s.id !== id));
+        
+        if (isInPlaylists) {
+          console.log(`[App] Song "${song.title}" deleted from library but preserved in playlists`);
+        }
+      }
+    },
+    [songs, setSongs, playlists]
   );
 
-  // --- Filters (hide failed in main list) ---
+  /**
+   * Add song to playlist (now passes full Song object)
+   */
+  const handleAddToPlaylist = useCallback((playlistId: string, songId: string) => {
+    const song = songs.find(s => s.id === songId);
+    if (!song) {
+      console.error('[App] Song not found:', songId);
+      return;
+    }
+    
+    // Pass full song object to playlist
+    addSongsToPlaylist(playlistId, [song]);
+  }, [songs, addSongsToPlaylist]);
+
+  /**
+   * Remove song from playlist (by ID)
+   */
+  const handleRemoveFromPlaylist = useCallback((playlistId: string, songId: string) => {
+    removeSongsFromPlaylist(playlistId, [songId]);
+  }, [removeSongsFromPlaylist]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
 
@@ -202,13 +254,13 @@ export default function App() {
       return acc;
     }, {} as Record<number, Song[]>);
 
-    let prompt = `📄 REPLACEMENT REQUEST\n\n`;
+    let prompt = `🔄 REPLACEMENT REQUEST\n\n`;
     prompt += `I need help replacing ${failedTracks.length} track${
       failedTracks.length !== 1 ? "s" : ""
     } that couldn't be verified on Spotify.\n\n`;
 
     Object.entries(tracksByRound).forEach(([round, tracks]) => {
-      prompt += `🔀 Round ${round}:\n`;
+      prompt += `💿 Round ${round}:\n`;
       tracks.forEach((track) => {
         prompt += `  • "${track.title}" by ${track.artist}\n`;
         if (track.verificationError) prompt += `    ❌ Error: ${track.verificationError}\n`;
@@ -272,18 +324,19 @@ export default function App() {
         <SpotifyLoginButton />
       </div>
 
-      {/* Always show header */}
       <Header />
 
-      {/* Main content or empty state */}
       {hasContent ? (
         <>
           <Toolbar
             songs={songs}
+            playlists={playlists}
             onClear={onClear}
             onOpenChatGPTModal={() => setIsChatGPTModalOpen(true)}
             onExportFeedback={handleExportFeedback}
             onGetReplacements={handleGetReplacements}
+            onOpenPlaylistsDrawer={() => setIsPlaylistsDrawerOpen(true)}
+            onOpenCreatePlaylist={() => setIsCreatePlaylistModalOpen(true)}
           />
 
           <FilterBar
@@ -305,6 +358,10 @@ export default function App() {
                 song={s}
                 onUpdate={(next) => updateSong(s.id, next)}
                 onDelete={() => deleteSong(s.id)}
+                onOpenCreatePlaylist={() => setIsCreatePlaylistModalOpen(true)}
+                playlists={playlists}
+                onAddToPlaylist={handleAddToPlaylist}
+                onRemoveFromPlaylist={handleRemoveFromPlaylist}
               />
             ))}
 
@@ -372,7 +429,26 @@ export default function App() {
         onGetReplacements={handleCopyReplacementPrompt}
       />
 
-      {/* Guide drawer */}
+      <CreatePlaylistModal
+        open={isCreatePlaylistModalOpen}
+        onOpenChange={setIsCreatePlaylistModalOpen}
+        songs={songs}
+        onCreatePlaylist={createPlaylist}
+        existingPlaylists={playlists}
+      />
+
+      <PlaylistsDrawer
+        open={isPlaylistsDrawerOpen}
+        onOpenChange={setIsPlaylistsDrawerOpen}
+        playlists={playlists}
+        onDeletePlaylist={deletePlaylist}
+        onOpenCreatePlaylist={() => {
+          setIsCreatePlaylistModalOpen(true);
+          setIsPlaylistsDrawerOpen(false);
+        }}
+        onRemoveSongFromPlaylist={handleRemoveFromPlaylist}
+      />
+
       <GuideDrawer
         open={drawerOpen || onboardingOpen}
         onClose={() => {
@@ -380,7 +456,7 @@ export default function App() {
           onboardingClose();
         }}
       />
-      {/* Feedback FAB - Always visible */}
+      
       <FeedbackFAB onOpenGuide={() => setDrawerOpen(true)} />
     </div>
   );
