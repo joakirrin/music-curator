@@ -1,7 +1,6 @@
 // src/App.tsx
 import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { spotifyAuth } from "./services/spotifyAuth";
-import { SpotifyLoginButton } from "./components/SpotifyLoginButton";
 
 import { Header } from "./components/Header";
 import Toolbar from "./components/Toolbar";
