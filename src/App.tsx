@@ -324,7 +324,7 @@ export default function App() {
         <SpotifyLoginButton />
       </div>
 
-      <Header />
+      <Header onOpenGuide={() => setDrawerOpen(true)} />
 
       {hasContent ? (
         <>
