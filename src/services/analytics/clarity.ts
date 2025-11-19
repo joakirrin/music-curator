@@ -32,14 +32,15 @@ class ClarityService {
     this.projectId = projectId;
 
     // Load Clarity script
-    (function(c: any, l: Document, a: string, r: string, i: string, t: HTMLScriptElement, y: HTMLScriptElement) {
+    // The IIFE takes 5 arguments, and declares 2 local variables (t, y) inside
+    (function(c: any, l: Document, a: string, r: string, i: string) {
       c[a] = c[a] || function() {
         (c[a].q = c[a].q || []).push(arguments);
       };
-      t = l.createElement(r) as HTMLScriptElement;
+      const t = l.createElement(r) as HTMLScriptElement;
       t.async = true;
       t.src = "https://www.clarity.ms/tag/" + i;
-      y = l.getElementsByTagName(r)[0] as HTMLScriptElement;
+      const y = l.getElementsByTagName(r)[0] as HTMLScriptElement;
       y.parentNode!.insertBefore(t, y);
     })(window, document, "clarity", "script", projectId);
 
