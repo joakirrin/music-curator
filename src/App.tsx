@@ -1,4 +1,4 @@
-// src/App.tsx
+// src/App.tsx - FINAL VERSION with GDPR Compliance
 import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { spotifyAuth } from "./services/spotifyAuth";
 
@@ -23,6 +23,12 @@ import EmptyState from "@/components/EmptyState";
 import { useOnboardingFlag } from "@/hooks/useOnboardingFlag";
 import "@/styles/guide.css";
 
+// ✅ ANALYTICS & PRIVACY: GDPR-compliant setup
+import { clarity } from "./services/analytics/clarity";
+import { ANALYTICS_CONFIG, hasAnalyticsConsent } from "./config/analytics";
+import { CookieConsentBanner } from "./components/CookieConsent";
+import { PrivacyRouteHandler } from "./components/PrivacyRouteHandler";
+
 const DEV = import.meta.env.DEV;
 
 export default function App() {
@@ -46,12 +52,23 @@ export default function App() {
     deletePlaylist,
     addSongsToPlaylist,
     removeSongsFromPlaylist,
-    markAsSynced, // ✅ NEW: For Spotify integration
+    markAsSynced, // ✅ For Spotify integration
   } = usePlaylistsState();
 
   // Playlist modal states
   const [isCreatePlaylistModalOpen, setIsCreatePlaylistModalOpen] = useState(false);
   const [isPlaylistsDrawerOpen, setIsPlaylistsDrawerOpen] = useState(false);
+
+  // ✅ ANALYTICS: Initialize Clarity (only if user already consented)
+  useEffect(() => {
+    if (hasAnalyticsConsent() && ANALYTICS_CONFIG.clarity.enabled) {
+      clarity.init(ANALYTICS_CONFIG.clarity.projectId);
+      clarity.event('app_opened');
+      
+      // Optional: Set user segment for analytics
+      clarity.setTag('user_type', songs.length > 0 ? 'returning' : 'new');
+    }
+  }, [songs.length]); // Re-run when songs change to update user type
 
   // OAuth callback handler
   const callbackHandledRef = useRef(false);
@@ -92,14 +109,30 @@ export default function App() {
         if (success) {
           if (DEV) console.log("[App] ✅ Login successful");
           alert("✅ Successfully logged in to Spotify!");
+          
+          // ✅ ANALYTICS: Track successful Spotify login (GDPR compliant)
+          if (clarity.isInitialized()) {
+            clarity.event('spotify_login_success');
+            clarity.setTag('auth_method', 'spotify_oauth');
+          }
         } else {
           if (DEV) console.error("[App] ❌ Login failed");
           alert("❌ Login failed. Please check console and try again.");
+          
+          // ✅ ANALYTICS: Track login failure (no personal data)
+          if (clarity.isInitialized()) {
+            clarity.event('spotify_login_failed');
+          }
         }
       }).catch((err) => {
         if (DEV) console.error("[App] ❌ Callback handler exception:", err);
         alert("❌ Login error. Please check console and try again.");
         window.history.replaceState({}, "", window.location.pathname);
+        
+        // ✅ ANALYTICS: Track login error (no personal data)
+        if (clarity.isInitialized()) {
+          clarity.event('spotify_login_error');
+        }
       });
     }
   }, []);
@@ -121,20 +154,47 @@ export default function App() {
       if (incoming.length > 0 && incoming[0].round) {
         setSelectedRound(incoming[0].round);
       }
+
+      // ✅ ANALYTICS: Track import (GDPR compliant - no personal data)
+      if (clarity.isInitialized()) {
+        clarity.event('songs_imported');
+        clarity.setTag('import_count', incoming.length.toString());
+        clarity.setTag('round', incoming[0]?.round?.toString() || 'unknown');
+        clarity.setTag('source', 'chatgpt');
+        
+        // Track verification success rate (useful for improving service)
+        const verifiedCount = incoming.filter(s => s.verificationStatus === 'verified').length;
+        clarity.setTag('verification_rate', Math.round((verifiedCount / incoming.length) * 100).toString());
+      }
     },
     [songs, setSongs]
   );
 
   const onClear = useCallback(() => {
     if (confirm("Delete all songs from library?\n\nNote: Songs in playlists will NOT be deleted.")) {
+      const previousCount = songs.length;
       setSongs([]);
       setSelectedRound("all");
+
+      // ✅ ANALYTICS: Track clear action (no personal data)
+      if (clarity.isInitialized()) {
+        clarity.event('library_cleared');
+        clarity.setTag('songs_cleared', previousCount.toString());
+      }
     }
-  }, [setSongs]);
+  }, [setSongs, songs.length]);
 
   const updateSong = useCallback(
     (id: string, next: Song) => {
+      const prevSong = songs.find(s => s.id === id);
       setSongs(songs.map((s) => (s.id === id ? next : s)));
+
+      // ✅ ANALYTICS: Track feedback changes (GDPR compliant)
+      if (clarity.isInitialized() && prevSong && prevSong.feedback !== next.feedback) {
+        clarity.event('song_feedback_updated');
+        clarity.setTag('feedback_type', next.feedback || 'unknown');
+        clarity.setTag('verification_status', next.verificationStatus || 'unknown');
+      }
     },
     [songs, setSongs]
   );
@@ -163,6 +223,13 @@ export default function App() {
         if (isInPlaylists) {
           console.log(`[App] Song "${song.title}" deleted from library but preserved in playlists`);
         }
+
+        // ✅ ANALYTICS: Track delete (GDPR compliant - no personal data)
+        if (clarity.isInitialized()) {
+          clarity.event('song_deleted');
+          clarity.setTag('in_playlists', isInPlaylists.toString());
+          clarity.setTag('verification_status', song.verificationStatus || 'unknown');
+        }
       }
     },
     [songs, setSongs, playlists]
@@ -180,6 +247,12 @@ export default function App() {
     
     // Pass full song object to playlist
     addSongsToPlaylist(playlistId, [song]);
+
+    // ✅ ANALYTICS: Track add to playlist (GDPR compliant)
+    if (clarity.isInitialized()) {
+      clarity.event('song_added_to_playlist');
+      clarity.setTag('feedback_status', song.feedback || 'unknown');
+    }
   }, [songs, addSongsToPlaylist]);
 
   /**
@@ -187,19 +260,32 @@ export default function App() {
    */
   const handleRemoveFromPlaylist = useCallback((playlistId: string, songId: string) => {
     removeSongsFromPlaylist(playlistId, [songId]);
+
+    // ✅ ANALYTICS: Track remove from playlist (GDPR compliant)
+    if (clarity.isInitialized()) {
+      clarity.event('song_removed_from_playlist');
+    }
   }, [removeSongsFromPlaylist]);
 
   /**
-   * ✅ NEW: Mark playlist as synced after successful Spotify push
+   * ✅ Mark playlist as synced after successful Spotify push
    */
   const handleMarkAsSynced = useCallback((
     playlistId: string,
     spotifyPlaylistId: string,
     spotifyUrl: string
   ) => {
+    const playlist = playlists.find(p => p.id === playlistId);
     markAsSynced(playlistId, spotifyPlaylistId, spotifyUrl);
     console.log(`[App] ✅ Playlist marked as synced: ${playlistId}`);
-  }, [markAsSynced]);
+
+    // ✅ ANALYTICS: Track Spotify sync (GDPR compliant - no personal data)
+    if (clarity.isInitialized() && playlist) {
+      clarity.event('playlist_synced_to_spotify');
+      clarity.setTag('playlist_song_count', playlist.songs.length.toString());
+      clarity.setTag('sync_success', 'true');
+    }
+  }, [markAsSynced, playlists]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -227,13 +313,11 @@ export default function App() {
 
     switch (verificationFilter) {
       case "verified":
-        base = base.filter((s) => s.verificationStatus === "verified");
-        break;
+        return base.filter((s) => s.verificationStatus === "verified");
       case "unverified":
-        base = base.filter((s) => s.verificationStatus === "unverified" || !s.verificationStatus);
+        return base.filter((s) => s.verificationStatus !== "verified");
+      default:
         break;
-      case "failed":
-        return [];
     }
 
     switch (filterType) {
@@ -255,6 +339,13 @@ export default function App() {
       return;
     }
     setIsFailedTracksModalOpen(true);
+
+    // ✅ ANALYTICS: Track failed tracks modal open (GDPR compliant)
+    if (clarity.isInitialized()) {
+      clarity.event('failed_tracks_modal_opened');
+      clarity.setTag('failed_count', failedTracks.length.toString());
+      clarity.setTag('success_rate', Math.round(((songs.length - failedTracks.length) / songs.length) * 100).toString());
+    }
   }, [songs]);
 
   const handleCopyReplacementPrompt = useCallback(() => {
@@ -284,6 +375,12 @@ export default function App() {
     prompt += `🎯 Please suggest verified Spotify replacements with the same vibe and round.\n`;
     navigator.clipboard.writeText(prompt);
     alert("✅ Replacement prompt copied to clipboard!");
+
+    // ✅ ANALYTICS: Track replacement prompt copy (GDPR compliant)
+    if (clarity.isInitialized()) {
+      clarity.event('replacement_prompt_copied');
+      clarity.setTag('failed_tracks_count', failedTracks.length.toString());
+    }
   }, [songs]);
 
   const handleExportFeedback = useCallback(() => {
@@ -318,12 +415,31 @@ export default function App() {
 
     navigator.clipboard.writeText(JSON.stringify(feedbackData, null, 2));
     alert("✅ Feedback copied to clipboard!");
+
+    // ✅ ANALYTICS: Track feedback export (GDPR compliant)
+    if (clarity.isInitialized()) {
+      clarity.event('feedback_exported');
+      clarity.setTag('songs_with_feedback', songsWithFeedback.length.toString());
+      clarity.setTag('feedback_completion_rate', Math.round((songsWithFeedback.length / songs.length) * 100).toString());
+    }
   }, [songs]);
 
-  const handleImportFromEmpty = () => setIsChatGPTModalOpen(true);
+  const handleImportFromEmpty = () => {
+    setIsChatGPTModalOpen(true);
+
+    // ✅ ANALYTICS: Track import modal open from empty state (GDPR compliant)
+    if (clarity.isInitialized()) {
+      clarity.event('import_modal_opened_from_empty');
+      clarity.setTag('user_journey', 'first_time');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-800 flex flex-col">
+      {/* ✅ GDPR-COMPLIANT PRIVACY SYSTEM */}
+      <CookieConsentBanner />
+      <PrivacyRouteHandler />
+
       <Header onOpenGuide={() => setDrawerOpen(true)} />
 
       {hasContent ? (
@@ -447,7 +563,7 @@ export default function App() {
           setIsPlaylistsDrawerOpen(false);
         }}
         onRemoveSongFromPlaylist={handleRemoveFromPlaylist}
-        onMarkAsSynced={handleMarkAsSynced} // ✅ NEW: Wire in Spotify sync handler
+        onMarkAsSynced={handleMarkAsSynced}
       />
 
       <GuideDrawer

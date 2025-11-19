@@ -1,0 +1,43 @@
+/* src/styles/cookie-consent.css */
+
+/* Override cookie consent colors to match Fonea theme */
+:root {
+  --cc-bg: #ffffff;
+  --cc-text: #1f2937;
+  --cc-btn-primary-bg: #10b981; /* Emerald-600 - Fonea green */
+  --cc-btn-primary-text: #ffffff;
+  --cc-btn-primary-hover-bg: #059669; /* Emerald-700 */
+  --cc-btn-secondary-bg: #f3f4f6;
+  --cc-btn-secondary-text: #374151;
+  --cc-btn-secondary-hover-bg: #e5e7eb;
+  --cc-toggle-bg-on: #10b981;
+  --cc-cookie-category-block-bg: #f9fafb;
+  --cc-overlay-bg: rgba(0, 0, 0, 0.5);
+}
+
+/* Make banner more prominent */
+#cc-main .cm {
+  border-radius: 1rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+              0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Adjust button styling */
+#cc-main .cm__btn {
+  border-radius: 0.75rem;
+  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+  #cc-main .cm {
+    max-width: 90vw;
+    margin: 0 auto;
+  }
+  
+  #cc-main .cm__btn {
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+  }
+}
