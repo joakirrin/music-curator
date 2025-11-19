@@ -12,7 +12,6 @@ export interface ClarityConfig {
 
 class ClarityService {
   private initialized = false;
-  private projectId: string | null = null;
 
   /**
    * Initialize Microsoft Clarity
@@ -28,8 +27,6 @@ class ClarityService {
       console.error('Clarity project ID is required');
       return;
     }
-
-    this.projectId = projectId;
 
     // Load Clarity script
     // The IIFE takes 5 arguments, and declares 2 local variables (t, y) inside
