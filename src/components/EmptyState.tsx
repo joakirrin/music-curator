@@ -1,123 +1,131 @@
-import React, { useState, useEffect } from 'react';
-import { spotifyAuth } from '@/services/spotifyAuth';
-import '../styles/guide.css';
+// src/components/EmptyState.tsx
+// ✅ NO LOGIN REQUIRED: Works immediately with MusicBrainz verification
 
-type EmptyStateProps = {
+import { motion } from "framer-motion";
+
+type Props = {
   onImport: () => void;
   onOpenGuide: () => void;
 };
 
-const EmptyState: React.FC<EmptyStateProps> = ({ onImport, onOpenGuide }) => {
-  // Track auth state with auto-refresh
-  const [isSignedIn, setIsSignedIn] = useState(false);
-
-  useEffect(() => {
-    const checkAuth = () => {
-      const authState = spotifyAuth.getAuthState();
-      setIsSignedIn(!!authState?.access_token);
-    };
-
-    // Check immediately
-    checkAuth();
-    
-    // Recheck every 1 second to catch login changes
-    const interval = setInterval(checkAuth, 1000);
-    
-    return () => clearInterval(interval);
-  }, []);
-
+export default function EmptyState({ onImport, onOpenGuide }: Props) {
   return (
-    <div className="fonea-empty_root">
-      <div className="fonea-empty_card">
-        <div className="fonea-empty_badge">Fonea</div>
-        
-        {/* Title using header font, 2x bigger */}
-        <h1 className="fonea-empty_title_header">
-          fonea
+    <div className="flex-1 flex items-center justify-center p-8">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="max-w-2xl w-full text-center"
+      >
+        {/* Icon */}
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+          className="mb-8"
+        >
+          <div className="inline-block p-6 bg-emerald-500/10 rounded-3xl">
+            <span className="text-7xl">🎵</span>
+          </div>
+        </motion.div>
+
+        {/* Heading */}
+        <h1 className="text-4xl font-bold text-white mb-4">
+          Welcome to Fonea Sound Curator
         </h1>
-        
-        <p className="fonea-empty_subtitle">
-          Curate smarter. Listen deeper.
+
+        {/* ✅ UPDATED: Emphasize no login needed */}
+        <p className="text-lg text-gray-400 mb-8 max-w-xl mx-auto">
+          Your AI-powered music discovery assistant.
+          <br />
+          <span className="text-emerald-400 font-medium">
+            ✨ No login required to get started!
+          </span>
         </p>
 
-        <p className="fonea-empty_desc">
-          {isSignedIn ? (
-            <>Start by importing a playlist JSON from the Companion GPT, or open the guide to see the workflow.</>
-          ) : (
-            <>Sign in with Spotify to verify tracks and start curating your perfect playlist.</>
-          )}
-        </p>
+        {/* Quick Start Steps */}
+        <div className="grid md:grid-cols-3 gap-6 mb-12 text-left">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-emerald-500 transition-colors"
+          >
+            <div className="text-3xl mb-3">🤖</div>
+            <h3 className="text-lg font-semibold text-white mb-2">
+              1. Get Recommendations
+            </h3>
+            <p className="text-sm text-gray-400">
+              Use ChatGPT to get personalized music recommendations based on your taste
+            </p>
+          </motion.div>
 
-        {/* Conditional CTA based on sign-in status */}
-        <div className="fonea-empty_actions">
-          {isSignedIn ? (
-            <>
-              <button 
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors shadow-lg hover:shadow-xl" 
-                onClick={onImport}
-              >
-                🤖 Import from ChatGPT
-              </button>
-              <button className="btn btn-ghost" onClick={onOpenGuide}>
-                Open Guide
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => void spotifyAuth.login()}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-4 rounded-lg transition-all shadow-lg hover:shadow-xl hover:scale-105 flex items-center gap-3 text-lg"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 168 168"
-                  className="w-6 h-6"
-                  fill="currentColor"
-                >
-                  <path d="M84 0a84 84 0 1 0 84 84A84 84 0 0 0 84 0ZM122.5 121a5 5 0 0 1-6.9 1.6c-19-11.6-42.8-14.2-71.3-7.7a5 5 0 0 1-2.2-9.7c30.9-7.1 57.8-4.2 79.5 8.8a5 5 0 0 1 1 7Zm9.8-21.7a6.3 6.3 0 0 1-8.7 2c-21.7-13.3-54.8-17.2-80.6-9.3a6.3 6.3 0 0 1-3.6-12c28.6-8.6 64.5-4.3 89.1 11.3a6.3 6.3 0 0 1 3.8 8Zm.8-23.5c-25.3-15-67.2-16.4-91.4-8.8a7.5 7.5 0 0 1-4.6-14.3c27.4-8.8 73.6-7.2 102.8 10.2a7.5 7.5 0 1 1-7.7 12.9Z" />
-                </svg>
-                Sign in with Spotify to Get Started
-              </button>
-              <button 
-                className="btn btn-ghost mt-2" 
-                onClick={onOpenGuide}
-              >
-                Learn More
-              </button>
-            </>
-          )}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-emerald-500 transition-colors"
+          >
+            <div className="text-3xl mb-3">✨</div>
+            <h3 className="text-lg font-semibold text-white mb-2">
+              2. Import & Verify
+            </h3>
+            <p className="text-sm text-gray-400">
+              Import songs and we'll verify them with MusicBrainz (no login needed!)
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-emerald-500 transition-colors"
+          >
+            <div className="text-3xl mb-3">📚</div>
+            <h3 className="text-lg font-semibold text-white mb-2">
+              3. Curate & Export
+            </h3>
+            <p className="text-sm text-gray-400">
+              Review songs, create playlists, and export to Spotify when ready
+            </p>
+          </motion.div>
         </div>
 
-        {/* Instructions centered with left-aligned content */}
-        {isSignedIn && (
-          <div className="fonea-instructions-container">
-            <ul className="fonea-instructions-list-proper">
-              <li>
-                <span className="instruction-circle">1</span>
-                <span className="instruction-content">Get JSON from Companion GPT (Round 1)</span>
-              </li>
-              <li>
-                <span className="instruction-circle">2</span>
-                <span className="instruction-content">Import JSON here</span>
-              </li>
-              <li>
-                <span className="instruction-circle">3</span>
-                <span className="instruction-content">Verify, Keep/Skip, add notes</span>
-              </li>
-              <li>
-                <span className="instruction-circle">4</span>
-                <span className="instruction-content">Export Feedback → paste in GPT</span>
-              </li>
-              <li>
-                <span className="instruction-circle">5</span>
-                <span className="instruction-content">Import new round and iterate</span>
-              </li>
-            </ul>
-          </div>
-        )}
-      </div>
+        {/* CTA Buttons */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            onClick={onImport}
+            className="px-8 py-4 rounded-xl bg-emerald-600 text-white text-lg font-semibold hover:bg-emerald-700 transition-colors shadow-lg hover:shadow-xl flex items-center gap-3"
+          >
+            <span className="text-2xl">🚀</span>
+            <span>Import from ChatGPT</span>
+          </motion.button>
+
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.7 }}
+            onClick={onOpenGuide}
+            className="px-8 py-4 rounded-xl border border-gray-600 text-gray-300 text-lg font-semibold hover:bg-gray-800 hover:text-white transition-colors flex items-center gap-3"
+          >
+            <span className="text-2xl">📖</span>
+            <span>View Guide</span>
+          </motion.button>
+        </div>
+
+        {/* Helper Text */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8 }}
+          className="mt-8 text-sm text-gray-500"
+        >
+          ℹ️ Spotify login is optional - only needed when exporting playlists
+        </motion.p>
+      </motion.div>
     </div>
   );
-};
-
-export default EmptyState;
+}

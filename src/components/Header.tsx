@@ -1,4 +1,6 @@
 // src/components/Header.tsx
+// ✅ SIMPLIFIED: Spotify login is optional, not required
+
 import { motion } from "framer-motion";
 import { FoneaLogo } from "./FoneaLogo";
 import { SpotifyLoginButton } from "./SpotifyLoginButton";
@@ -32,10 +34,10 @@ export const Header = ({ onOpenGuide }: HeaderProps) => {
 
           {/* Right: Utility buttons */}
           <div className="flex items-center gap-3">
-            {/* Sign in with Spotify - Secondary style */}
+            {/* ✅ CHANGED: Spotify login is now optional (not blocking) */}
             <SpotifyLoginButton />
 
-            {/* Open Guide - Tertiary style with emoji icon */}
+            {/* Open Guide button */}
             <button
               onClick={onOpenGuide}
               className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-600 bg-transparent text-gray-300 text-sm font-medium hover:bg-gray-700 hover:text-white hover:border-gray-500 transition-colors"

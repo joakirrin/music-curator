@@ -1,6 +1,8 @@
 /**
  * Core Song type definition
  * Supports multiple sources (manual, ChatGPT, Spotify, YouTube, Apple Music) and recommendation workflows
+ * 
+ * ✅ PHASE 4 UPDATE: Added MusicBrainz fields for universal verification
  */
 
 export type Platform = "Spotify" | "YouTube" | "Bandcamp" | "SoundCloud";
@@ -42,10 +44,39 @@ export type Song = {
 
   addedAt?: string;         // ISO 8601
 
-  // Verification (Phase 1.5+)
+  // ✅ NEW: MusicBrainz fields for universal verification (Phase 4)
+  musicBrainzId?: string;   // MusicBrainz Recording ID (MBID) - universal identifier
+  isrc?: string;            // International Standard Recording Code - for cross-platform matching
+  
+  // ✅ NEW: Multi-platform IDs (extracted from MusicBrainz)
+  platformIds?: {
+    spotify?: {
+      id: string;           // Track ID (e.g., "3n3Ppam7vgaVa1iaRUc9Lp")
+      uri: string;          // Spotify URI (e.g., "spotify:track:3n3Ppam7vgaVa1iaRUc9Lp")
+      url?: string;         // Web URL
+    };
+    apple?: {
+      id: string;           // Apple Music track ID
+      url?: string;         // Store URL
+    };
+    tidal?: {
+      id: string;           // Tidal track ID
+      url?: string;         // Web URL
+    };
+    qobuz?: {
+      id: string;           // Qobuz track ID
+      url?: string;         // Web URL
+    };
+    youtube?: {
+      id: string;           // YouTube video ID
+      url?: string;         // Watch URL
+    };
+  };
+
+  // Verification (Phase 1.5+) - UPDATED for multi-source
   verificationStatus?: "verified" | "unverified" | "checking" | "failed";
   verifiedAt?: string;      // ISO 8601
-  verificationSource?: "spotify" | "youtube" | "applemusic" | "manual";
+  verificationSource?: "spotify" | "youtube" | "applemusic" | "manual" | "musicbrainz" | "itunes" | "multi";
   verificationError?: string;
 
   // ---- Deprecated (kept optional for backward compatibility) ----

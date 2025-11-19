@@ -1,4 +1,6 @@
 // src/components/ChatGPTSongRow.tsx
+// ✅ POLISHED: Clean UI with direct platform links
+
 import { useState } from "react";
 import type { Song } from "../types/song";
 import type { Playlist } from "../types/playlist";
@@ -27,7 +29,6 @@ export const ChatGPTSongRow = ({
   const set = <K extends keyof Song>(key: K, value: Song[K]) =>
     onUpdate({ ...song, [key]: value });
 
-  // Changed from showPlaylistDropdown to showPlaylistModal
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
 
   const feedbackOptions: Array<"keep" | "skip" | "pending"> = [
@@ -57,19 +58,32 @@ export const ChatGPTSongRow = ({
     setShowPlaylistModal(true);
   };
 
-  const spotifyHref = `https://open.spotify.com/search/${encodeURIComponent(
-    `${song.artist} ${song.title}`,
-  )}`;
-  const youtubeHref = `https://www.youtube.com/results?search_query=${encodeURIComponent(
-    `${song.artist} ${song.title}`,
-  )}`;
+  const getVerificationSourceLabel = (source?: string) => {
+    if (!source) return "";
+    
+    switch (source) {
+      case "musicbrainz":
+        return "MusicBrainz";
+      case "spotify":
+        return "Spotify";
+      case "itunes":
+        return "iTunes";
+      case "multi":
+        return "Multi";
+      case "manual":
+        return "Manual";
+      default:
+        return source;
+    }
+  };
 
   const playlistCount = playlists.filter(p => p.songs.some(s => s.id === song.id)).length;
 
   return (
     <div className="container mx-auto px-4 py-4 border-b border-gray-700 bg-gray-700 hover:bg-gray-650 transition-colors overflow-hidden">
-      {/* TOP META ROW */}
+      {/* TOP META ROW - Simplified */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
+        {/* Verification Status */}
         {song.verificationStatus && (
           <span
             className={`px-2 py-1 rounded-full text-xs font-medium border ${
@@ -82,57 +96,28 @@ export const ChatGPTSongRow = ({
                 : "bg-orange-500 text-white border-orange-400"
             }`}
           >
-            {song.verificationStatus === "verified" && "✓ Verified"}
+            {song.verificationStatus === "verified" && (
+              <>
+                ✓ Verified
+                {song.verificationSource && (
+                  <span className="ml-1 opacity-75">
+                    ({getVerificationSourceLabel(song.verificationSource)})
+                  </span>
+                )}
+              </>
+            )}
             {song.verificationStatus === "checking" && "🔄 Checking..."}
             {song.verificationStatus === "failed" && "✗ Failed"}
             {song.verificationStatus === "unverified" && "⚠️ Unverified"}
           </span>
         )}
 
+        {/* Round */}
         {song.round && (
           <span className="px-2 py-1 rounded-full text-xs font-medium bg-emerald-900 text-emerald-300 border border-emerald-700">
             Round {song.round}
           </span>
         )}
-
-        {song.duration && (
-          <span className="px-2 py-1 rounded-full text-xs text-gray-300 bg-gray-600">
-            ⏱️ {formatDuration(song.duration)}
-          </span>
-        )}
-
-        {/* Platform badges */}
-        <div className="flex items-center gap-3">
-          <a
-            href={spotifyHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center h-8 px-3 rounded-full bg-[#1DB954] text-white shadow-md hover:shadow-xl hover:bg-[#1ed760] transition-all active:scale-95"
-            title="Search on Spotify"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              className="w-4 h-4 fill-current"
-            >
-              <path d="M12 0a12 12 0 100 24 12 12 0 000-24Zm5.2 16.7a.9.9 0 01-1.2.3c-3.2-2-7.6-2.5-12.3-1.3a.9.9 0 01-.4-1.7c5.1-1.3 10.2-.7 13.9 1.6a.9.9 0 01.4 1.1Zm1.7-3.6a1 1 0 01-1.3.3c-3.7-2.3-9.3-3-13.5-1.6a1 1 0 11-.6-1.9c4.9-1.5 11.2-.7 15.5 2a1 1 0 01-.1 1.2Zm.1-3.8c-4.3-2.6-11.4-2.8-15.8-1.5a1.2 1.2 0 11-.7-2.2c5.1-1.5 13-1.2 18 1.8a1.2 1.2 0 01-1.3 2Z" />
-            </svg>
-          </a>
-
-          <a
-            href={youtubeHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center h-8 px-3 rounded-full bg-[#FF0000] text-white shadow-md hover:shadow-xl hover:bg-[#e60000] transition-all active:scale-95"
-            title="Search on YouTube"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              className="w-4 h-4 fill-current"
-            >
-              <path d="M23 7.5s-.2-2-1-2.8c-.8-.9-1.7-1-2.2-1C16.3 3.3 12 3.3 12 3.3s-4.3 0-7.8.4c-.5 0-1.4.1-2.2 1C1.2 5.5 1 7.5 1 7.5S.8 9.7.8 12s.2 4.5.2 4.5.2 2 1 2.8 1.7 1 2.2 1c3.5.4 7.8.4 7.8.4s4.3 0 7.8-.4c.5 0 1.4-.1 2.2-1 .8-.8 1-2.8 1-2.8s.2-2.3.2-4.5-.2-4.5-.2-4.5ZM9.8 15.6V8.4l6.2 3.6-6.2 3.6Z" />
-            </svg>
-          </a>
-        </div>
 
         <div className="flex items-center gap-3 ml-auto">
           {song.addedAt && (
@@ -170,7 +155,7 @@ export const ChatGPTSongRow = ({
             className="w-full px-0 py-1 border-b border-gray-500/60 bg-transparent text-white placeholder-gray-500 text-lg font-bold focus:outline-none focus:border-emerald-500"
           />
 
-          {/* Artist · Album · Year */}
+          {/* Artist · Album · Year · Duration */}
           <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
             <input
               value={song.artist}
@@ -196,7 +181,38 @@ export const ChatGPTSongRow = ({
               placeholder="Year"
               className="bg-transparent border-b border-transparent focus:border-emerald-500 text-gray-400 px-0 py-0.5 focus:outline-none w-14"
             />
+
+            {/* ✅ MOVED: Duration here instead of badge */}
+            {song.duration && (
+              <>
+                <span className="text-gray-500">·</span>
+                <span className="text-gray-400">{formatDuration(song.duration)}</span>
+              </>
+            )}
+
+            {/* ✅ NEW: Clickable MusicBrainz link (if verified) */}
+            {song.musicBrainzId && (
+              <>
+                <span className="text-gray-500">·</span>
+                <a
+                  href={`https://musicbrainz.org/recording/${song.musicBrainzId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-purple-400 hover:text-purple-300 text-xs underline"
+                  title="View on MusicBrainz"
+                >
+                  MusicBrainz ↗
+                </a>
+              </>
+            )}
           </div>
+
+          {/* ISRC (if available) */}
+          {song.isrc && (
+            <div className="mt-1 text-xs text-gray-400">
+              <span className="font-medium">ISRC:</span> {song.isrc}
+            </div>
+          )}
 
           {/* WHY ChatGPT recommended */}
           {song.comments && (
@@ -210,8 +226,150 @@ export const ChatGPTSongRow = ({
         </div>
       </div>
 
+      {/* ✅ IMPROVED: Platform Links Section (moved up, more prominent) */}
+      {song.platformIds && Object.keys(song.platformIds).length > 0 && (
+        <div className="mt-4 p-3 bg-gray-800/50 border border-gray-600 rounded-lg">
+          <p className="text-xs font-medium text-gray-400 mb-2">
+            🌐 Listen on:
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {song.platformIds.spotify && (
+              <a
+                href={song.platformIds.spotify.url || `https://open.spotify.com/track/${song.platformIds.spotify.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1DB954] text-white hover:bg-[#1ed760] transition-all shadow-md hover:shadow-lg"
+                title="Open in Spotify"
+              >
+                <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current">
+                  <path d="M12 0a12 12 0 100 24 12 12 0 000-24Zm5.2 16.7a.9.9 0 01-1.2.3c-3.2-2-7.6-2.5-12.3-1.3a.9.9 0 01-.4-1.7c5.1-1.3 10.2-.7 13.9 1.6a.9.9 0 01.4 1.1Zm1.7-3.6a1 1 0 01-1.3.3c-3.7-2.3-9.3-3-13.5-1.6a1 1 0 11-.6-1.9c4.9-1.5 11.2-.7 15.5 2a1 1 0 01-.1 1.2Zm.1-3.8c-4.3-2.6-11.4-2.8-15.8-1.5a1.2 1.2 0 11-.7-2.2c5.1-1.5 13-1.2 18 1.8a1.2 1.2 0 01-1.3 2Z" />
+                </svg>
+                <span className="font-medium">Spotify</span>
+              </a>
+            )}
+
+            {song.platformIds.apple && (
+              <a
+                href={song.platformIds.apple.url || `https://music.apple.com/us/song/${song.platformIds.apple.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#FA243C] text-white hover:bg-[#ff3b52] transition-all shadow-md hover:shadow-lg"
+                title="Open in Apple Music"
+              >
+                <span className="text-lg">🍎</span>
+                <span className="font-medium">Apple Music</span>
+              </a>
+            )}
+
+            {song.platformIds.tidal && (
+              <a
+                href={song.platformIds.tidal.url || `https://tidal.com/browse/track/${song.platformIds.tidal.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-black text-white hover:bg-gray-900 transition-all shadow-md hover:shadow-lg border border-gray-700"
+                title="Open in Tidal"
+              >
+                <span className="text-lg">🌊</span>
+                <span className="font-medium">Tidal</span>
+              </a>
+            )}
+
+            {song.platformIds.qobuz && (
+              <a
+                href={song.platformIds.qobuz.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#0066CC] text-white hover:bg-[#0055aa] transition-all shadow-md hover:shadow-lg"
+                title="Open in Qobuz"
+              >
+                <span className="text-lg">🎼</span>
+                <span className="font-medium">Qobuz</span>
+              </a>
+            )}
+
+            {song.platformIds.youtube && (
+              <a
+                href={song.platformIds.youtube.url || `https://www.youtube.com/watch?v=${song.platformIds.youtube.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#FF0000] text-white hover:bg-[#e60000] transition-all shadow-md hover:shadow-lg"
+                title="Open in YouTube"
+              >
+                <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current">
+                  <path d="M23 7.5s-.2-2-1-2.8c-.8-.9-1.7-1-2.2-1C16.3 3.3 12 3.3 12 3.3s-4.3 0-7.8.4c-.5 0-1.4.1-2.2 1C1.2 5.5 1 7.5 1 7.5S.8 9.7.8 12s.2 4.5.2 4.5.2 2 1 2.8 1.7 1 2.2 1c3.5.4 7.8.4 7.8.4s4.3 0 7.8-.4c.5 0 1.4-.1 2.2-1 .8-.8 1-2.8 1-2.8s.2-2.3.2-4.5-.2-4.5-.2-4.5ZM9.8 15.6V8.4l6.2 3.6-6.2 3.6Z" />
+                </svg>
+                <span className="font-medium">YouTube</span>
+              </a>
+            )}
+          </div>
+
+          {/* ✅ OPTIONAL: Add search fallback if no direct links */}
+          {(!song.platformIds.spotify || !song.platformIds.youtube) && (
+            <div className="mt-2 pt-2 border-t border-gray-700">
+              <p className="text-xs text-gray-500 mb-2">Search on:</p>
+              <div className="flex flex-wrap gap-2">
+                {!song.platformIds.spotify && (
+                  <a
+                    href={`https://open.spotify.com/search/${encodeURIComponent(`${song.artist} ${song.title}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-gray-400 hover:text-emerald-400 underline"
+                  >
+                    Search Spotify
+                  </a>
+                )}
+                {!song.platformIds.youtube && (
+                  <a
+                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`${song.artist} ${song.title}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-gray-400 hover:text-emerald-400 underline"
+                  >
+                    Search YouTube
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ✅ FALLBACK: If no platformIds, show search links */}
+      {(!song.platformIds || Object.keys(song.platformIds).length === 0) && (
+        <div className="mt-4 p-3 bg-gray-800/50 border border-gray-600 rounded-lg">
+          <p className="text-xs font-medium text-gray-400 mb-2">
+            🔍 Search for this song:
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href={`https://open.spotify.com/search/${encodeURIComponent(`${song.artist} ${song.title}`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1DB954] text-white hover:bg-[#1ed760] transition-all shadow-md hover:shadow-lg"
+            >
+              <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current">
+                <path d="M12 0a12 12 0 100 24 12 12 0 000-24Zm5.2 16.7a.9.9 0 01-1.2.3c-3.2-2-7.6-2.5-12.3-1.3a.9.9 0 01-.4-1.7c5.1-1.3 10.2-.7 13.9 1.6a.9.9 0 01.4 1.1Zm1.7-3.6a1 1 0 01-1.3.3c-3.7-2.3-9.3-3-13.5-1.6a1 1 0 11-.6-1.9c4.9-1.5 11.2-.7 15.5 2a1 1 0 01-.1 1.2Zm.1-3.8c-4.3-2.6-11.4-2.8-15.8-1.5a1.2 1.2 0 11-.7-2.2c5.1-1.5 13-1.2 18 1.8a1.2 1.2 0 01-1.3 2Z" />
+              </svg>
+              <span className="font-medium">Search Spotify</span>
+            </a>
+
+            <a
+              href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`${song.artist} ${song.title}`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#FF0000] text-white hover:bg-[#e60000] transition-all shadow-md hover:shadow-lg"
+            >
+              <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current">
+                <path d="M23 7.5s-.2-2-1-2.8c-.8-.9-1.7-1-2.2-1C16.3 3.3 12 3.3 12 3.3s-4.3 0-7.8.4c-.5 0-1.4.1-2.2 1C1.2 5.5 1 7.5 1 7.5S.8 9.7.8 12s.2 4.5.2 4.5.2 2 1 2.8 1.7 1 2.2 1c3.5.4 7.8.4 7.8.4s4.3 0 7.8-.4c.5 0 1.4-.1 2.2-1 .8-.8 1-2.8 1-2.8s.2-2.3.2-4.5-.2-4.5-.2-4.5ZM9.8 15.6V8.4l6.2 3.6-6.2 3.6Z" />
+              </svg>
+              <span className="font-medium">Search YouTube</span>
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* DECISION BUTTONS */}
-      <div className="mt-3 flex flex-wrap items-center gap-2">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
         <span className="text-sm font-medium text-gray-300">Your decision:</span>
         {feedbackOptions.map((option) => (
           <button
@@ -240,7 +398,7 @@ export const ChatGPTSongRow = ({
           </button>
         ))}
 
-        {/* Add to Playlist button - NO MORE RELATIVE WRAPPER */}
+        {/* Add to Playlist button */}
         {song.feedback === 'keep' && (
           <button
             onClick={() => setShowPlaylistModal(true)}
@@ -274,24 +432,7 @@ export const ChatGPTSongRow = ({
         </p>
       </div>
 
-      {/* EXTRA platform metadata if exists */}
-      {song.platforms && song.platforms.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 mt-1">
-          <span className="text-xs font-medium text-gray-400">
-            Available on:
-          </span>
-          {song.platforms.map((platform) => (
-            <span
-              key={platform}
-              className="px-2 py-1 rounded-full text-xs bg-gray-600 text-gray-200 border border-gray-500"
-            >
-              {platform}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Modal - renders at root level, not inside relative container */}
+      {/* Modal */}
       <AddToPlaylistModal
         open={showPlaylistModal}
         onOpenChange={setShowPlaylistModal}

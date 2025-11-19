@@ -1,10 +1,15 @@
 // src/components/ImportChatGPTModal.tsx
-// ✅ PHASE 2.2 UPDATE: Uses service-agnostic field names (serviceUri, serviceId, serviceUrl)
+// ✅ PHASE 4 UPDATE: Uses MusicBrainz for universal verification (no login required!)
+// ✅ PHASE 4.1 UPDATE: Added Spotify ISRC resolution for direct links
 
 import { useState, useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import type { Song } from "../types/song";
-import { verifySong, applySongVerification } from "../services/spotifyVerification";
+import { verifyWithMusicBrainz } from "../services/verification/musicBrainzVerification";
+import type { VerificationResult } from "../services/verification/verificationTypes";
+import { spotifyAuth } from "../services/spotifyAuth";
+import { resolveSpotifyByISRC } from "../services/spotifyIsrcResolver";
+import { resolveAppleMusic } from "../services/appleMusicResolver";
 
 type Props = {
   open: boolean;
@@ -132,7 +137,7 @@ export default function ImportChatGPTModal({
           throw new Error(`Recommendation #${index + 1} is missing required fields (title or artist)`);
         }
 
-        // ✅ Support both new service-agnostic fields and legacy Spotify fields
+        // Support both new service-agnostic fields and legacy Spotify fields
         const serviceLink = normalizeServiceLink(
           rec.serviceUri || rec.serviceUrl || rec.spotifyUri || rec.spotifyUrl
         );
@@ -198,18 +203,88 @@ export default function ImportChatGPTModal({
           }
 
           try {
-            const result = await verifySong(song);
-            newSongs[i] = applySongVerification(song, result);
+            // ✅ STEP 1: Use MusicBrainz for universal verification
+            const result: VerificationResult = await verifyWithMusicBrainz(
+              song.artist,
+              song.title
+            );
             
-            if (result.verificationStatus === 'verified') {
+            if (result.verified) {
+              // Success! Update song with MusicBrainz data
+              newSongs[i] = {
+                ...song,
+                verificationStatus: 'verified',
+                verifiedAt: result.timestamp,
+                verificationSource: 'musicbrainz',
+                
+                // MusicBrainz-specific fields
+                musicBrainzId: result.musicBrainzId,
+                isrc: result.isrc,
+                
+                // Metadata (prefer MusicBrainz over ChatGPT)
+                artist: result.artist,
+                title: result.title,
+                album: result.album || song.album,
+                year: result.year || song.year,
+                releaseDate: result.releaseDate,
+                duration: result.duration,
+                durationMs: result.durationMs,
+                
+                // Platform IDs from MusicBrainz
+                platformIds: result.platformIds,
+                
+                // Map Spotify ID to service fields for backward compatibility
+                serviceId: result.platformIds?.spotify?.id,
+                serviceUri: result.platformIds?.spotify?.uri,
+                serviceUrl: result.platformIds?.spotify?.url,
+              };
+              
+              // ✅ STEP 2: Try to resolve Spotify URL using ISRC (if user is logged in and ISRC exists)
+              // NOTE: Only resolve if MusicBrainz didn't already find a Spotify link
+              if (result.verified && result.isrc && !result.platformIds?.spotify) {
+                const spotifyToken = await spotifyAuth.getAccessToken();
+                if (spotifyToken) {
+                  const spotifyData = await resolveSpotifyByISRC(result.isrc, spotifyToken);
+                  if (spotifyData) {
+                    // Initialize platformIds if needed
+                    if (!newSongs[i].platformIds) newSongs[i].platformIds = {};
+                    newSongs[i].platformIds!.spotify = spotifyData;
+                    
+                    // Also update service fields for backward compatibility
+                    newSongs[i].serviceId = spotifyData.id;
+                    newSongs[i].serviceUri = spotifyData.uri;
+                    newSongs[i].serviceUrl = spotifyData.url;
+                  }
+                }
+              }
+              
+              // ✅ STEP 3: Try to resolve Apple Music URL using artist+title search (no auth required!)
+              // NOTE: iTunes API doesn't support ISRC search, so we use artist+title matching
+              if (result.verified) {
+                const appleMusicData = await resolveAppleMusic(result.artist, result.title);
+                if (appleMusicData) {
+                  // Initialize platformIds if needed
+                  if (!newSongs[i].platformIds) newSongs[i].platformIds = {};
+                  newSongs[i].platformIds!.apple = appleMusicData;
+                }
+              }
+              
               summary.verified++;
             } else {
+              // Verification failed
               summary.failed++;
               summary.failedSongs.push({
                 title: song.title,
                 artist: song.artist,
-                error: result.verificationError || 'Unknown error',
+                error: result.error || 'Unknown error',
               });
+              
+              newSongs[i] = {
+                ...song,
+                verificationStatus: 'failed',
+                verificationSource: 'musicbrainz',
+                verificationError: result.error,
+              };
             }
           } catch (err) {
             summary.failed++;
@@ -221,11 +296,12 @@ export default function ImportChatGPTModal({
             newSongs[i] = {
               ...song,
               verificationStatus: 'failed',
+              verificationSource: 'musicbrainz',
               verificationError: err instanceof Error ? err.message : 'Verification failed',
             };
           }
 
-          // Small delay to avoid rate limiting
+          // Small delay to avoid hammering the API
           if (i < newSongs.length - 1) {
             await new Promise(resolve => setTimeout(resolve, 100));
           }
@@ -235,7 +311,7 @@ export default function ImportChatGPTModal({
         setIsVerifying(false);
         setVerificationProgress(null);
 
-        // ✅ Smart Replacement Detection (AFTER verification)
+        // Smart Replacement Detection (AFTER verification)
         const failedInThisRound = existingSongs.filter(
           (s) => s.round === nextRound && s.verificationStatus === 'failed'
         );
@@ -320,7 +396,7 @@ export default function ImportChatGPTModal({
               <p className="text-sm text-gray-600 mb-4">
                 {verificationSummary.failed > 0 ? (
                   <>
-                    • {verificationSummary.verified} track{verificationSummary.verified !== 1 ? 's' : ''} verified and imported<br />
+                    • {verificationSummary.verified} track{verificationSummary.verified !== 1 ? 's' : ''} verified with MusicBrainz<br />
                     • {verificationSummary.failed} track{verificationSummary.failed !== 1 ? 's' : ''} failed verification<br />
                     <br />
                     <span className="text-orange-600 font-medium">
@@ -329,7 +405,7 @@ export default function ImportChatGPTModal({
                     </span>
                   </>
                 ) : (
-                  <>Imported {verificationSummary.verified} verified track{verificationSummary.verified !== 1 ? 's' : ''}!</>
+                  <>Imported {verificationSummary.verified} verified track{verificationSummary.verified !== 1 ? 's' : ''} with MusicBrainz!</>
                 )}
               </p>
               
@@ -343,7 +419,7 @@ export default function ImportChatGPTModal({
                     <div className="text-2xl font-bold text-emerald-700">
                       {verificationSummary.verified}
                     </div>
-                    <div className="text-sm text-emerald-600">✓ Verified</div>
+                    <div className="text-sm text-emerald-600">✓ Verified (MusicBrainz)</div>
                   </div>
                   
                   {verificationSummary.failed > 0 && (
@@ -425,8 +501,7 @@ export default function ImportChatGPTModal({
                 Import from ChatGPT
               </Dialog.Title>
               <Dialog.Description className="text-sm text-gray-600 mb-4">
-                Paste the JSON response from ChatGPT below. Just provide artist + title - 
-                we'll search Spotify for the real track!
+                Paste the JSON response from ChatGPT below. We'll verify with MusicBrainz (no login required!)
               </Dialog.Description>
 
               <div className="space-y-3">
@@ -440,13 +515,13 @@ export default function ImportChatGPTModal({
                       disabled={isLoading || isVerifying}
                     />
                     <span className="text-sm font-medium text-emerald-900">
-                      ✓ Auto-verify with Spotify Search API
+                      ✓ Auto-verify with MusicBrainz (No login required!)
                     </span>
                   </label>
                   
                   <p className="text-xs text-emerald-700">
                     {autoVerify 
-                      ? "We'll search Spotify for each track. Failed tracks will be hidden from the main list." 
+                      ? "We'll verify each track with MusicBrainz and extract platform IDs. Failed tracks will be hidden from the main list." 
                       : "Songs will be imported without verification (you can verify them later)."}
                   </p>
                 </div>
@@ -455,7 +530,7 @@ export default function ImportChatGPTModal({
                   <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-blue-900">
-                        🔄 Verifying tracks...
+                        🔄 Verifying with MusicBrainz...
                       </span>
                       <span className="text-sm font-bold text-blue-700">
                         {verificationProgress.current} / {verificationProgress.total}
