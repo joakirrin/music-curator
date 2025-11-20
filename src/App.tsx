@@ -407,7 +407,7 @@ export default function App() {
         userFeedback: s.userFeedback || "",
         verification:
           s.verificationStatus === "verified"
-            ? { status: "verified", spotifyUrl: s.spotifyUrl, album: s.album, popularity: s.popularity }
+            ? { status: "verified", spotifyUri: s.spotifyUri, album: s.album, popularity: s.popularity }
             : undefined,
       })),
       instructions: `Use this feedback to improve future recommendations for Round ${latestRound + 1}.`,

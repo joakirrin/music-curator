@@ -22,12 +22,12 @@ export default function AlbumArt({
   className = "",
   onArtLoaded,
 }: Props) {
-  const [albumArt, setAlbumArt] = useState<string>(song.albumArt?.url || "");
-  const [loading, setLoading] = useState(!song.albumArt);
+  const [albumArt, setAlbumArt] = useState<string>(song.albumArtUrl || "");
+  const [loading, setLoading] = useState(!song.albumArtUrl);
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    if (!song.albumArt && (song.releaseId || song.platformIds?.appleMusic?.id)) {
+    if (!song.albumArtUrl && (song.releaseId || song.platformIds?.apple?.id)) {
       loadAlbumArt();
     }
   }, [song.id]);

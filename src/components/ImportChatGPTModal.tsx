@@ -202,7 +202,6 @@ export default function ImportChatGPTModal({
 
           try {
             let isVerified = false;
-            let verificationSource: 'musicbrainz' | 'apple' | 'spotify' = 'musicbrainz';
             
             // ===================================================================
             // TIER 1: Try MusicBrainz first (best source - has ISRCs, metadata)
@@ -238,7 +237,6 @@ export default function ImportChatGPTModal({
               };
               
               isVerified = true;
-              verificationSource = 'musicbrainz';
               
               // Try to enhance with Spotify ISRC resolution (if user is logged in and ISRC exists)
               if (mbResult.isrc && !mbResult.platformIds?.spotify) {
@@ -291,7 +289,6 @@ export default function ImportChatGPTModal({
                 };
                 
                 isVerified = true;
-                verificationSource = 'apple';
                 
                 // Try to enhance with Spotify (if user is logged in)
                 const spotifyToken = await spotifyAuth.getAccessToken();

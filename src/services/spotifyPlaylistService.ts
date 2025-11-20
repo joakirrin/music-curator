@@ -72,8 +72,8 @@ function extractSpotifyId(song: Song): string | null {
     return song.spotifyId;
   }
   
-  if (song.spotifyUrl?.includes('spotify.com/track/')) {
-    const match = song.spotifyUrl.match(/track\/([a-zA-Z0-9]{22})/);
+  if (song.spotifyUri?.includes('spotify.com/track/')) {
+    const match = song.spotifyUri.match(/track\/([a-zA-Z0-9]{22})/);
     if (match) return match[1];
   }
   

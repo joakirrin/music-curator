@@ -28,8 +28,8 @@ export type AlbumArtResult = {
  */
 export async function getAlbumArt(song: Song): Promise<AlbumArtResult> {
   // Return cached if available
-  if (song.albumArt) {
-    return song.albumArt;
+  if (song.albumArtUrl) {
+    return { url: song.albumArtUrl, size: "medium", source: "coverartarchive" };
   }
 
   // Check localStorage cache
@@ -48,8 +48,8 @@ export async function getAlbumArt(song: Song): Promise<AlbumArtResult> {
   }
 
   // TIER 2: iTunes direct lookup (if we have Apple Music ID)
-  if (song.platformIds?.appleMusic?.id) {
-    const itunesArt = await getItunesAlbumArt(song.platformIds.appleMusic.id);
+  if (song.platformIds?.apple?.id) {
+    const itunesArt = await getItunesAlbumArt(song.platformIds.apple.id);
     if (itunesArt) {
       cacheAlbumArt(song.id, itunesArt);
       return itunesArt;
