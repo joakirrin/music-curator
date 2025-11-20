@@ -1,7 +1,8 @@
+@import './styles/album-art.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import './styles/album-art.css';
 
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;

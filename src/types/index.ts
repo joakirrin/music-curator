@@ -1,6 +1,17 @@
+// src/types/index.ts
+
 /**
- * Types barrel export
- * Central export point for all type definitions
+ * Central export point for all type definitions.
+ * Only re-exports the types that actually exist in ./song.
  */
 
-export type { Song, Playlist, RecommendationRound, Platform, FilterType, VerificationFilterType } from './song';
+export type {
+  Song,
+  Platform,
+  FilterType,
+  VerificationFilterType,
+  SongSource,
+  FeedbackStatus,
+  VerificationStatus,
+  VerificationSource,
+} from './song';

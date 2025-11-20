@@ -1,22 +1,53 @@
 // src/types/song.ts
 
+// Platform used across the UI
+export type Platform = 'Spotify' | 'YouTube' | 'Bandcamp' | 'SoundCloud';
+
+// Song source and feedback types
+export type SongSource = 'chatgpt' | 'manual' | 'imported' | 'spotify';
+export type FeedbackStatus = 'pending' | 'keep' | 'skip';
+
+// Verification types
+export type VerificationStatus = 'verified' | 'unverified' | 'checking' | 'failed';
+export type VerificationSource =
+  | 'musicbrainz'
+  | 'spotify'
+  | 'itunes'
+  | 'apple'
+  | 'multi'
+  | 'manual'
+  | 'none';
+
 export type Song = {
   id: string;
   title: string;
   artist: string;
   album?: string;
   year?: string;
-  source: "chatgpt" | "manual" | "imported";
+
+  // Core curation metadata
+  source: SongSource;
   round?: number;
-  feedback: "pending" | "keep" | "skip";
+  feedback: FeedbackStatus;
   addedAt: string;
   comments?: string;
-  platforms: string[];
+
+  // Platforms where the song is available
+  platforms: Platform[];
   liked: boolean;
   toAdd: boolean;
 
-  // Spotify/Platform specific
+  // Core playback / duration info
+  duration?: number;    // seconds
+  durationMs?: number;  // milliseconds
+
+  // Platform-specific identifiers
   spotifyUri?: string;
+  spotifyId?: string;
+  serviceId?: string;
+  serviceUri?: string;
+  serviceUrl?: string;
+
   platformIds?: {
     spotify?: {
       id: string;
@@ -40,26 +71,44 @@ export type Song = {
     };
   };
 
-  // MusicBrainz verification
-  verificationStatus?: "verified" | "unverified" | "checking" | "failed";
-  verificationSource?: "musicbrainz" | "spotify" | "itunes" | "apple" | "multi" | "manual" | "none";
-  verificationError?: string;  // Error message if verification failed
+  // Verification state
+  verificationStatus?: VerificationStatus;
+  verificationSource?: VerificationSource;
+  verificationError?: string | null;
+  verifiedAt?: string;
+
+  // External metadata / IDs
   musicBrainzId?: string;
   musicBrainzUrl?: string;
   isrc?: string;
-  
-  // 🆕 Album Art (Phase 4.7)
-  albumArtUrl?: string;  // URL to album artwork (from Cover Art Archive or iTunes)
-  releaseId?: string;    // MusicBrainz Release ID (for Cover Art Archive)
-  
-  // Additional metadata
-  duration?: number;     // Track duration in seconds
-  durationMs?: number;   // Track duration in milliseconds
-  explicit?: boolean;
-  
-  // User feedback
+
+  // Release info
+  releaseId?: string;
+  releaseDate?: string;
+
+  // Media & preview
+  albumArtUrl?: string;
+  previewUrl?: string;
+  isPlayable?: boolean;
+  popularity?: number;
+
+  // Additional musical metadata
+  genre?: string;
+  mood?: string;
+  energy?: number;
+  tempo?: number;
+  key?: string;
+  tags?: string[];
+  notes?: string;
   userFeedback?: string;
-  
+
+  // Credits / people (used by fileHandlers)
+  featuring?: string;
+  producer?: string;
+
+  // Playlist linkage (used by demo data / services)
+  playlistId?: string;
+
   // Legacy/additional fields
   relationships?: {
     url?: Array<{
@@ -71,5 +120,5 @@ export type Song = {
 };
 
 // Filter types for UI
-export type FilterType = "all" | "keep" | "skip" | "pending";
-export type VerificationFilterType = "all" | "verified" | "unverified" | "failed";
+export type FilterType = 'all' | 'keep' | 'skip' | 'pending';
+export type VerificationFilterType = 'all' | 'verified' | 'unverified' | 'failed';
