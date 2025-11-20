@@ -1,0 +1,35 @@
+<!-- public/assets/placeholder-album.svg -->
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300">
+  <!-- Background -->
+  <rect width="300" height="300" fill="#f3f4f6"/>
+  
+  <!-- Music note icon -->
+  <g transform="translate(150, 150)">
+    <!-- Note stem -->
+    <line x1="0" y1="-60" x2="0" y2="40" 
+          stroke="#9ca3af" 
+          stroke-width="6" 
+          stroke-linecap="round"/>
+    
+    <!-- Note head (circle at bottom) -->
+    <ellipse cx="-15" cy="40" rx="20" ry="15" 
+             fill="#9ca3af"/>
+    
+    <!-- Note flag (at top) -->
+    <path d="M 0 -60 Q 25 -50, 25 -35 Q 25 -20, 0 -10" 
+          fill="#9ca3af"/>
+    
+    <!-- Additional decorative note -->
+    <ellipse cx="15" cy="50" rx="12" ry="9" 
+             fill="#d1d5db" 
+             opacity="0.6"/>
+  </g>
+  
+  <!-- Optional: Add subtle pattern -->
+  <defs>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <circle cx="10" cy="10" r="1" fill="#e5e7eb" opacity="0.3"/>
+    </pattern>
+  </defs>
+  <rect width="300" height="300" fill="url(#grid)"/>
+</svg>

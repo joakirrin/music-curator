@@ -1,17 +1,4 @@
-/**
- * Core Song type definition
- * Supports multiple sources (manual, ChatGPT, Spotify, YouTube, Apple Music) and recommendation workflows
- * 
- * ✅ PHASE 4 UPDATE: Added MusicBrainz fields for universal verification
- */
-
-export type Platform = "Spotify" | "YouTube" | "Bandcamp" | "SoundCloud";
-
-// Decision filters used in the UI
-export type FilterType = "all" | "keep" | "skip" | "pending";
-
-// Verification status filter (Phase 2.1+)
-export type VerificationFilterType = "all" | "verified" | "unverified" | "failed";
+// src/types/song.ts
 
 export type Song = {
   id: string;
@@ -19,89 +6,69 @@ export type Song = {
   artist: string;
   album?: string;
   year?: string;
-  producer?: string;
-  comments?: string;        // ChatGPT's reason (read-only from ChatGPT)
-  duration?: number;        // seconds (coarse)
-  durationMs?: number;      // milliseconds (accurate)
-
-  // Source + workflow
-  source?: "chatgpt" | "manual" | "spotify" | "youtube" | "applemusic";
+  source: "chatgpt" | "manual" | "imported";
   round?: number;
-  feedback?: "keep" | "skip" | "pending";  // replaces legacy liked/toAdd
-  userFeedback?: string;                   // user's text feedback to send back to ChatGPT
-  playlistId?: string;
+  feedback: "pending" | "keep" | "skip";
+  addedAt: string;
+  comments?: string;
+  platforms: string[];
+  liked: boolean;
+  toAdd: boolean;
 
-  // Service-agnostic metadata (works for Spotify, YouTube, Apple Music, etc.)
-  serviceUri?: string;      // Service-specific URI (e.g., "spotify:track:..." or "youtube:video:...")
-  serviceId?: string;       // Service-specific ID extracted from URI/URL
-  serviceUrl?: string;      // Direct URL to track on service (e.g., https://open.spotify.com/track/...)
-  previewUrl?: string;      // 30s preview URL
-  albumArtUrl?: string;     // Album artwork image URL (e.g., 300x300)
-  releaseDate?: string;     // Release date (YYYY-MM-DD)
-  explicit?: boolean;       // Explicit content flag
-  popularity?: number;      // Popularity score (0-100, platform-specific)
-  isPlayable?: boolean;     // Whether track is playable in user's region
-
-  addedAt?: string;         // ISO 8601
-
-  // ✅ NEW: MusicBrainz fields for universal verification (Phase 4)
-  musicBrainzId?: string;   // MusicBrainz Recording ID (MBID) - universal identifier
-  isrc?: string;            // International Standard Recording Code - for cross-platform matching
-  
-  // ✅ NEW: Multi-platform IDs (extracted from MusicBrainz)
+  // Spotify/Platform specific
+  spotifyUri?: string;
   platformIds?: {
     spotify?: {
-      id: string;           // Track ID (e.g., "3n3Ppam7vgaVa1iaRUc9Lp")
-      uri: string;          // Spotify URI (e.g., "spotify:track:3n3Ppam7vgaVa1iaRUc9Lp")
-      url?: string;         // Web URL
+      id: string;
+      url?: string;
     };
     apple?: {
-      id: string;           // Apple Music track ID
-      url?: string;         // Store URL
+      id: string;
+      url?: string;
     };
     tidal?: {
-      id: string;           // Tidal track ID
-      url?: string;         // Web URL
+      id: string;
+      url?: string;
     };
     qobuz?: {
-      id: string;           // Qobuz track ID
-      url?: string;         // Web URL
+      id: string;
+      url?: string;
     };
     youtube?: {
-      id: string;           // YouTube video ID
-      url?: string;         // Watch URL
+      id: string;
+      url?: string;
     };
   };
 
-  // Verification (Phase 1.5+) - UPDATED for multi-source
+  // MusicBrainz verification
   verificationStatus?: "verified" | "unverified" | "checking" | "failed";
-  verifiedAt?: string;      // ISO 8601
-  verificationSource?: "spotify" | "youtube" | "applemusic" | "manual" | "musicbrainz" | "itunes" | "multi";
-  verificationError?: string;
-
-  // ---- Deprecated (kept optional for backward compatibility) ----
-  featuring?: string;       // DEPRECATED - kept for backward compatibility only
-  liked?: boolean;          // DEPRECATED legacy UI flag
-  toAdd?: boolean;          // DEPRECATED legacy UI flag
-  platforms?: Platform[];   // DEPRECATED legacy multi-platform shape
-  spotifyUri?: string;      // DEPRECATED - use serviceUri
-  spotifyId?: string;       // DEPRECATED - use serviceId
-  spotifyUrl?: string;      // DEPRECATED - use serviceUrl
-  albumArt?: string;        // DEPRECATED - use albumArtUrl
+  verificationSource?: "musicbrainz" | "spotify" | "itunes" | "multi" | "manual" | "none";
+  musicBrainzId?: string;
+  musicBrainzUrl?: string;
+  isrc?: string;
+  
+  // 🆕 Album Art (Phase 4.7)
+  albumArtUrl?: string;  // URL to album artwork (from Cover Art Archive or iTunes)
+  releaseId?: string;    // MusicBrainz Release ID (for Cover Art Archive)
+  
+  // Additional metadata
+  duration?: number;     // Track duration in seconds
+  durationMs?: number;   // Track duration in milliseconds
+  explicit?: boolean;
+  
+  // User feedback
+  userFeedback?: string;
+  
+  // Legacy/additional fields
+  relationships?: {
+    url?: Array<{
+      type: string;
+      url: string;
+      targetType: string;
+    }>;
+  };
 };
 
-export type Playlist = {
-  id: string;
-  name: string;
-  description?: string;
-  songIds: string[];
-  createdAt?: string; // ISO 8601
-  updatedAt?: string; // ISO 8601
-};
-
-export type RecommendationRound = {
-  id: string;       // e.g., "round-1"
-  round: number;    // 1, 2, 3, ...
-  createdAt: string; // ISO 8601
-  notes?: string;
-};
+// Filter types for UI
+export type FilterType = "all" | "keep" | "skip" | "pending";
+export type VerificationFilterType = "all" | "verified" | "unverified" | "failed";

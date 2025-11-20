@@ -6,6 +6,7 @@
  * - Core metadata (title, artist, album, year)
  * - Platform IDs (Spotify, Apple Music, Tidal, Qobuz)
  * - ISRC codes for cross-platform matching
+ * - 🆕 Album art from Cover Art Archive
  * 
  * Rate Limit: 1 request per second (enforced by User-Agent requirement)
  * Documentation: https://musicbrainz.org/doc/MusicBrainz_API
@@ -25,6 +26,9 @@ const DEV = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
 // MusicBrainz API configuration
 const MUSICBRAINZ_API_BASE = 'https://musicbrainz.org/ws/2';
 const USER_AGENT = 'FoneaSoundCurator/1.0 ( https://github.com/joakirrin/music-curator )';
+
+// Cover Art Archive configuration
+const COVER_ART_ARCHIVE_BASE = 'https://coverartarchive.org';
 
 // Rate limiting: 1 request per second
 let lastRequestTime = 0;
@@ -117,6 +121,47 @@ async function fetchWithRetry(
   }
   
   throw lastError || new Error('All retry attempts failed');
+}
+
+/**
+ * 🆕 Fetch album art from Cover Art Archive
+ * Returns the 500px version (good balance of quality and file size)
+ * Falls back to 250px if 500px is not available
+ */
+async function getAlbumArtFromCoverArtArchive(releaseId: string): Promise<string | null> {
+  try {
+    // Try 500px version first (best quality without being too large)
+    const url500 = `${COVER_ART_ARCHIVE_BASE}/release/${releaseId}/front-500`;
+    
+    const response = await fetch(url500, {
+      method: 'HEAD', // Just check if it exists
+      redirect: 'manual',
+    });
+    
+    // 307 = redirect (image exists), 200 = direct hit
+    if (response.status === 307 || response.status === 200) {
+      log(`  ✅ Album art found: ${url500}`);
+      return url500;
+    }
+    
+    // Try 250px fallback
+    const url250 = `${COVER_ART_ARCHIVE_BASE}/release/${releaseId}/front-250`;
+    const response250 = await fetch(url250, {
+      method: 'HEAD',
+      redirect: 'manual',
+    });
+    
+    if (response250.status === 307 || response250.status === 200) {
+      log(`  ✅ Album art found (250px): ${url250}`);
+      return url250;
+    }
+    
+    log(`  ⚠️ No album art available for release ${releaseId}`);
+    return null;
+  } catch (error) {
+    logError(`  ❌ Failed to fetch album art for release ${releaseId}:`, error);
+    return null;
+  }
 }
 
 /**
@@ -325,7 +370,7 @@ async function getRecordingDetail(mbid: string): Promise<MusicBrainzRecordingDet
  * 
  * @param artist - Artist name
  * @param title - Song title
- * @returns VerificationResult with metadata and platform IDs
+ * @returns VerificationResult with metadata, platform IDs, and album art
  */
 export async function verifyWithMusicBrainz(
   artist: string,
@@ -380,6 +425,17 @@ export async function verifyWithMusicBrainz(
     const durationMs = detail.length;
     const duration = durationMs ? Math.round(durationMs / 1000) : undefined;
     
+    // 🆕 Step 4.5: Extract release ID and fetch album art
+    const releaseId = firstRelease?.id;
+    let albumArtUrl: string | undefined = undefined;
+    
+    if (releaseId) {
+      log(`🎨 Found release ID: ${releaseId}`);
+      albumArtUrl = await getAlbumArtFromCoverArtArchive(releaseId) || undefined;
+    } else {
+      log(`⚠️ No release ID found - cannot fetch album art`);
+    }
+    
     // Step 5: Extract platform IDs
     const platformIds = extractPlatformIds(detail.relations);
     
@@ -393,6 +449,8 @@ export async function verifyWithMusicBrainz(
       year,
       releaseDate,
       musicBrainzId: detail.id,
+      releaseId,         // 🆕 Release ID for future use
+      albumArtUrl,       // 🆕 Album art URL
       isrc,
       platformIds,
       duration,
@@ -403,6 +461,8 @@ export async function verifyWithMusicBrainz(
     
     log('=== ✅ Verification successful ===');
     log(`MBID: ${detail.id}`);
+    if (releaseId) log(`Release ID: ${releaseId}`);
+    if (albumArtUrl) log(`Album Art: ${albumArtUrl}`);
     if (platformIds) {
       log(`Platform IDs: ${Object.keys(platformIds).join(', ')}`);
     }

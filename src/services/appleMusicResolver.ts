@@ -32,6 +32,7 @@ function logError(...args: any[]) {
 export type AppleMusicPlatformId = {
   id: string;           // Track ID (e.g., "1440857781")
   url: string;          // Direct URL to track on Apple Music
+  artworkUrl?: string;  // Album artwork URL (600x600 high-res)
 };
 
 /**
@@ -160,9 +161,25 @@ export async function resolveAppleMusic(
       appleMusicUrl = `https://music.apple.com/us/song/${trackId}`;
     }
     
+    // Extract artwork URL and upgrade to high-res (600x600)
+    let artworkUrl: string | undefined = undefined;
+    if (bestMatch.artworkUrl100 || bestMatch.artworkUrl60) {
+      const baseArtwork = bestMatch.artworkUrl100 || bestMatch.artworkUrl60;
+      // Replace size to get 600x600 high-res version
+      artworkUrl = baseArtwork
+        .replace('100x100bb', '600x600bb')
+        .replace('60x60bb', '600x600bb')
+        .replace('30x30bb', '600x600bb');
+      
+      if (DEV) {
+        log(`Artwork URL: ${artworkUrl}`);
+      }
+    }
+    
     const result: AppleMusicPlatformId = {
       id: trackId,
       url: appleMusicUrl,
+      artworkUrl: artworkUrl,
     };
     
     log('=== ✅ Resolution successful ===');
@@ -170,6 +187,9 @@ export async function resolveAppleMusic(
     log(`Match confidence: ${(bestScore * 100).toFixed(0)}%`);
     log(`Track ID: ${result.id}`);
     log(`URL: ${result.url}`);
+    if (result.artworkUrl) {
+      log(`Artwork: ${result.artworkUrl}`);
+    }
     
     return result;
     

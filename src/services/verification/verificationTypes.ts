@@ -59,13 +59,14 @@ export type VerificationResult = {
   
   // Universal identifiers
   musicBrainzId?: string;   // MusicBrainz Recording ID (MBID)
+  releaseId?: string;       // 🆕 MusicBrainz Release ID (for album art)
   isrc?: string;            // International Standard Recording Code
   
   // Platform-specific IDs (populated from MusicBrainz URL relations)
   platformIds?: PlatformIds;
   
   // Media
-  albumArtUrl?: string;     // Album artwork URL
+  albumArtUrl?: string;     // 🆕 Album artwork URL (from Cover Art Archive)
   previewUrl?: string;      // 30-90s preview URL
   previewSource?: "itunes" | "qobuz" | "apple" | "spotify";
   previewDuration?: number; // Preview length in seconds
@@ -98,7 +99,7 @@ export type MusicBrainzRecording = {
     };
   }>;
   releases?: Array<{
-    id: string;
+    id: string;             // 🆕 Release ID (needed for album art!)
     title: string;
     date?: string;          // Release date (YYYY-MM-DD or YYYY)
     "cover-art-archive"?: {

@@ -148,12 +148,10 @@ export default function ImportChatGPTModal({
           artist: rec.artist,
           album: rec.album,
           year: rec.year,
-          producer: rec.producer,
           source: "chatgpt" as const,
           round: nextRound,
           feedback: "pending" as const,
-          serviceUri: serviceLink,
-          previewUrl: rec.previewUrl,
+          spotifyUri: serviceLink, // Store service link in spotifyUri for now (legacy field)
           addedAt: new Date().toISOString(),
           comments: rec.reason,
           duration: rec.duration,
@@ -214,29 +212,25 @@ export default function ImportChatGPTModal({
               newSongs[i] = {
                 ...song,
                 verificationStatus: 'verified',
-                verifiedAt: result.timestamp,
                 verificationSource: 'musicbrainz',
                 
                 // MusicBrainz-specific fields
                 musicBrainzId: result.musicBrainzId,
                 isrc: result.isrc,
-                
+                // 🆕 Album Art fields
+                albumArtUrl: result.albumArtUrl,
+                releaseId: result.releaseId,
+
                 // Metadata (prefer MusicBrainz over ChatGPT)
                 artist: result.artist,
                 title: result.title,
                 album: result.album || song.album,
                 year: result.year || song.year,
-                releaseDate: result.releaseDate,
                 duration: result.duration,
                 durationMs: result.durationMs,
                 
                 // Platform IDs from MusicBrainz
                 platformIds: result.platformIds,
-                
-                // Map Spotify ID to service fields for backward compatibility
-                serviceId: result.platformIds?.spotify?.id,
-                serviceUri: result.platformIds?.spotify?.uri,
-                serviceUrl: result.platformIds?.spotify?.url,
               };
               
               // ✅ STEP 2: Try to resolve Spotify URL using ISRC (if user is logged in and ISRC exists)
@@ -249,11 +243,6 @@ export default function ImportChatGPTModal({
                     // Initialize platformIds if needed
                     if (!newSongs[i].platformIds) newSongs[i].platformIds = {};
                     newSongs[i].platformIds!.spotify = spotifyData;
-                    
-                    // Also update service fields for backward compatibility
-                    newSongs[i].serviceId = spotifyData.id;
-                    newSongs[i].serviceUri = spotifyData.uri;
-                    newSongs[i].serviceUrl = spotifyData.url;
                   }
                 }
               }
@@ -266,6 +255,10 @@ export default function ImportChatGPTModal({
                   // Initialize platformIds if needed
                   if (!newSongs[i].platformIds) newSongs[i].platformIds = {};
                   newSongs[i].platformIds!.apple = appleMusicData;
+                  // 🆕 Use iTunes artwork as fallback if Cover Art Archive didn't have it
+if (!newSongs[i].albumArtUrl && appleMusicData.artworkUrl) {
+  newSongs[i].albumArtUrl = appleMusicData.artworkUrl;
+}
                 }
               }
               

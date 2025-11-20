@@ -8,6 +8,7 @@ import { formatDistanceToNow } from "date-fns";
 import { AddToPlaylistModal } from "./AddToPlaylistModal";
 
 type Props = {
+  
   song: Song;
   onUpdate: (next: Song) => void;
   onDelete: () => void;
@@ -25,7 +26,10 @@ export const ChatGPTSongRow = ({
   playlists,
   onAddToPlaylist,
   onRemoveFromPlaylist,
-}: Props) => {
+}: 
+
+Props) => {
+  
   const set = <K extends keyof Song>(key: K, value: Song[K]) =>
     onUpdate({ ...song, [key]: value });
 
