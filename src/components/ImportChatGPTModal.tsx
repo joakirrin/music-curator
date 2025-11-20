@@ -201,85 +201,135 @@ export default function ImportChatGPTModal({
           }
 
           try {
-            // ✅ STEP 1: Use MusicBrainz for universal verification
-            const result: VerificationResult = await verifyWithMusicBrainz(
+            let isVerified = false;
+            let verificationSource: 'musicbrainz' | 'apple' | 'spotify' = 'musicbrainz';
+            
+            // ===================================================================
+            // TIER 1: Try MusicBrainz first (best source - has ISRCs, metadata)
+            // ===================================================================
+            const mbResult: VerificationResult = await verifyWithMusicBrainz(
               song.artist,
               song.title
             );
             
-            if (result.verified) {
-              // Success! Update song with MusicBrainz data
+            if (mbResult.verified) {
+              // ✅ MusicBrainz success! Update song with all the data
               newSongs[i] = {
                 ...song,
                 verificationStatus: 'verified',
                 verificationSource: 'musicbrainz',
                 
                 // MusicBrainz-specific fields
-                musicBrainzId: result.musicBrainzId,
-                isrc: result.isrc,
-                // 🆕 Album Art fields
-                albumArtUrl: result.albumArtUrl,
-                releaseId: result.releaseId,
+                musicBrainzId: mbResult.musicBrainzId,
+                isrc: mbResult.isrc,
+                albumArtUrl: mbResult.albumArtUrl,
+                releaseId: mbResult.releaseId,
 
                 // Metadata (prefer MusicBrainz over ChatGPT)
-                artist: result.artist,
-                title: result.title,
-                album: result.album || song.album,
-                year: result.year || song.year,
-                duration: result.duration,
-                durationMs: result.durationMs,
+                artist: mbResult.artist,
+                title: mbResult.title,
+                album: mbResult.album || song.album,
+                year: mbResult.year || song.year,
+                duration: mbResult.duration,
+                durationMs: mbResult.durationMs,
                 
                 // Platform IDs from MusicBrainz
-                platformIds: result.platformIds,
+                platformIds: mbResult.platformIds,
               };
               
-              // ✅ STEP 2: Try to resolve Spotify URL using ISRC (if user is logged in and ISRC exists)
-              // NOTE: Only resolve if MusicBrainz didn't already find a Spotify link
-              if (result.verified && result.isrc && !result.platformIds?.spotify) {
+              isVerified = true;
+              verificationSource = 'musicbrainz';
+              
+              // Try to enhance with Spotify ISRC resolution (if user is logged in and ISRC exists)
+              if (mbResult.isrc && !mbResult.platformIds?.spotify) {
                 const spotifyToken = await spotifyAuth.getAccessToken();
                 if (spotifyToken) {
-                  const spotifyData = await resolveSpotifyByISRC(result.isrc, spotifyToken);
+                  const spotifyData = await resolveSpotifyByISRC(mbResult.isrc, spotifyToken);
                   if (spotifyData) {
-                    // Initialize platformIds if needed
                     if (!newSongs[i].platformIds) newSongs[i].platformIds = {};
                     newSongs[i].platformIds!.spotify = spotifyData;
                   }
                 }
               }
               
-              // ✅ STEP 3: Try to resolve Apple Music URL using artist+title search (no auth required!)
-              // NOTE: iTunes API doesn't support ISRC search, so we use artist+title matching
-              if (result.verified) {
-                const appleMusicData = await resolveAppleMusic(result.artist, result.title);
-                if (appleMusicData) {
-                  // Initialize platformIds if needed
-                  if (!newSongs[i].platformIds) newSongs[i].platformIds = {};
-                  newSongs[i].platformIds!.apple = appleMusicData;
-                  // 🆕 Use iTunes artwork as fallback if Cover Art Archive didn't have it
-if (!newSongs[i].albumArtUrl && appleMusicData.artworkUrl) {
-  newSongs[i].albumArtUrl = appleMusicData.artworkUrl;
-}
+              // Try to enhance with Apple Music resolution (always try - no auth needed)
+              const appleMusicData = await resolveAppleMusic(mbResult.artist, mbResult.title);
+              if (appleMusicData) {
+                if (!newSongs[i].platformIds) newSongs[i].platformIds = {};
+                newSongs[i].platformIds!.apple = appleMusicData;
+                // Use iTunes artwork as fallback if Cover Art Archive didn't have it
+                if (!newSongs[i].albumArtUrl && appleMusicData.artworkUrl) {
+                  newSongs[i].albumArtUrl = appleMusicData.artworkUrl;
                 }
               }
+            } else {
+              // ===================================================================
+              // TIER 2: MusicBrainz failed → Try Apple Music (no auth required!)
+              // ===================================================================
+              const appleMusicData = await resolveAppleMusic(song.artist, song.title);
               
+              if (appleMusicData) {
+                // ✅ Apple Music success!
+                newSongs[i] = {
+                  ...song,
+                  verificationStatus: 'verified',
+                  verificationSource: 'apple',
+                  
+                  // Store Apple Music data
+                  platformIds: {
+                    apple: appleMusicData,
+                  },
+                  
+                  // Use iTunes artwork
+                  albumArtUrl: appleMusicData.artworkUrl,
+                  
+                  // Keep original metadata from ChatGPT (Apple Music API doesn't return detailed metadata in our simplified resolver)
+                  artist: song.artist,
+                  title: song.title,
+                  album: song.album,
+                  year: song.year,
+                };
+                
+                isVerified = true;
+                verificationSource = 'apple';
+                
+                // Try to enhance with Spotify (if user is logged in)
+                const spotifyToken = await spotifyAuth.getAccessToken();
+                if (spotifyToken) {
+                  // Note: We can't use ISRC here since we don't have it from Apple Music
+                  // This is a limitation - Spotify verification would need artist+title search
+                  // For now, we skip Spotify enhancement when verifying via Apple Music
+                }
+              } else {
+                // ===================================================================
+                // TIER 3: Both failed → Mark as failed
+                // ===================================================================
+                // Note: We could add Spotify as a third tier here if needed,
+                // but it requires user login, so we keep it optional
+                
+                newSongs[i] = {
+                  ...song,
+                  verificationStatus: 'failed',
+                  verificationSource: 'multi',
+                  verificationError: `Not found in MusicBrainz or Apple Music. ${mbResult.error || 'No details available.'}`,
+                };
+              }
+            }
+            
+            // Update summary
+            if (isVerified) {
               summary.verified++;
             } else {
-              // Verification failed
               summary.failed++;
               summary.failedSongs.push({
                 title: song.title,
                 artist: song.artist,
-                error: result.error || 'Unknown error',
+                error: newSongs[i].verificationError || 'Verification failed',
               });
-              
-              newSongs[i] = {
-                ...song,
-                verificationStatus: 'failed',
-                verificationSource: 'musicbrainz',
-                verificationError: result.error,
-              };
             }
+            
           } catch (err) {
+            // Catch-all error handler
             summary.failed++;
             summary.failedSongs.push({
               title: song.title,
@@ -289,7 +339,7 @@ if (!newSongs[i].albumArtUrl && appleMusicData.artworkUrl) {
             newSongs[i] = {
               ...song,
               verificationStatus: 'failed',
-              verificationSource: 'musicbrainz',
+              verificationSource: 'multi',
               verificationError: err instanceof Error ? err.message : 'Verification failed',
             };
           }

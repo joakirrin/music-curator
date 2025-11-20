@@ -42,7 +42,8 @@ export type Song = {
 
   // MusicBrainz verification
   verificationStatus?: "verified" | "unverified" | "checking" | "failed";
-  verificationSource?: "musicbrainz" | "spotify" | "itunes" | "multi" | "manual" | "none";
+  verificationSource?: "musicbrainz" | "spotify" | "itunes" | "apple" | "multi" | "manual" | "none";
+  verificationError?: string;  // Error message if verification failed
   musicBrainzId?: string;
   musicBrainzUrl?: string;
   isrc?: string;
