@@ -2,7 +2,7 @@
 Two pieces work together:
 
 
-1) **Fonea Companion GPT** → proposes songs, according to your vibes andgenerates curated track lists in JSON
+1) **Fonea Companion GPT** → proposes songs, according to your vibes, generates curated track lists in JSON and exports them to your favorite streaming service (Spotify only for the moment!)
 2) **Fonea Sound Curator App** → imports JSON, verifies tracks, collects your feedback, and exports it back.
 
 
@@ -26,7 +26,7 @@ Two pieces work together:
 
 | Step | Action                              | Where                             |
 | ---- | ----------------------------------- | --------------------------------- |
-| 1    | Log Into Spotify                    | Fonea App                         |
+| 1    | Log Into Spotify (optional)         | Fonea App                         |
 | 2    | Describe your vibe                  | Fonea Companion GPT                         |
 | 3    | Copy JSON output                    | Fonea Companion GPT                         |
 | 4    | Import JSON                         | Fonea App → *Import from ChatGPT* |
@@ -36,7 +36,7 @@ Two pieces work together:
 | 8    | Repeat until the vibe feels right   | Both                              |
 ---
 
-## 1) Log into your favourite Streaming Service
+## 1) Log into your favourite Streaming Service (optional)
 Currently we're only able to connect to Spotify. Other Streaming services coming soon.
 
 
@@ -56,9 +56,11 @@ Use **Import from ChatGPT** and paste the JSON block.
 
 
 ## 4&5) Verify & Review
-- **Verified ✅** / **Unverified ⚠️** / **Failed ❌**
+- **Verified ✅** / **Failed ❌**
 - Keep / Skip / Pending, plus short notes.
 - Make sure to see why **Fonea Companion GPT** is recommending this song in the orange textbox
+- When clicking the Keep button, you can save your songs to a specific playlist
+- Songs in playlists will remain saved until you delete your cookies / cache
 
 
 ## 6) Replace Unverified
@@ -80,6 +82,12 @@ Click **Export Feedback** and paste it back into GPT to get **Round N+1**.
 
 ## 8) Iterate
 Repeat import → review → export; the vibe evolves each round.
+
+## 9) Review your playlist and export
+- Click the playlists button
+- Select your favorite playlist
+- Review that the songs in the playlist are correct
+- Push your playlist to Spotify (other services coming soon!)
 
 
 ---
@@ -110,4 +118,4 @@ Repeat import → review → export; the vibe evolves each round.
 
 ---
 
-# **fonea** – Curate smarter. Listen deeper.
+## **fonea** – Curate smarter. Listen deeper.
