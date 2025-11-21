@@ -24,7 +24,7 @@ export const PushPlaylistModal = ({
   onSuccess,
 }: Props) => {
   const [stage, setStage] = useState<Stage>('confirm');
-  const [progress, setProgress] = useState(0);
+  const [_progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
   const [result, setResult] = useState<PushResult | null>(null);
   

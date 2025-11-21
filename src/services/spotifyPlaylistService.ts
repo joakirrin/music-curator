@@ -2,7 +2,7 @@
 
 import { spotifyAuth } from './spotifyAuth';
 import type { Playlist } from '@/types/playlist';
-import type { Song } from '@/types/song';
+// import type { Song } from '@/types/song';
 // NEW IMPORTS
 import { resolveSpotifySong } from './export/smartPlatformResolver';
 import { formatPlaylistDescription } from '@/utils/formatters';
@@ -282,7 +282,7 @@ export async function pushPlaylistToSpotify(
       });
     }
     
-    const tracksAdded = await addTracksToPlaylist(
+     await addTracksToPlaylist(
       token,
       spotifyPlaylistId,
       trackUris,
