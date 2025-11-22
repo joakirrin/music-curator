@@ -7,7 +7,8 @@ import type { Playlist } from '@/types/playlist';
 import { resolveSpotifySong } from './export/smartPlatformResolver';
 import { formatPlaylistDescription } from '@/utils/formatters';
 import { FEATURES } from '@/config/features';
-import type { ExportReport, SmartResolveResult } from './export/types';
+import type { SmartResolveResult } from './export/types';
+import { verifySpotifyExport, type ExtendedPushResult } from './export/spotifyExportVerification';
 
 const DEV = import.meta.env.DEV;
 
@@ -20,9 +21,9 @@ function logError(...args: any[]) {
 
 /**
  * Result of pushing a playlist to Spotify
- * UPDATED to use the new ExportReport structure
+ * UPDATED to use the ExtendedPushResult structure
  */
-export type PushResult = ExportReport; // This now matches your new task list type
+export type PushResult = ExtendedPushResult;
 
 /**
  * Progress callback for tracking push operation
@@ -148,26 +149,29 @@ async function addTracksToPlaylist(
 
 /**
  * Main function: Push a local playlist to Spotify
- * HEAVILY MODIFIED to use Smart Resolver (Task 4.5.1) and Branding (Task 4.5.2)
+ * Uses Smart Resolver + Branding + Export Verification
  */
 export async function pushPlaylistToSpotify(
   playlist: Playlist,
   onProgress?: ProgressCallback
-): Promise<PushResult> {
+): Promise<ExtendedPushResult> {
   log('=== Starting Spotify push (with Smart Resolver) ===');
   const startTime = Date.now();
   
-  // Build the initial (empty) report structure
-  const report: PushResult = {
+  // Build the initial (empty) report-like structure
+  const baseReport = {
     playlistName: playlist.name,
     platform: 'spotify',
     timestamp: new Date().toISOString(),
     totalSongs: playlist.songs.length,
-    successful: { direct: 0, softSearch: 0, hardSearch: 0, total: 0, songs: [] },
-    failed: { count: 0, songs: [] },
+    successful: { direct: 0, softSearch: 0, hardSearch: 0, total: 0, songs: [] as any[] },
+    failed: { count: 0, songs: [] as any[] },
     statistics: { successRate: 0, averageConfidence: 0, exportDuration: 0 },
     success: false,
   };
+
+  // Iremos mutando este objeto y luego lo convertimos en ExtendedPushResult al final
+  const report: any = { ...baseReport };
 
   try {
     // Step 1: Get access token
@@ -282,13 +286,13 @@ export async function pushPlaylistToSpotify(
       });
     }
     
-     await addTracksToPlaylist(
+    await addTracksToPlaylist(
       token,
       spotifyPlaylistId,
       trackUris,
       (current, total) => {
         if (onProgress) {
-          const progress = 50 + Math.floor((current / total) * 50); // Adding = 50-100%
+          const progress = 50 + Math.floor((current / total) * 40); // Adding = 50-90%
           onProgress({
             stage: 'adding_tracks',
             current: progress,
@@ -298,24 +302,48 @@ export async function pushPlaylistToSpotify(
         }
       }
     );
+
+    // NEW: After tracks are added, verify the export
+    if (onProgress) {
+      onProgress({
+        stage: 'complete',
+        current: 90,
+        total: 100,
+        message: 'Verifying export...',
+      });
+    }
     
+    const { verification, updatedSongs } = await verifySpotifyExport(
+      playlist,
+      report.playlistId,
+      report.playlistUrl,
+      token
+    );
+
     // Step 8: Finalize report
     report.success = true;
     report.statistics.successRate = (report.successful.total / report.totalSongs) * 100;
     report.statistics.averageConfidence = (totalConfidence / report.successful.total) * 100;
     report.statistics.exportDuration = Date.now() - startTime;
 
+    // Añadimos la info extra de verificación al resultado extendido
+    const extendedResult: ExtendedPushResult = {
+      ...report,
+      verification,
+      updatedSongs,
+    };
+
     if (onProgress) {
       onProgress({
         stage: 'complete',
         current: 100,
         total: 100,
-        message: 'Playlist created successfully!',
+        message: 'Export complete!',
       });
     }
     
     log('=== ✅ Push complete ===');
-    return report;
+    return extendedResult;
     
   } catch (error: any) {
     logError('=== ❌ Push failed ===');
@@ -326,14 +354,23 @@ export async function pushPlaylistToSpotify(
         stage: 'error',
         current: 0,
         total: 100,
-        message: error.message || 'Failed to push playlist',
+        message: error?.message || 'Failed to push playlist',
       });
     }
     
     report.success = false;
-    report.error = error.message || 'Unknown error occurred';
+    report.error = error?.message || 'Unknown error occurred';
     report.statistics.exportDuration = Date.now() - startTime;
-    return report;
+
+    // Aseguramos que devolvemos algo que matchee ExtendedPushResult,
+    // aunque verificación no se haya podido hacer.
+    const extendedResult: ExtendedPushResult = {
+      ...report,
+      verification: (report as any).verification,
+      updatedSongs: (report as any).updatedSongs,
+    };
+
+    return extendedResult;
   }
 }
 
@@ -341,3 +378,4 @@ export async function pushPlaylistToSpotify(
  * REMOVED: searchSpotifyTrack(artist: string, title: string)
  * This logic is now inside smartPlatformResolver.ts
  */
+

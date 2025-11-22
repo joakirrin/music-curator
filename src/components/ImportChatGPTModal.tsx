@@ -223,6 +223,10 @@ export default function ImportChatGPTModal({
                 isrc: mbResult.isrc,
                 albumArtUrl: mbResult.albumArtUrl,
                 releaseId: mbResult.releaseId,
+                
+                // 🆕 Preview URL fields (from iTunes Search API)
+                previewUrl: mbResult.previewUrl,
+                previewSource: mbResult.previewSource,
 
                 // Metadata (prefer MusicBrainz over ChatGPT)
                 artist: mbResult.artist,

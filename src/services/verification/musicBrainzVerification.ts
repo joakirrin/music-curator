@@ -1,12 +1,13 @@
 // src/services/verification/musicBrainzVerification.ts
 /**
- * MusicBrainz Verification Service
+ * MusicBrainz Verification Service (MODIFIED - with Apple Music Preview)
  * 
  * Uses MusicBrainz API to verify songs and extract:
  * - Core metadata (title, artist, album, year)
  * - Platform IDs (Spotify, Apple Music, Tidal, Qobuz)
  * - ISRC codes for cross-platform matching
- * - 🆕 Album art from Cover Art Archive
+ * - Album art from Cover Art Archive
+ * - 🆕 Apple Music preview URL (30s clips, no auth required)
  * 
  * Rate Limit: 1 request per second (enforced by User-Agent requirement)
  * Documentation: https://musicbrainz.org/doc/MusicBrainz_API
@@ -20,6 +21,8 @@ import type {
   MusicBrainzUrlRelation,
   RetryConfig,
 } from './verificationTypes';
+// 🆕 Import Apple Music service (with fallback support)
+import { getPreviewUrl as getAppleMusicPreviewUrl } from '../appleMusicService';
 
 const DEV = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
 
@@ -124,7 +127,7 @@ async function fetchWithRetry(
 }
 
 /**
- * 🆕 Fetch album art from Cover Art Archive
+ * Fetch album art from Cover Art Archive
  * Returns the 500px version (good balance of quality and file size)
  * Falls back to 250px if 500px is not available
  */
@@ -160,6 +163,40 @@ async function getAlbumArtFromCoverArtArchive(releaseId: string): Promise<string
     return null;
   } catch (error) {
     logError(`  ❌ Failed to fetch album art for release ${releaseId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * 🆕 Fetch Apple Music preview URL using ISRC (with text search fallback)
+ * Now uses getPreviewUrl which automatically falls back to text search if ISRC fails
+ */
+async function getAppleMusicPreview(
+  isrc: string | undefined,
+  artist: string,
+  title: string
+): Promise<string | null> {
+  try {
+    log(`  🎵 Searching iTunes preview for: "${title}" by ${artist}`);
+    
+    // Use getPreviewUrl which has built-in fallback:
+    // 1. Try ISRC first if available
+    // 2. Fallback to text search if ISRC fails
+    const previewUrl = await getAppleMusicPreviewUrl({
+      isrc,
+      artist,
+      title,
+    });
+    
+    if (previewUrl) {
+      log(`  ✅ iTunes preview found`);
+      return previewUrl;
+    }
+    
+    log(`  ⚠️ No iTunes preview available`);
+    return null;
+  } catch (error) {
+    logError(`  ❌ Failed to fetch iTunes preview:`, error);
     return null;
   }
 }
@@ -367,10 +404,11 @@ async function getRecordingDetail(mbid: string): Promise<MusicBrainzRecordingDet
 
 /**
  * Verify a song using MusicBrainz
+ * 🆕 Now also fetches Apple Music preview URL
  * 
  * @param artist - Artist name
  * @param title - Song title
- * @returns VerificationResult with metadata, platform IDs, and album art
+ * @returns VerificationResult with metadata, platform IDs, album art, and preview URL
  */
 export async function verifyWithMusicBrainz(
   artist: string,
@@ -425,7 +463,7 @@ export async function verifyWithMusicBrainz(
     const durationMs = detail.length;
     const duration = durationMs ? Math.round(durationMs / 1000) : undefined;
     
-    // 🆕 Step 4.5: Extract release ID and fetch album art
+    // Step 4.5: Extract release ID and fetch album art
     const releaseId = firstRelease?.id;
     let albumArtUrl: string | undefined = undefined;
     
@@ -434,6 +472,16 @@ export async function verifyWithMusicBrainz(
       albumArtUrl = await getAlbumArtFromCoverArtArchive(releaseId) || undefined;
     } else {
       log(`⚠️ No release ID found - cannot fetch album art`);
+    }
+    
+    // 🆕 Step 4.6: Fetch Apple Music preview (with fallback to text search)
+    let previewUrl: string | undefined = undefined;
+    let previewSource: VerificationResult['previewSource'] = undefined;
+    
+    // Always try to get preview (with ISRC preferred, text search as fallback)
+    previewUrl = await getAppleMusicPreview(isrc, recordingArtist, recordingTitle) || undefined;
+    if (previewUrl) {
+      previewSource = 'apple';
     }
     
     // Step 5: Extract platform IDs
@@ -449,20 +497,24 @@ export async function verifyWithMusicBrainz(
       year,
       releaseDate,
       musicBrainzId: detail.id,
-      releaseId,         // 🆕 Release ID for future use
-      albumArtUrl,       // 🆕 Album art URL
+      releaseId,
+      albumArtUrl,
       isrc,
       platformIds,
       duration,
       durationMs,
       confidence: calculateConfidence(artist, title, bestMatch),
       timestamp: new Date().toISOString(),
+      // 🆕 Preview fields
+      previewUrl,
+      previewSource,
     };
     
     log('=== ✅ Verification successful ===');
     log(`MBID: ${detail.id}`);
     if (releaseId) log(`Release ID: ${releaseId}`);
     if (albumArtUrl) log(`Album Art: ${albumArtUrl}`);
+    if (previewUrl) log(`Preview URL: ${previewUrl} (${previewSource})`);
     if (platformIds) {
       log(`Platform IDs: ${Object.keys(platformIds).join(', ')}`);
     }

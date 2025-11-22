@@ -1,0 +1,314 @@
+/* src/styles/export-verification.css */
+/**
+ * Export Verification Styles (Phase 4.5.6)
+ * Visual indicators for song sync status in playlists
+ */
+
+/* Song row status indicators */
+.song-row.failed-export {
+  background-color: rgba(239, 68, 68, 0.1);
+  border-left: 3px solid #ef4444;
+}
+
+.song-row.failed-export:hover {
+  background-color: rgba(239, 68, 68, 0.15);
+}
+
+.song-row.partial-export {
+  background-color: rgba(251, 146, 60, 0.1);
+  border-left: 3px solid #fb923c;
+}
+
+.song-row.partial-export:hover {
+  background-color: rgba(251, 146, 60, 0.15);
+}
+
+.song-row.success-export {
+  border-left: 3px solid transparent;
+}
+
+/* Sync status indicators */
+.sync-indicator {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 8px;
+}
+
+.sync-status {
+  display: inline-flex;
+  align-items: center;
+  cursor: help;
+  font-size: 1.25rem;
+  transition: transform 0.2s ease;
+}
+
+.sync-status:hover {
+  transform: scale(1.1);
+}
+
+.sync-status.success { 
+  color: #10b981; 
+}
+
+.sync-status.partial { 
+  color: #fb923c; 
+}
+
+.sync-status.failed { 
+  color: #ef4444; 
+}
+
+.sync-status.pending { 
+  color: #6b7280; 
+}
+
+/* Sync details tooltip */
+.sync-details-tooltip {
+  display: none;
+  position: absolute;
+  z-index: 50;
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  min-width: 200px;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+}
+
+.song-row:hover .sync-details-tooltip {
+  display: block;
+}
+
+.platform-sync-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 0;
+  border-bottom: 1px solid #374151;
+}
+
+.platform-sync-info:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.platform-sync-info strong {
+  color: #f9fafb;
+  font-size: 0.875rem;
+  text-transform: capitalize;
+}
+
+.platform-sync-info .error-msg {
+  color: #fca5a5;
+  font-size: 0.75rem;
+  margin-top: 2px;
+}
+
+/* Export results modal specific styles */
+.export-summary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 24px;
+  border-radius: 12px;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.success-rate {
+  margin-bottom: 16px;
+}
+
+.success-rate .percentage {
+  display: block;
+  font-size: 48px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.success-rate .label {
+  display: block;
+  font-size: 14px;
+  opacity: 0.9;
+  margin-top: 8px;
+}
+
+.stats {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  margin-top: 16px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.stat .icon {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+
+.stat .count {
+  font-size: 32px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.stat .label {
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+/* Failed songs list */
+.failed-songs-section {
+  margin-top: 24px;
+}
+
+.failed-songs-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 12px;
+  background: #111827;
+}
+
+.failed-song-item {
+  padding: 12px;
+  border-bottom: 1px solid #1f2937;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.failed-song-item:last-child {
+  border-bottom: none;
+}
+
+.song-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.song-info strong {
+  color: #f9fafb;
+  font-size: 0.875rem;
+}
+
+.song-info .artist {
+  color: #9ca3af;
+  font-size: 0.75rem;
+}
+
+.failure-reason {
+  color: #fca5a5;
+  font-size: 0.75rem;
+  padding: 6px 8px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 4px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.confidence-badge {
+  display: inline-block;
+  background-color: #fef3c7;
+  color: #92400e;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Manual resolution button */
+.action-item.resolve {
+  color: #10b981;
+  border: 1px solid #10b981;
+  background: transparent;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.action-item.resolve:hover {
+  background-color: rgba(16, 185, 129, 0.1);
+  transform: translateY(-1px);
+}
+
+.action-item.resolve:active {
+  transform: translateY(0);
+}
+
+/* Success message */
+.success-message {
+  text-align: center;
+  padding: 32px;
+}
+
+.success-message .celebration {
+  font-size: 64px;
+  display: block;
+  margin-bottom: 16px;
+  animation: bounce 1s ease infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.success-message h3 {
+  color: #f9fafb;
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.success-message p {
+  color: #d1d5db;
+  font-size: 0.875rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .stats {
+    gap: 16px;
+  }
+  
+  .stat .count {
+    font-size: 24px;
+  }
+  
+  .success-rate .percentage {
+    font-size: 36px;
+  }
+  
+  .failed-songs-list {
+    max-height: 200px;
+  }
+}
+
+/* Dark mode specific (already optimized for dark theme) */
+@media (prefers-color-scheme: light) {
+  /* Light mode overrides if needed in the future */
+  .song-row.failed-export {
+    background-color: rgba(254, 226, 226, 0.5);
+  }
+  
+  .song-row.partial-export {
+    background-color: rgba(254, 243, 199, 0.5);
+  }
+}

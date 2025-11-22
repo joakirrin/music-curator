@@ -1,4 +1,4 @@
-// src/hooks/usePlaylistsState.ts
+// src/hooks/usePlaylistsState.ts (MODIFIED - Phase 4.5.6)
 /**
  * Playlist state management hook
  * Provides CRUD operations and state persistence
@@ -10,6 +10,8 @@ import { useState, useEffect, useCallback } from 'react';
 import type { Playlist, CreatePlaylistInput, UpdatePlaylistInput } from '@/types/playlist';
 import type { Song } from '@/types/song';
 import { loadPlaylists, savePlaylists } from '@/utils/playlistStorage';
+// NEW: Import helper for updating playlist songs
+import { updatePlaylistSongs as updatePlaylistSongsHelper } from '@/utils/playlistHelpers';
 
 /**
  * Generate a unique playlist ID
@@ -133,6 +135,20 @@ export function usePlaylistsState() {
   }, []);
 
   /**
+   * NEW: Update songs in a playlist (for sync status updates after export)
+   * This replaces existing songs with updated versions (e.g., with new syncStatus)
+   */
+  const updatePlaylistSongsStatus = useCallback((playlistId: string, updatedSongs: Song[]): void => {
+    setPlaylists(prev =>
+      prev.map(playlist => {
+        if (playlist.id !== playlistId) return playlist;
+        
+        return updatePlaylistSongsHelper(playlist, updatedSongs);
+      })
+    );
+  }, []);
+
+  /**
    * Get a specific playlist by ID
    */
   const getPlaylist = useCallback(
@@ -239,6 +255,9 @@ export function usePlaylistsState() {
     // Song operations (now work with full Song objects)
     addSongsToPlaylist,
     removeSongsFromPlaylist,
+    
+    // NEW: Update songs with sync status (Phase 4.5.6)
+    updatePlaylistSongsStatus,
     
     // Queries
     getPlaylist,

@@ -1,9 +1,14 @@
-// FILE: src/components/PushPlaylistModal.tsx (MODIFIED)
+// FILE: src/components/PushPlaylistModal.tsx (MODIFIED - Phase 4.5.6)
 
 import { useState, useEffect } from 'react';
 import type { Playlist } from '@/types/playlist';
-// NEW: Import the formatter, features, and new PushResult type
-import { pushPlaylistToSpotify, type PushResult } from '@/services/spotifyPlaylistService';
+import type { Song } from '@/types/song';
+import { FoneaLogo } from './FoneaLogo';
+// MODIFIED: Import the new types and components
+import { pushPlaylistToSpotify } from '@/services/spotifyPlaylistService';
+import type { ExtendedPushResult } from '@/services/export/spotifyExportVerification';
+import type { VerificationResult } from '@/services/export/exportVerificationService';
+import { ExportResultsModal } from './ExportResultsModal';
 import { formatPlaylistDescription } from '@/utils/formatters';
 import { FEATURES } from '@/config/features';
 
@@ -12,9 +17,10 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   playlist: Playlist | null;
   onSuccess: (playlistId: string, spotifyPlaylistId: string, spotifyUrl: string) => void;
+  // NEW: Callback to update playlist songs with sync status
+  onUpdatePlaylistSongs?: (playlistId: string, updatedSongs: Song[]) => void;
 };
 
-// NEW: Updated stage for resolving
 type Stage = 'confirm' | 'pushing' | 'success' | 'error';
 
 export const PushPlaylistModal = ({
@@ -22,14 +28,17 @@ export const PushPlaylistModal = ({
   onOpenChange,
   playlist,
   onSuccess,
+  onUpdatePlaylistSongs, // NEW
 }: Props) => {
   const [stage, setStage] = useState<Stage>('confirm');
   const [_progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
-  const [result, setResult] = useState<PushResult | null>(null);
-  
-  // NEW: State for the playlist description
+  const [result, setResult] = useState<ExtendedPushResult | null>(null);
   const [description, setDescription] = useState(playlist?.description || '');
+  
+  // NEW: State for export results modal
+  const [showResultsModal, setShowResultsModal] = useState(false);
+  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
 
   // Reset when modal opens
   useEffect(() => {
@@ -38,8 +47,10 @@ export const PushPlaylistModal = ({
       setProgress(0);
       setProgressMessage('');
       setResult(null);
-      // NEW: Reset description to match the playlist
       setDescription(playlist?.description || '');
+      // NEW: Reset results modal state
+      setShowResultsModal(false);
+      setVerificationResult(null);
     }
   }, [open, playlist]);
 
@@ -49,16 +60,15 @@ export const PushPlaylistModal = ({
     setStage('pushing');
     setProgress(0);
 
-    // NEW: Create an updated playlist object with the new description
     const playlistToPush: Playlist = {
       ...playlist,
       description: description,
     };
 
-    const result = await pushPlaylistToSpotify(playlistToPush, (progressUpdate) => {
+    // MODIFIED: Call returns ExtendedPushResult now
+    const result: ExtendedPushResult = await pushPlaylistToSpotify(playlistToPush, (progressUpdate) => {
       setProgress(progressUpdate.current);
       setProgressMessage(progressUpdate.message);
-      // NEW: Update stage based on progress
       if (progressUpdate.stage === 'resolving') {
         setProgressMessage(progressUpdate.message);
       }
@@ -67,6 +77,17 @@ export const PushPlaylistModal = ({
     setResult(result);
 
     if (result.success && result.playlistId && result.playlistUrl) {
+      // NEW: Update songs with sync status
+      if (result.updatedSongs && onUpdatePlaylistSongs) {
+        onUpdatePlaylistSongs(playlist.id, result.updatedSongs);
+      }
+      
+      // NEW: Show verification results if available
+      if (result.verification) {
+        setVerificationResult(result.verification);
+        setShowResultsModal(true);
+      }
+      
       setStage('success');
       onSuccess(playlist.id, result.playlistId, result.playlistUrl);
     } else {
@@ -77,17 +98,20 @@ export const PushPlaylistModal = ({
   const handleClose = () => {
     onOpenChange(false);
   };
+  
+  // NEW: Handle closing the results modal
+  const handleResultsModalClose = () => {
+    setShowResultsModal(false);
+    handleClose();
+  };
 
-  // MODIFIED: This logic is now simpler, as the resolver handles it.
-  // We just show a summary.
   const songsWithDirectLink = playlist?.songs.filter(song => {
-      // This logic checks for any existing ID (Tier 1)
       const hasPlatformId = !!song.platformIds?.spotify?.id;
       const hasLegacyId = 
-        song.serviceUri?.startsWith('spotify:') || //
-        song.spotifyUri?.startsWith('spotify:') || //
-        !!song.serviceId || //
-        !!song.spotifyId; //
+        song.serviceUri?.startsWith('spotify:') ||
+        song.spotifyUri?.startsWith('spotify:') ||
+        !!song.serviceId ||
+        !!song.spotifyId;
       return hasPlatformId || hasLegacyId;
   }) || [];
 
@@ -95,22 +119,21 @@ export const PushPlaylistModal = ({
 
   if (!open || !playlist) return null;
 
-  // NEW: Get the formatted description for the preview
   const previewDescription = formatPlaylistDescription(description);
 
   return (
     <>
-      {/* Backdrop (unchanged) */}
+      {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-4"
         onClick={stage === 'confirm' || stage === 'success' || stage === 'error' ? handleClose : undefined}
       >
-        {/* Modal (unchanged) */}
+        {/* Modal */}
         <div
           className="bg-gray-800 border border-gray-600 rounded-xl shadow-2xl w-full max-w-md flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header (MODIFIED to include resolving) */}
+          {/* Header */}
           <div className="px-6 py-4 bg-gray-900 border-b border-gray-700 flex items-center justify-between flex-shrink-0">
             <h2 className="text-lg font-bold text-white">
               {stage === 'confirm' && 'Export to Spotify'}
@@ -118,20 +141,30 @@ export const PushPlaylistModal = ({
               {stage === 'success' && '✅ Playlist Exported'}
               {stage === 'error' && '❌ Error'}
             </h2>
-            {/* ... (close button unchanged) ... */}
+            {(stage === 'confirm' || stage === 'error') && (
+              <button
+                onClick={handleClose}
+                className="p-2 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
+                title="Close"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
           </div>
 
           {/* Content */}
           <div className="px-6 py-6 flex-1 overflow-y-auto">
             
-            {/* Confirm Stage (HEAVILY MODIFIED for Tasks 4.5.1 & 4.5.2) */}
+            {/* Confirm Stage */}
             {stage === 'confirm' && (
               <div className="space-y-4">
                 <p className="text-white text-lg font-medium">
                   "{playlist.name}"
                 </p>
 
-                {/* NEW: Description Input */}
+                {/* Description Input */}
                 <div className="space-y-2">
                   <label htmlFor="description" className="text-sm font-medium text-gray-300">
                     Description (optional)
@@ -146,7 +179,7 @@ export const PushPlaylistModal = ({
                   />
                 </div>
 
-                {/* NEW: Branding Preview */}
+                {/* Branding Preview */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-300">
                     Preview
@@ -161,7 +194,7 @@ export const PushPlaylistModal = ({
                   )}
                 </div>
 
-                {/* MODIFIED: Export Summary */}
+                {/* Export Summary */}
                 <div className="p-4 bg-gray-700 rounded-lg space-y-2 text-sm">
                   <div className="flex items-center justify-between">
                     <span className="text-gray-300">Total songs:</span>
@@ -198,22 +231,25 @@ export const PushPlaylistModal = ({
                   </button>
                   <button
                     onClick={handlePush}
-                    // MODIFIED: Only disable if there are no songs at all
                     disabled={playlist.songs.length === 0}
                     className="flex-1 px-4 py-3 rounded-lg bg-[#1DB954] text-white hover:bg-[#1ed760] disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors font-medium inline-flex items-center justify-center gap-2"
                   >
-                    {/* ... (spotify icon unchanged) ... */}
+                    <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current">
+                      <path d="M12 0a12 12 0 100 24 12 12 0 000-24Zm5.2 16.7a.9.9 0 01-1.2.3c-3.2-2-7.6-2.5-12.3-1.3a.9.9 0 01-.4-1.7c5.1-1.3 10.2-.7 13.9 1.6a.9.9 0 01.4 1.1Zm1.7-3.6a1 1 0 01-1.3.3c-3.7-2.3-9.3-3-13.5-1.6a1 1 0 11-.6-1.9c4.9-1.5 11.2-.7 15.5 2a1 1 0 01-.1 1.2Zm.1-3.8c-4.3-2.6-11.4-2.8-15.8-1.5a1.2 1.2 0 11-.7-2.2c5.1-1.5 13-1.2 18 1.8a1.2 1.2 0 01-1.3 2Z" />
+                    </svg>
                     <span>Export to Spotify</span>
                   </button>
                 </div>
               </div>
             )}
 
-            {/* Pushing Stage (MODIFIED to show new messages) */}
+            {/* Pushing Stage */}
             {stage === 'pushing' && (
               <div className="space-y-4">
                 <div className="text-center">
-                  <div className="text-5xl mb-4 animate-bounce">🎵</div>
+                  <div className="flex justify-center mb-4">
+                    <FoneaLogo variant="icon" className="h-16 w-16 text-emerald-400 animate-bounce" />
+                  </div>
                   <p className="text-white text-lg font-medium mb-2">
                     Exporting your playlist...
                   </p>
@@ -221,15 +257,24 @@ export const PushPlaylistModal = ({
                     {progressMessage || 'Initializing...'}
                   </p>
                 </div>
-                {/* ... (progress bar unchanged) ... */}
+
+                {/* Progress bar */}
+                <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+                  <div 
+                    className="bg-emerald-500 h-full transition-all duration-300 ease-out"
+                    style={{ width: `${_progress}%` }}
+                  />
+                </div>
               </div>
             )}
 
-            {/* Success Stage (MODIFIED for new ExportReport) */}
-            {stage === 'success' && result && (
+            {/* Success Stage */}
+            {stage === 'success' && result && !showResultsModal && (
               <div className="space-y-4">
                 <div className="text-center">
-                  <div className="text-6xl mb-4">🎉</div>
+                  <div className="flex justify-center mb-4">
+                    <FoneaLogo variant="icon" className="h-16 w-16 text-emerald-400" />
+                  </div>
                   <p className="text-white text-xl font-bold mb-2">
                     Export Successful!
                   </p>
@@ -238,56 +283,31 @@ export const PushPlaylistModal = ({
                   </p>
                 </div>
 
-                {/* NEW: Detailed Export Summary */}
-                <div className="p-4 bg-gray-700 rounded-lg space-y-2 text-sm">
-                  <h3 className="text-white font-medium mb-2">📊 Export Summary</h3>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-300">Total songs:</span>
-                    <span className="text-white font-medium">{result.totalSongs}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-300">Successfully added:</span>
-                    <span className="text-emerald-400 font-medium">
-                      {result.successful.total} ({result.statistics.successRate.toFixed(0)}%)
-                    </span>
-                  </div>
-                  <div className="pl-4">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-400">• Direct links (Tier 1):</span>
-                      <span className="text-gray-300">{result.successful.direct}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-400">• Smart search (Tier 2/3):</span>
-                      <span className="text-gray-300">{result.successful.softSearch + result.successful.hardSearch}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-300">Not available:</span>
-                    <span className="text-orange-400 font-medium">{result.failed.count}</span>
-                  </div>
-                </div>
-
-                {result.failed.count > 0 && (
-                  <details className="text-sm">
-                    <summary className="cursor-pointer text-orange-400 hover:text-orange-300 font-medium">
-                      ⚠️ View songs not found ({result.failed.count})
-                    </summary>
-                    <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
-                      {result.failed.songs.map((item, idx) => (
-                        <div key={idx} className="p-2 bg-orange-900/20 rounded text-xs text-orange-300">
-                          {item.song.artist} - {item.song.title}
-                        </div>
-                      ))}
-                    </div>
-                  </details>
+                {result.playlistUrl && (
+                  <a
+                    href={result.playlistUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full px-4 py-3 rounded-lg bg-[#1DB954] text-white text-center font-medium hover:bg-[#1ed760] transition-colors inline-flex items-center justify-center gap-2"
+                  >
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
+                      <path d="M12 0a12 12 0 100 24 12 12 0 000-24Zm5.2 16.7a.9.9 0 01-1.2.3c-3.2-2-7.6-2.5-12.3-1.3a.9.9 0 01-.4-1.7c5.1-1.3 10.2-.7 13.9 1.6a.9.9 0 01.4 1.1Zm1.7-3.6a1 1 0 01-1.3.3c-3.7-2.3-9.3-3-13.5-1.6a1 1 0 11-.6-1.9c4.9-1.5 11.2-.7 15.5 2a1 1 0 01-.1 1.2Zm.1-3.8c-4.3-2.6-11.4-2.8-15.8-1.5a1.2 1.2 0 11-.7-2.2c5.1-1.5 13-1.2 18 1.8a1.2 1.2 0 01-1.3 2Z" />
+                    </svg>
+                    <span>Open in Spotify</span>
+                  </a>
                 )}
-                {/* ... (buttons unchanged) ... */}
+
+                <button
+                  onClick={handleClose}
+                  className="w-full px-4 py-3 rounded-lg bg-gray-700 text-white hover:bg-gray-600 transition-colors font-medium"
+                >
+                  Close
+                </button>
               </div>
             )}
 
-            {/* Error Stage (Unchanged, but error messages will be better) */}
+            {/* Error Stage */}
             {stage === 'error' && result && (
-              // ... (this JSX is unchanged)
               <div className="space-y-4">
                 <div className="text-center">
                   <div className="text-5xl mb-4">😞</div>
@@ -307,12 +327,45 @@ export const PushPlaylistModal = ({
                       : '💡 Try again or check your internet connection.'}
                   </p>
                 </div>
-                {/* ... (buttons unchanged) ... */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleClose}
+                    className="flex-1 px-4 py-3 rounded-lg bg-gray-700 text-white hover:bg-gray-600 transition-colors"
+                  >
+                    Close
+                  </button>
+                  <button
+                    onClick={() => {
+                      setStage('confirm');
+                      setResult(null);
+                    }}
+                    className="flex-1 px-4 py-3 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+                  >
+                    Try Again
+                  </button>
+                </div>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* NEW: Export Results Modal */}
+      {showResultsModal && verificationResult && (
+        <ExportResultsModal
+          isOpen={showResultsModal}
+          onClose={handleResultsModalClose}
+          verification={verificationResult}
+          playlistUrl={result?.playlistUrl}
+          platform="Spotify"
+          playlistName={playlist?.name || ''}
+          onRetryFailed={() => {
+            // TODO: Implement retry logic
+            console.log('Retry failed songs - to be implemented');
+            setShowResultsModal(false);
+          }}
+        />
+      )}
     </>
   );
 };

@@ -1,6 +1,7 @@
 // src/components/PlaylistsDrawer.tsx
 import { useEffect, useRef, useState } from 'react';
 import type { Playlist } from '@/types/playlist';
+import type { Song } from '@/types/song';
 import { formatDistanceToNow } from 'date-fns';
 import { PlaylistDetailModal } from './PlaylistDetailModal';
 import { PushPlaylistModal } from './PushPlaylistModal';
@@ -13,6 +14,7 @@ type Props = {
   onOpenCreatePlaylist: () => void;
   onRemoveSongFromPlaylist: (playlistId: string, songId: string) => void;
   onMarkAsSynced: (playlistId: string, spotifyPlaylistId: string, spotifyUrl: string) => void;
+  onUpdatePlaylistSongs: (playlistId: string, updatedSongs: Song[]) => void;  // ← AGREGAR
 };
 
 export const PlaylistsDrawer = ({
@@ -23,6 +25,7 @@ export const PlaylistsDrawer = ({
   onOpenCreatePlaylist,
   onRemoveSongFromPlaylist,
   onMarkAsSynced,
+  onUpdatePlaylistSongs,  // ← AGREGAR
 }: Props) => {
   const drawerRef = useRef<HTMLDivElement>(null);
   
@@ -363,12 +366,13 @@ export const PlaylistsDrawer = ({
       />
       
       {/* Push to Spotify Modal */}
-      <PushPlaylistModal
+        <PushPlaylistModal
         open={isPushModalOpen}
         onOpenChange={setIsPushModalOpen}
         playlist={playlistToPushObj}
         onSuccess={handlePushSuccess}
-      />
+        onUpdatePlaylistSongs={onUpdatePlaylistSongs} 
+/>
     </>
   );
 };

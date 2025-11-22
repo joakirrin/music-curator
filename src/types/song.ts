@@ -89,6 +89,7 @@ export type Song = {
   // Media & preview
   albumArtUrl?: string;
   previewUrl?: string;
+  previewSource?: "itunes" | "qobuz" | "apple" | "spotify";
   isPlayable?: boolean;
   popularity?: number;
 
@@ -117,6 +118,29 @@ export type Song = {
       targetType: string;
     }>;
   };
+
+  // NEW: Export sync status tracking (Phase 4.5.6)
+  syncStatus?: {
+    spotify?: PlatformSyncInfo;
+    appleMusic?: PlatformSyncInfo;
+    tidal?: PlatformSyncInfo;
+    qobuz?: PlatformSyncInfo;
+  };
+  
+  // Computed overall sync health across all platforms
+  overallSyncStatus?: 'all_success' | 'partial_success' | 'all_failed' | 'pending';
+};
+
+// Export sync status types (Phase 4.5.6)
+export type SyncStatus = 'success' | 'failed' | 'pending' | 'not_exported' | 'manually_resolved';
+
+export type PlatformSyncInfo = {
+  status: SyncStatus;
+  playlistId?: string;              // ID of the playlist on the platform
+  lastSynced?: string;              // ISO timestamp of successful sync
+  lastAttempted?: string;           // ISO timestamp of last attempt
+  error?: string;                   // Error message if failed
+  manuallyResolvedAt?: string;      // Timestamp when user marked as resolved
 };
 
 // Filter types for UI

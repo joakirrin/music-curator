@@ -1,4 +1,4 @@
-// src/App.tsx - FINAL VERSION with GDPR Compliance
+// src/App.tsx - FINAL VERSION with GDPR Compliance + Export Verification + AUDIO PREVIEW
 import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { spotifyAuth } from "./services/spotifyAuth";
 
@@ -29,6 +29,10 @@ import { ANALYTICS_CONFIG, hasAnalyticsConsent } from "./config/analytics";
 import { CookieConsentBanner } from "./components/CookieConsent";
 import { PrivacyRouteHandler } from "./components/PrivacyRouteHandler";
 
+// 🆕 NEW IMPORTS - Audio Preview System
+import { AudioProvider } from "./contexts/AudioContext";
+import { Toaster } from "sonner";
+
 const DEV = import.meta.env.DEV;
 
 export default function App() {
@@ -52,6 +56,7 @@ export default function App() {
     deletePlaylist,
     addSongsToPlaylist,
     removeSongsFromPlaylist,
+    updatePlaylistSongsStatus,
     markAsSynced, // ✅ For Spotify integration
   } = usePlaylistsState();
 
@@ -98,483 +103,357 @@ export default function App() {
       callbackHandledRef.current = true;
 
       if (DEV) {
-        console.log("[App] 🔄 OAuth callback detected");
-        console.log("[App] Code:", code.substring(0, 20) + "...");
-        console.log("[App] State:", state);
+        console.log("[App] 🔑 OAuth callback detected");
+        console.log("  code:", code?.substring(0, 20) + "...");
+        console.log("  state:", state?.substring(0, 20) + "...");
       }
-      
-      spotifyAuth.handleCallback(code, state).then((success) => {
-        window.history.replaceState({}, "", window.location.pathname);
-        
-        if (success) {
-          if (DEV) console.log("[App] ✅ Login successful");
-          alert("✅ Successfully logged in to Spotify!");
-          
-          // ✅ ANALYTICS: Track successful Spotify login (GDPR compliant)
-          if (clarity.isInitialized()) {
-            clarity.event('spotify_login_success');
-            clarity.setTag('auth_method', 'spotify_oauth');
-          }
-        } else {
-          if (DEV) console.error("[App] ❌ Login failed");
-          alert("❌ Login failed. Please check console and try again.");
-          
-          // ✅ ANALYTICS: Track login failure (no personal data)
-          if (clarity.isInitialized()) {
-            clarity.event('spotify_login_failed');
-          }
+
+      (async () => {
+        try {
+          await spotifyAuth.handleCallback(code, state);
+          if (DEV) console.log("[App] ✅ OAuth successful");
+        } catch (err) {
+          console.error("[App] ❌ OAuth failed:", err);
+          alert("❌ Failed to authenticate with Spotify. Please try again.");
+        } finally {
+          window.history.replaceState({}, "", window.location.pathname);
         }
-      }).catch((err) => {
-        if (DEV) console.error("[App] ❌ Callback handler exception:", err);
-        alert("❌ Login error. Please check console and try again.");
-        window.history.replaceState({}, "", window.location.pathname);
-        
-        // ✅ ANALYTICS: Track login error (no personal data)
-        if (clarity.isInitialized()) {
-          clarity.event('spotify_login_error');
-        }
-      });
+      })();
     }
   }, []);
 
-  const hasContent = songs.length > 0;
+  // --- Song logic ---
+  const updateSong = useCallback(
+    (id: string, updates: Partial<Song>) => {
+      setSongs((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, ...updates } : s))
+      );
+    },
+    [setSongs]
+  );
 
-  const handleChatGPTImport = useCallback(
-    (incoming: Song[], replaceFailedInRound?: number) => {
-      let updatedSongs = [...songs];
+  const deleteSong = useCallback(
+    (id: string) => {
+      const song = songs.find((s) => s.id === id);
+      if (!song) return;
 
-      if (replaceFailedInRound !== undefined) {
-        updatedSongs = updatedSongs.filter(
-          (s) => !(s.round === replaceFailedInRound && s.verificationStatus === "failed")
-        );
-      }
-
-      setSongs([...updatedSongs, ...incoming]);
-      setFilterType("all");
-      if (incoming.length > 0 && incoming[0].round) {
-        setSelectedRound(incoming[0].round);
-      }
-
-      // ✅ ANALYTICS: Track import (GDPR compliant - no personal data)
-      if (clarity.isInitialized()) {
-        clarity.event('songs_imported');
-        clarity.setTag('import_count', incoming.length.toString());
-        clarity.setTag('round', incoming[0]?.round?.toString() || 'unknown');
-        clarity.setTag('source', 'chatgpt');
-        
-        // Track verification success rate (useful for improving service)
-        const verifiedCount = incoming.filter(s => s.verificationStatus === 'verified').length;
-        clarity.setTag('verification_rate', Math.round((verifiedCount / incoming.length) * 100).toString());
+      if (window.confirm(`🗑️ Delete "${song.title}"?`)) {
+        setSongs((prev) => prev.filter((s) => s.id !== id));
       }
     },
-    [songs, setSongs]
+    [setSongs, songs]
   );
 
   const onClear = useCallback(() => {
-    if (confirm("Delete all songs from library?\n\nNote: Songs in playlists will NOT be deleted.")) {
-      const previousCount = songs.length;
+    if (songs.length === 0) return;
+    if (window.confirm("🗑️ Clear ALL songs? This action cannot be undone.")) {
       setSongs([]);
-      setSelectedRound("all");
+    }
+  }, [songs, setSongs]);
 
-      // ✅ ANALYTICS: Track clear action (no personal data)
-      if (clarity.isInitialized()) {
-        clarity.event('library_cleared');
-        clarity.setTag('songs_cleared', previousCount.toString());
+  const handleChatGPTImport = useCallback(
+    (newSongs: Song[]) => {
+      setSongs((prev) => [...prev, ...newSongs]);
+      setIsChatGPTModalOpen(false);
+    },
+    [setSongs]
+  );
+
+  // --- Filtering ---
+  const filtered = useMemo(() => {
+    let result = songs;
+
+    if (filterType !== "all") {
+      result = result.filter((s) => s.feedback === filterType);
+    }
+
+    if (verificationFilter !== "all") {
+      if (verificationFilter === "verified") {
+        result = result.filter((s) => s.verificationStatus === "verified");
+      } else if (verificationFilter === "unverified") {
+        result = result.filter((s) => 
+          s.verificationStatus !== "verified" && s.verificationStatus !== "failed"
+        );
+      } else if (verificationFilter === "failed") {
+        result = result.filter((s) => s.verificationStatus === "failed");
       }
     }
-  }, [setSongs, songs.length]);
 
-  const updateSong = useCallback(
-    (id: string, next: Song) => {
-      const prevSong = songs.find(s => s.id === id);
-      setSongs(songs.map((s) => (s.id === id ? next : s)));
+    if (selectedRound !== "all") {
+      result = result.filter((s) => s.round === selectedRound);
+    }
 
-      // ✅ ANALYTICS: Track feedback changes (GDPR compliant)
-      if (clarity.isInitialized() && prevSong && prevSong.feedback !== next.feedback) {
-        clarity.event('song_feedback_updated');
-        clarity.setTag('feedback_type', next.feedback || 'unknown');
-        clarity.setTag('verification_status', next.verificationStatus || 'unknown');
-      }
-    },
-    [songs, setSongs]
-  );
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (s) =>
+          s.title.toLowerCase().includes(q) ||
+          s.artist.toLowerCase().includes(q) ||
+          s.album?.toLowerCase().includes(q)
+      );
+    }
 
-  /**
-   * Delete song from library
-   * Song will be removed from the library view, but will stay in playlists
-   */
-  const deleteSong = useCallback(
-    (id: string) => {
-      const song = songs.find(s => s.id === id);
-      if (!song) return;
+    return result;
+  }, [songs, filterType, verificationFilter, selectedRound, search]);
 
-      // Check if song is in any playlist
-      const isInPlaylists = playlists.some(p => p.songs.some(s => s.id === id));
+  const hasContent = useMemo(() => songs.length > 0, [songs.length]);
 
-      const message = isInPlaylists
-        ? `Delete "${song.title}" from library?\n\n` +
-          `⚠️ This song is in ${playlists.filter(p => p.songs.some(s => s.id === id)).length} playlist(s).\n\n` +
-          `It will be removed from your library but will stay in your playlists.`
-        : `Delete "${song.title}" from library?`;
+  // --- Export logic ---
+  const handleExportFeedback = useCallback(() => {
+    const lines: string[] = [];
+    lines.push("## Your Feedback Summary:\n");
+    const keep = songs.filter((s) => s.feedback === "keep");
+    const skip = songs.filter((s) => s.feedback === "skip");
+    if (keep.length > 0) {
+      lines.push("### ✓ Keep:\n");
+      keep.forEach((s) => lines.push(`- "${s.title}" by ${s.artist}`));
+      lines.push("");
+    }
+    if (skip.length > 0) {
+      lines.push("### ✗ Skip:\n");
+      skip.forEach((s) => lines.push(`- "${s.title}" by ${s.artist}`));
+    }
+    const text = lines.join("\n");
+    navigator.clipboard.writeText(text);
+    alert("📋 Feedback copied to clipboard!");
+  }, [songs]);
 
-      if (confirm(message)) {
-        setSongs(songs.filter((s) => s.id !== id));
-        
-        if (isInPlaylists) {
-          console.log(`[App] Song "${song.title}" deleted from library but preserved in playlists`);
-        }
-
-        // ✅ ANALYTICS: Track delete (GDPR compliant - no personal data)
-        if (clarity.isInitialized()) {
-          clarity.event('song_deleted');
-          clarity.setTag('in_playlists', isInPlaylists.toString());
-          clarity.setTag('verification_status', song.verificationStatus || 'unknown');
-        }
-      }
-    },
-    [songs, setSongs, playlists]
-  );
-
-  /**
-   * Add song to playlist (now passes full Song object)
-   */
-  const handleAddToPlaylist = useCallback((playlistId: string, songId: string) => {
-    const song = songs.find(s => s.id === songId);
-    if (!song) {
-      console.error('[App] Song not found:', songId);
+  const handleGetReplacements = useCallback(() => {
+    // Get songs that failed verification (not songs marked as skip)
+    const failedSongs = songs.filter((s) => s.verificationStatus === "failed");
+    
+    if (failedSongs.length === 0) {
+      alert("⚠️ No failed tracks found. All songs verified successfully!");
       return;
     }
     
-    // Pass full song object to playlist
-    addSongsToPlaylist(playlistId, [song]);
-
-    // ✅ ANALYTICS: Track add to playlist (GDPR compliant)
-    if (clarity.isInitialized()) {
-      clarity.event('song_added_to_playlist');
-      clarity.setTag('feedback_status', song.feedback || 'unknown');
-    }
-  }, [songs, addSongsToPlaylist]);
-
-  /**
-   * Remove song from playlist (by ID)
-   */
-  const handleRemoveFromPlaylist = useCallback((playlistId: string, songId: string) => {
-    removeSongsFromPlaylist(playlistId, [songId]);
-
-    // ✅ ANALYTICS: Track remove from playlist (GDPR compliant)
-    if (clarity.isInitialized()) {
-      clarity.event('song_removed_from_playlist');
-    }
-  }, [removeSongsFromPlaylist]);
-
-  /**
-   * ✅ Mark playlist as synced after successful Spotify push
-   */
-  const handleMarkAsSynced = useCallback((
-    playlistId: string,
-    spotifyPlaylistId: string,
-    spotifyUrl: string
-  ) => {
-    const playlist = playlists.find(p => p.id === playlistId);
-    markAsSynced(playlistId, spotifyPlaylistId, spotifyUrl);
-    console.log(`[App] ✅ Playlist marked as synced: ${playlistId}`);
-
-    // ✅ ANALYTICS: Track Spotify sync (GDPR compliant - no personal data)
-    if (clarity.isInitialized() && playlist) {
-      clarity.event('playlist_synced_to_spotify');
-      clarity.setTag('playlist_song_count', playlist.songs.length.toString());
-      clarity.setTag('sync_success', 'true');
-    }
-  }, [markAsSynced, playlists]);
-
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-
-    let base = songs.filter((s) => s.verificationStatus !== "failed");
-
-    if (selectedRound !== "all") {
-      base = base.filter((s) => s.round === selectedRound);
-    }
-
-    base = base.filter((s) => {
-      const hay = [
-        s.title,
-        s.artist,
-        s.featuring ?? "",
-        s.album ?? "",
-        s.year ?? "",
-        s.producer ?? "",
-        s.comments ?? "",
-      ]
-        .join(" ")
-        .toLowerCase();
-      return hay.includes(q);
-    });
-
-    switch (verificationFilter) {
-      case "verified":
-        return base.filter((s) => s.verificationStatus === "verified");
-      case "unverified":
-        return base.filter((s) => s.verificationStatus !== "verified");
-      default:
-        break;
-    }
-
-    switch (filterType) {
-      case "keep":
-        return base.filter((s) => s.feedback === "keep");
-      case "skip":
-        return base.filter((s) => s.feedback === "skip");
-      case "pending":
-        return base.filter((s) => s.feedback === "pending" || !s.feedback);
-      default:
-        return base;
-    }
-  }, [songs, search, filterType, verificationFilter, selectedRound]);
-
-  const handleGetReplacements = useCallback(() => {
-    const failedTracks = songs.filter((s) => s.verificationStatus === "failed");
-    if (failedTracks.length === 0) {
-      alert("No failed tracks to replace! All songs are verified. 🎉");
-      return;
-    }
-    setIsFailedTracksModalOpen(true);
-
-    // ✅ ANALYTICS: Track failed tracks modal open (GDPR compliant)
-    if (clarity.isInitialized()) {
-      clarity.event('failed_tracks_modal_opened');
-      clarity.setTag('failed_count', failedTracks.length.toString());
-      clarity.setTag('success_rate', Math.round(((songs.length - failedTracks.length) / songs.length) * 100).toString());
-    }
+    const lines: string[] = [];
+    lines.push("These tracks failed verification and couldn't be found:");
+    lines.push("");
+    failedSongs.forEach((s) => lines.push(`- "${s.title}" by ${s.artist}`));
+    lines.push("");
+    lines.push("Can you suggest alternative tracks that are similar but more mainstream/verified?");
+    
+    const text = lines.join("\n");
+    navigator.clipboard.writeText(text);
+    alert(`📋 Replacement prompt for ${failedSongs.length} failed track(s) copied! Paste it into ChatGPT.`);
   }, [songs]);
 
-  const handleCopyReplacementPrompt = useCallback(() => {
-    const failedTracks = songs.filter((s) => s.verificationStatus === "failed");
-    const tracksByRound = failedTracks.reduce((acc, track) => {
-      const round = track.round || 0;
-      if (!acc[round]) acc[round] = [];
-      acc[round].push(track);
-      return acc;
-    }, {} as Record<number, Song[]>);
+  const handleCopyReplacementPrompt = useCallback(
+    (failedSongs: Song[]) => {
+      if (failedSongs.length === 0) {
+        alert("⚠️ No failed tracks to copy.");
+        return;
+      }
 
-    let prompt = `🔄 REPLACEMENT REQUEST\n\n`;
-    prompt += `I need help replacing ${failedTracks.length} track${
-      failedTracks.length !== 1 ? "s" : ""
-    } that couldn't be verified on Spotify.\n\n`;
+      const lines: string[] = [];
+      lines.push("These tracks failed verification:");
+      failedSongs.forEach((s) => lines.push(`- "${s.title}" by ${s.artist}`));
+      lines.push("");
+      lines.push("Can you suggest alternative tracks that would be similar and are more mainstream/verified?");
 
-    Object.entries(tracksByRound).forEach(([round, tracks]) => {
-      prompt += `💿 Round ${round}:\n`;
-      tracks.forEach((track) => {
-        prompt += `  • "${track.title}" by ${track.artist}\n`;
-        if (track.verificationError) prompt += `    ❌ Error: ${track.verificationError}\n`;
-        if (track.comments) prompt += `    💡 Original reason: "${track.comments}"\n`;
-      });
-      prompt += `\n`;
-    });
+      const text = lines.join("\n");
+      navigator.clipboard.writeText(text);
+      alert("📋 Replacement prompt copied! Paste it into ChatGPT.");
+    },
+    []
+  );
 
-    prompt += `🎯 Please suggest verified Spotify replacements with the same vibe and round.\n`;
-    navigator.clipboard.writeText(prompt);
-    alert("✅ Replacement prompt copied to clipboard!");
+  // --- Playlist logic ---
+  const handleAddToPlaylist = useCallback(
+    (playlistId: string, songId: string) => {
+      const song = songs.find((s) => s.id === songId);
+      if (!song) return;
+      addSongsToPlaylist(playlistId, [song]);
+    },
+    [songs, addSongsToPlaylist]
+  );
 
-    // ✅ ANALYTICS: Track replacement prompt copy (GDPR compliant)
-    if (clarity.isInitialized()) {
-      clarity.event('replacement_prompt_copied');
-      clarity.setTag('failed_tracks_count', failedTracks.length.toString());
-    }
-  }, [songs]);
+  const handleRemoveFromPlaylist = useCallback(
+    (playlistId: string, songId: string) => {
+      removeSongsFromPlaylist(playlistId, [songId]);
+    },
+    [removeSongsFromPlaylist]
+  );
 
-  const handleExportFeedback = useCallback(() => {
-    const songsWithFeedback = songs.filter((s) => s.feedback && s.feedback !== "pending");
-    if (songsWithFeedback.length === 0) {
-      alert("No feedback to export yet. Mark some songs as Keep or Skip first!");
-      return;
-    }
+  const handleRemoveSongFromPlaylist = useCallback(
+    (playlistId: string, songId: string) => {
+      if (window.confirm("🗑️ Remove this song from the playlist?")) {
+        removeSongsFromPlaylist(playlistId, [songId]);
+      }
+    },
+    [removeSongsFromPlaylist]
+  );
 
-    const latestRound = Math.max(...songs.map((s) => s.round || 0));
-    const feedbackData: any = {
-      round: latestRound,
-      summary: {
-        total: songs.length,
-        reviewed: songsWithFeedback.length,
-        kept: songsWithFeedback.filter((s) => s.feedback === "keep").length,
-        skipped: songsWithFeedback.filter((s) => s.feedback === "skip").length,
-        verified: songs.filter((s) => s.verificationStatus === "verified").length,
-      },
-      feedback: songsWithFeedback.map((s) => ({
-        requestedTitle: s.title,
-        requestedArtist: s.artist,
-        decision: s.feedback,
-        userFeedback: s.userFeedback || "",
-        verification:
-          s.verificationStatus === "verified"
-            ? { status: "verified", spotifyUri: s.spotifyUri, album: s.album, popularity: s.popularity }
-            : undefined,
-      })),
-      instructions: `Use this feedback to improve future recommendations for Round ${latestRound + 1}.`,
-    };
+  const handleOpenCreatePlaylist = useCallback(() => {
+    setIsPlaylistsDrawerOpen(false);
+    setIsCreatePlaylistModalOpen(true);
+  }, []);
 
-    navigator.clipboard.writeText(JSON.stringify(feedbackData, null, 2));
-    alert("✅ Feedback copied to clipboard!");
-
-    // ✅ ANALYTICS: Track feedback export (GDPR compliant)
-    if (clarity.isInitialized()) {
-      clarity.event('feedback_exported');
-      clarity.setTag('songs_with_feedback', songsWithFeedback.length.toString());
-      clarity.setTag('feedback_completion_rate', Math.round((songsWithFeedback.length / songs.length) * 100).toString());
-    }
-  }, [songs]);
-
-  const handleImportFromEmpty = () => {
+  const handleImportFromEmpty = useCallback(() => {
     setIsChatGPTModalOpen(true);
-
+    
     // ✅ ANALYTICS: Track import modal open from empty state (GDPR compliant)
     if (clarity.isInitialized()) {
       clarity.event('import_modal_opened_from_empty');
       clarity.setTag('user_journey', 'first_time');
     }
-  };
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gray-800 flex flex-col">
-      {/* ✅ GDPR-COMPLIANT PRIVACY SYSTEM */}
-      <CookieConsentBanner />
-      <PrivacyRouteHandler />
+    // 🆕 WRAP EVERYTHING WITH AudioProvider - THIS IS THE ONLY CHANGE IN THE RETURN STATEMENT
+    <AudioProvider>
+      <div className="min-h-screen bg-gray-800 flex flex-col">
+        {/* ✅ GDPR-COMPLIANT PRIVACY SYSTEM */}
+        <CookieConsentBanner />
+        <PrivacyRouteHandler />
 
-      <Header onOpenGuide={() => setDrawerOpen(true)} />
+        <Header onOpenGuide={() => setDrawerOpen(true)} />
 
-      {hasContent ? (
-        <>
-          <Toolbar
-            songs={songs}
-            playlists={playlists}
-            onClear={onClear}
-            onOpenChatGPTModal={() => setIsChatGPTModalOpen(true)}
-            onExportFeedback={handleExportFeedback}
-            onGetReplacements={handleGetReplacements}
-            onOpenPlaylistsDrawer={() => setIsPlaylistsDrawerOpen(true)}
-            onOpenCreatePlaylist={() => setIsCreatePlaylistModalOpen(true)}
-          />
+        {hasContent ? (
+          <>
+            <Toolbar
+              songs={songs}
+              playlists={playlists}
+              onClear={onClear}
+              onOpenChatGPTModal={() => setIsChatGPTModalOpen(true)}
+              onExportFeedback={handleExportFeedback}
+              onGetReplacements={handleGetReplacements}
+              onOpenPlaylistsDrawer={() => setIsPlaylistsDrawerOpen(true)}
+              onOpenCreatePlaylist={() => setIsCreatePlaylistModalOpen(true)}
+            />
 
-          <FilterBar
-            value={filterType}
-            onChange={setFilterType}
-            verificationFilter={verificationFilter}
-            onVerificationFilterChange={setVerificationFilter}
-            search={search}
-            onSearch={setSearch}
-            songs={songs}
-            selectedRound={selectedRound}
-            onRoundChange={setSelectedRound}
-          />
+            <FilterBar
+              value={filterType}
+              onChange={setFilterType}
+              verificationFilter={verificationFilter}
+              onVerificationFilterChange={setVerificationFilter}
+              search={search}
+              onSearch={setSearch}
+              songs={songs}
+              selectedRound={selectedRound}
+              onRoundChange={setSelectedRound}
+            />
 
-          <div className="flex-1 pb-8">
-            {filtered.map((s) => (
-              <ChatGPTSongRow
-                key={s.id}
-                song={s}
-                onUpdate={(next) => updateSong(s.id, next)}
-                onDelete={() => deleteSong(s.id)}
-                onOpenCreatePlaylist={() => setIsCreatePlaylistModalOpen(true)}
-                playlists={playlists}
-                onAddToPlaylist={handleAddToPlaylist}
-                onRemoveFromPlaylist={handleRemoveFromPlaylist}
-              />
-            ))}
+            <div className="flex-1 pb-8">
+              {filtered.map((s) => (
+                <ChatGPTSongRow
+                  key={s.id}
+                  song={s}
+                  onUpdate={(next) => updateSong(s.id, next)}
+                  onDelete={() => deleteSong(s.id)}
+                  onOpenCreatePlaylist={() => setIsCreatePlaylistModalOpen(true)}
+                  playlists={playlists}
+                  onAddToPlaylist={handleAddToPlaylist}
+                  onRemoveFromPlaylist={handleRemoveFromPlaylist}
+                />
+              ))}
 
-            {filtered.length === 0 && (
-              <div className="container mx-auto px-4 py-12 text-center text-gray-400">
-                {verificationFilter === "failed" ? (
-                  <>
-                    Failed tracks are hidden from the main list.
-                    <br />
-                    <button
-                      onClick={() => setIsFailedTracksModalOpen(true)}
-                      className="mt-3 px-4 py-2 rounded-xl bg-orange-600 text-white text-sm font-medium hover:bg-orange-700 transition-colors inline-flex items-center gap-2"
-                    >
-                      🔄 View Failed Tracks
-                    </button>
-                  </>
-                ) : selectedRound !== "all" ? (
-                  <>
-                    No songs in Round {selectedRound}.
-                    <button
-                      onClick={() => setSelectedRound("all")}
-                      className="ml-2 text-emerald-400 hover:text-emerald-300 underline"
-                    >
-                      View all rounds
-                    </button>
-                  </>
-                ) : filterType === "keep" ? (
-                  "No songs marked as Keep yet. Click the ✓ Keep button on songs you like!"
-                ) : filterType === "skip" ? (
-                  "No songs marked as Skip yet. Click the ✗ Skip button on songs you want to skip!"
-                ) : filterType === "pending" ? (
-                  "No pending songs. All songs have been reviewed!"
-                ) : (
-                  <>
-                    No songs yet. Click{" "}
-                    <button
-                      onClick={() => setIsChatGPTModalOpen(true)}
-                      className="text-emerald-400 hover:text-emerald-300 underline"
-                    >
-                      🤖 Import from ChatGPT
-                    </button>{" "}
-                    to get started.
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        </>
-      ) : (
-        <EmptyState onImport={handleImportFromEmpty} onOpenGuide={() => setDrawerOpen(true)} />
-      )}
+              {filtered.length === 0 && (
+                <div className="container mx-auto px-4 py-12 text-center text-gray-400">
+                  {verificationFilter === "failed" ? (
+                    <>
+                      Failed tracks are hidden from the main list.
+                      <br />
+                      <button
+                        onClick={() => setIsFailedTracksModalOpen(true)}
+                        className="mt-3 px-4 py-2 rounded-xl bg-orange-600 text-white text-sm font-medium hover:bg-orange-700 transition-colors inline-flex items-center gap-2"
+                      >
+                        🔄 View Failed Tracks
+                      </button>
+                    </>
+                  ) : selectedRound !== "all" ? (
+                    <>
+                      No songs in Round {selectedRound}.
+                      <button
+                        onClick={() => setSelectedRound("all")}
+                        className="ml-2 text-emerald-400 hover:text-emerald-300 underline"
+                      >
+                        View all rounds
+                      </button>
+                    </>
+                  ) : filterType === "keep" ? (
+                    "No songs marked as Keep yet. Click the ✓ Keep button on songs you like!"
+                  ) : filterType === "skip" ? (
+                    "No songs marked as Skip yet. Click the ✗ Skip button on songs you want to skip!"
+                  ) : filterType === "pending" ? (
+                    "No pending songs. All songs have been reviewed!"
+                  ) : (
+                    <>
+                      No songs yet. Click{" "}
+                      <button
+                        onClick={() => setIsChatGPTModalOpen(true)}
+                        className="text-emerald-400 hover:text-emerald-300 underline"
+                      >
+                        🤖 Import from ChatGPT
+                      </button>{" "}
+                      to get started.
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <EmptyState onImport={handleImportFromEmpty} onOpenGuide={() => setDrawerOpen(true)} />
+        )}
 
-      {/* Modals */}
-      <ImportChatGPTModal
-        open={isChatGPTModalOpen}
-        onOpenChange={setIsChatGPTModalOpen}
-        onImport={handleChatGPTImport}
-        existingSongs={songs}
-      />
+        {/* Modals */}
+        <ImportChatGPTModal
+          open={isChatGPTModalOpen}
+          onOpenChange={setIsChatGPTModalOpen}
+          onImport={handleChatGPTImport}
+          existingSongs={songs}
+        />
 
-      <FailedTracksModal
-        open={isFailedTracksModalOpen}
-        onOpenChange={setIsFailedTracksModalOpen}
-        songs={songs}
-        onGetReplacements={handleCopyReplacementPrompt}
-      />
+        <FailedTracksModal
+          open={isFailedTracksModalOpen}
+          onOpenChange={setIsFailedTracksModalOpen}
+          songs={songs}
+          onGetReplacements={handleCopyReplacementPrompt}
+        />
 
-      <CreatePlaylistModal
-        open={isCreatePlaylistModalOpen}
-        onOpenChange={setIsCreatePlaylistModalOpen}
-        songs={songs}
-        onCreatePlaylist={createPlaylist}
-        existingPlaylists={playlists}
-      />
+        <CreatePlaylistModal
+          open={isCreatePlaylistModalOpen}
+          onOpenChange={setIsCreatePlaylistModalOpen}
+          songs={songs}
+          onCreatePlaylist={createPlaylist}
+          existingPlaylists={playlists}
+        />
 
-      <PlaylistsDrawer
-        open={isPlaylistsDrawerOpen}
-        onOpenChange={setIsPlaylistsDrawerOpen}
-        playlists={playlists}
-        onDeletePlaylist={deletePlaylist}
-        onOpenCreatePlaylist={() => {
-          setIsCreatePlaylistModalOpen(true);
-          setIsPlaylistsDrawerOpen(false);
+        <PlaylistsDrawer
+          open={isPlaylistsDrawerOpen}
+          onOpenChange={setIsPlaylistsDrawerOpen}
+          playlists={playlists}
+          onDeletePlaylist={deletePlaylist}
+          onOpenCreatePlaylist={handleOpenCreatePlaylist}
+          onRemoveSongFromPlaylist={handleRemoveSongFromPlaylist}
+          onMarkAsSynced={markAsSynced}
+          onUpdatePlaylistSongs={updatePlaylistSongsStatus}
+        />
+
+        <GuideDrawer
+          open={drawerOpen || onboardingOpen}
+          onClose={() => {
+            setDrawerOpen(false);
+            onboardingClose();
+          }}
+        />
+        
+        <FeedbackFAB onOpenGuide={() => setDrawerOpen(true)} />
+      </div>
+
+      {/* 🆕 ADD TOASTER FOR NOTIFICATIONS */}
+      <Toaster 
+        position="bottom-right"
+        toastOptions={{
+          style: {
+            background: '#1f2937',
+            color: '#fff',
+            border: '1px solid #374151',
+          },
         }}
-        onRemoveSongFromPlaylist={handleRemoveFromPlaylist}
-        onMarkAsSynced={handleMarkAsSynced}
       />
-
-      <GuideDrawer
-        open={drawerOpen || onboardingOpen}
-        onClose={() => {
-          setDrawerOpen(false);
-          onboardingClose();
-        }}
-      />
-      
-      <FeedbackFAB onOpenGuide={() => setDrawerOpen(true)} />
-    </div>
+    </AudioProvider>
   );
 }
