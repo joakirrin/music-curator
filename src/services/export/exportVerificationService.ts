@@ -15,9 +15,7 @@ function log(...args: any[]) {
   if (DEV) console.log('[ExportVerification]', ...args);
 }
 
-function logError(...args: any[]) {
-  if (DEV) console.error('[ExportVerification]', ...args);
-}
+
 
 /**
  * Result of a single export operation

@@ -239,25 +239,26 @@ export default function App() {
     alert(`📋 Replacement prompt for ${failedSongs.length} failed track(s) copied! Paste it into ChatGPT.`);
   }, [songs]);
 
-  const handleCopyReplacementPrompt = useCallback(
-    (failedSongs: Song[]) => {
-      if (failedSongs.length === 0) {
-        alert("⚠️ No failed tracks to copy.");
-        return;
-      }
+const handleCopyReplacementPrompt = useCallback(() => {
+    // Filter failed songs from the current songs list
+    const failedSongs = songs.filter((s) => s.verificationStatus === "failed");
+    
+    if (failedSongs.length === 0) {
+      alert("⚠️ No failed tracks to copy.");
+      return;
+    }
 
-      const lines: string[] = [];
-      lines.push("These tracks failed verification:");
-      failedSongs.forEach((s) => lines.push(`- "${s.title}" by ${s.artist}`));
-      lines.push("");
-      lines.push("Can you suggest alternative tracks that would be similar and are more mainstream/verified?");
+    const lines: string[] = [];
+    lines.push("These tracks failed verification:");
+    failedSongs.forEach((s) => lines.push(`- "${s.title}" by ${s.artist}`));
+    lines.push("");
+    lines.push("Can you suggest alternative tracks that would be similar and are more mainstream/verified?");
 
-      const text = lines.join("\n");
-      navigator.clipboard.writeText(text);
-      alert("📋 Replacement prompt copied! Paste it into ChatGPT.");
-    },
-    []
-  );
+    const text = lines.join("\n");
+    navigator.clipboard.writeText(text);
+    alert("📋 Replacement prompt copied! Paste it into ChatGPT.");
+  }, [songs]);
+
 
   // --- Playlist logic ---
   const handleAddToPlaylist = useCallback(

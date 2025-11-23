@@ -243,14 +243,11 @@ async function fetchSpotifyLink(
   };
 }
 
-/**
- * Fetch Apple Music link on-demand
- */
 async function fetchAppleMusicLink(song: Song): Promise<PlatformLinkResult> {
   // Try ISRC first
   if (song.isrc) {
     const result = await searchAppleMusicByISRC(song.isrc);
-    if (result) {
+    if (result && result.url) {  // ← Verificar que url existe
       return {
         id: result.id,
         url: result.url,
@@ -261,7 +258,7 @@ async function fetchAppleMusicLink(song: Song): Promise<PlatformLinkResult> {
   
   // Fallback to text search
   const result = await searchAppleMusicByText(song.artist, song.title);
-  if (result) {
+  if (result && result.url) {  // ← Verificar que url existe
     return {
       id: result.id,
       url: result.url,
@@ -352,7 +349,8 @@ export async function fetchPlatformLink(
         if (!options?.spotifyToken) {
           throw new Error('Spotify token required');
         }
-        result = await fetchSpotifyLink(song, options.spotifyToken);
+        // Type assertion: we know spotifyToken is defined after the check
+        result = await fetchSpotifyLink(song, options.spotifyToken as string);
         break;
         
       case 'apple':

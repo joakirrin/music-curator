@@ -191,19 +191,20 @@ export const ChatGPTSongRow = ({
     }));
 
     try {
-      // Get Spotify token if needed
-      let spotifyToken: string | undefined;
-      if (platform === 'spotify') {
-        spotifyToken = await spotifyAuth.getAccessToken();
-        if (!spotifyToken) {
-          throw new Error('Not logged in to Spotify');
-        }
-      }
+// Get Spotify token if needed
+let spotifyToken: string | undefined;
+if (platform === 'spotify') {
+  const token = await spotifyAuth.getAccessToken();
+  if (!token) {
+    throw new Error('Not logged in to Spotify');
+  }
+  spotifyToken = token;  // Ahora sabemos que es string (no null)
+}
 
-      // Fetch platform link
-      const { result, updatedSong } = await fetchPlatformLink(song, platform, {
-        spotifyToken,
-      });
+// Fetch platform link
+const { result, updatedSong } = await fetchPlatformLink(song, platform, {
+  spotifyToken,  // ← Ahora es string | undefined (correcto)
+});
 
       // Update song with cached link
       onUpdate(updatedSong);
@@ -249,11 +250,11 @@ export const ChatGPTSongRow = ({
     return !!(platformData?.id && platformData?.url);
   };
 
-  // 🆕 Helper: Get platform link URL if cached
-  const getPlatformUrl = (platform: PlatformType): string | undefined => {
-    const platformData = song.platformIds?.[platform];
-    return platformData?.url;
-  };
+// 🆕 Helper: Get platform link URL if cached
+const getPlatformUrl = (platform: PlatformType): string => {
+  const platformData = song.platformIds?.[platform];
+  return (platformData?.url ?? '') as string;
+};
 
   const playlistCount = playlists.filter(p => p.songs.some(s => s.id === song.id)).length;
 

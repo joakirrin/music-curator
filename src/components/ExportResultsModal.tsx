@@ -8,7 +8,7 @@
 
 import { useState } from 'react';
 import { FoneaLogo } from './FoneaLogo';
-import type { VerificationResult, FailedSongDetail } from '@/services/export/exportVerificationService';
+import type { VerificationResult } from '@/services/export/exportVerificationService';
 
 interface ExportResultsModalProps {
   isOpen: boolean;
@@ -18,7 +18,7 @@ interface ExportResultsModalProps {
   platform: string;
   playlistName: string;
   onRetryFailed?: () => void;
-  onViewPlaylist?: () => void;
+ 
 }
 
 export function ExportResultsModal({
@@ -29,7 +29,7 @@ export function ExportResultsModal({
   platform,
   playlistName,
   onRetryFailed,
-  onViewPlaylist,
+ 
 }: ExportResultsModalProps) {
   const [showFailedList, setShowFailedList] = useState(false);
   
