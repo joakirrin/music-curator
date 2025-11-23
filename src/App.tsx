@@ -160,8 +160,13 @@ export default function App() {
   );
 
   // --- Filtering ---
-  const filtered = useMemo(() => {
+const filtered = useMemo(() => {
     let result = songs;
+
+    // 🆕 ALWAYS exclude failed songs unless specifically filtering for them
+    if (verificationFilter !== "failed") {
+      result = result.filter((s) => s.verificationStatus !== "failed");
+    }
 
     if (filterType !== "all") {
       result = result.filter((s) => s.feedback === filterType);
@@ -199,23 +204,54 @@ export default function App() {
   const hasContent = useMemo(() => songs.length > 0, [songs.length]);
 
   // --- Export logic ---
-  const handleExportFeedback = useCallback(() => {
+const handleExportFeedback = useCallback(() => {
+    // Filter only verified songs with decisions
+    const verifiedSongs = songs.filter(
+      (s) => s.verificationStatus === "verified" && (s.feedback === "keep" || s.feedback === "skip")
+    );
+    
+    if (verifiedSongs.length === 0) {
+      alert("⚠️ No verified songs with decisions to export.");
+      return;
+    }
+    
     const lines: string[] = [];
-    lines.push("## Your Feedback Summary:\n");
-    const keep = songs.filter((s) => s.feedback === "keep");
-    const skip = songs.filter((s) => s.feedback === "skip");
+    lines.push("## Your Feedback Summary\n");
+    lines.push("Here are my decisions on the verified songs:\n");
+    
+    const keep = verifiedSongs.filter((s) => s.feedback === "keep");
+    const skip = verifiedSongs.filter((s) => s.feedback === "skip");
+    
+    // KEEP songs
     if (keep.length > 0) {
-      lines.push("### ✓ Keep:\n");
-      keep.forEach((s) => lines.push(`- "${s.title}" by ${s.artist}`));
-      lines.push("");
+      lines.push(`### ✓ KEEP (${keep.length} song${keep.length !== 1 ? 's' : ''}):\n`);
+      keep.forEach((s, index) => {
+        lines.push(`${index + 1}. "${s.title}" by ${s.artist}`);
+        if (s.userFeedback && s.userFeedback.trim()) {
+          lines.push(`   Your feedback: "${s.userFeedback}"`);
+        }
+        lines.push("");
+      });
     }
+    
+    // SKIP songs
     if (skip.length > 0) {
-      lines.push("### ✗ Skip:\n");
-      skip.forEach((s) => lines.push(`- "${s.title}" by ${s.artist}`));
+      lines.push(`### ✗ SKIP (${skip.length} song${skip.length !== 1 ? 's' : ''}):\n`);
+      skip.forEach((s, index) => {
+        lines.push(`${index + 1}. "${s.title}" by ${s.artist}`);
+        if (s.userFeedback && s.userFeedback.trim()) {
+          lines.push(`   Your feedback: "${s.userFeedback}"`);
+        }
+        lines.push("");
+      });
     }
+    
+    lines.push("---");
+    lines.push("Please use this feedback to refine future recommendations.");
+    
     const text = lines.join("\n");
     navigator.clipboard.writeText(text);
-    alert("📋 Feedback copied to clipboard!");
+    alert(`📋 Feedback for ${verifiedSongs.length} verified song(s) copied to clipboard!`);
   }, [songs]);
 
   const handleGetReplacements = useCallback(() => {

@@ -1,4 +1,14 @@
 # 🎧 Welcome to Fonea
+
+<p align="center">
+  <a href="https://app.supademo.com/demo/cmiayk8gq89oib7b4q75k8ac2?utm_source=link"
+     target="_blank" rel="noopener noreferrer"
+     style="background-color:#10a37f;color:white;padding:10px 20px;
+            border-radius:8px;text-decoration:none;font-weight:bold;">
+      Fonea Guided Tour
+  </a>
+</p>
+
 Two pieces work together:
 
 

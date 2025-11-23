@@ -1,3 +1,6 @@
+
+
+
 import React, { useEffect } from "react";
 import ReactDOM from "react-dom";
 import ReactMarkdown from "react-markdown";
@@ -5,6 +8,8 @@ import remarkGfm from "remark-gfm";
 import guideMd from "@/content/guide.md?raw";
 import "../styles/guide.css";
 import rehypeRaw from "rehype-raw";
+
+
 
 
 type GuideDrawerProps = {
