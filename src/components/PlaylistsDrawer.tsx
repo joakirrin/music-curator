@@ -5,6 +5,7 @@ import type { Song } from '@/types/song';
 import { formatDistanceToNow } from 'date-fns';
 import { PlaylistDetailModal } from './PlaylistDetailModal';
 import { PushPlaylistModal } from './PushPlaylistModal';
+import { spotifyAuth } from '@/services/spotifyAuth';
 
 type Props = {
   open: boolean;
@@ -133,11 +134,30 @@ export const PlaylistsDrawer = ({
     setIsDetailModalOpen(true);
   };
 
-  const handlePushToSpotify = (e: React.MouseEvent, playlistId: string) => {
-    e.stopPropagation(); // Prevent opening detail modal
-    setPlaylistToPush(playlistId);
-    setIsPushModalOpen(true);
-  };
+const handlePushToSpotify = async (e: React.MouseEvent, playlistId: string) => {
+  e.stopPropagation(); // Prevent opening detail modal
+  
+  // Check if user is logged in to Spotify
+  const token = await spotifyAuth.getAccessToken();
+  
+  if (!token) {
+    // Not logged in → redirect to Spotify login
+    const confirmLogin = window.confirm(
+      '🔐 Login to Spotify required\n\n' +
+      'You need to connect your Spotify account to export playlists.\n\n' +
+      'Click OK to login now.'
+    );
+    
+    if (confirmLogin) {
+      await spotifyAuth.login();
+    }
+    return;
+  }
+  
+  // User is logged in → proceed with export
+  setPlaylistToPush(playlistId);
+  setIsPushModalOpen(true);
+};
 
   const handlePushSuccess = (playlistId: string, spotifyPlaylistId: string, spotifyUrl: string) => {
     onMarkAsSynced(playlistId, spotifyPlaylistId, spotifyUrl);
