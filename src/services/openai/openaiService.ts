@@ -3,7 +3,6 @@ import type {
   LLMResponse, 
   FeedbackPayload, 
   ReplacementPayload,
-  MinimalSong,
   SongsJsonFormat 
 } from "./types";
 import { OPENAI_CONFIG, SYSTEM_PROMPTS } from "./config";
@@ -44,7 +43,7 @@ function parseLLMResponse(rawResponse: string, allowNoSongs: boolean = false): L
   const explanationText = rawResponse.substring(0, match.index).trim();
   
   // Parse JSON
-  let parsedJson: any;
+  let parsedJson: unknown;
   try {
     parsedJson = JSON.parse(jsonText);
   } catch (err) {
@@ -128,6 +127,14 @@ export async function getRecommendationsFromVibe(
     // Add conversation history if provided
     if (conversationHistory && conversationHistory.length > 0) {
       messages.push(...conversationHistory);
+    }
+
+    // Hint to the model about desired count (keeps param in use)
+    if (requestedCount && Number.isFinite(requestedCount)) {
+      messages.push({
+        role: "system",
+        content: `The user asked for approximately ${requestedCount} songs. Reflect this in requestedCount and recommendations length.`,
+      });
     }
     
     // Add current user message

@@ -1,5 +1,5 @@
 // src/components/chat/VerificationProgress.tsx
-import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { Loader2, CheckCircle } from "lucide-react";
 
 type Props = {
   total: number;

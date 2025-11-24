@@ -70,6 +70,13 @@ export default function App() {
 
   // 🆕 PHASE 2.2: Pre-filled message for feedback
   const [preFilledMessage, setPreFilledMessage] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    if (isChatOpen && preFilledMessage) {
+      const timer = setTimeout(() => setPreFilledMessage(undefined), 100);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [isChatOpen, preFilledMessage]);
 
   // Playlist state
   const {
@@ -412,16 +419,6 @@ const handleCopyReplacementPrompt = useCallback(() => {
     setIsCreatePlaylistModalOpen(true);
   }, []);
 
-  const handleImportFromEmpty = useCallback(() => {
-    setIsChatGPTModalOpen(true);
-    
-    // ✅ ANALYTICS: Track import modal open from empty state (GDPR compliant)
-    if (clarity.isInitialized()) {
-      clarity.event('import_modal_opened_from_empty');
-      clarity.setTag('user_journey', 'first_time');
-    }
-  }, []);
-
   return (
     // 🆕 WRAP EVERYTHING WITH AudioProvider - THIS IS THE ONLY CHANGE IN THE RETURN STATEMENT
     <AudioProvider>
@@ -438,7 +435,6 @@ const handleCopyReplacementPrompt = useCallback(() => {
               songs={songs}
               playlists={playlists}
               onClear={onClear}
-              onOpenChatGPTModal={() => setIsChatGPTModalOpen(true)}
               onExportFeedback={handleExportFeedback}
               onGetReplacements={handleGetReplacements}
               onOpenPlaylistsDrawer={() => setIsPlaylistsDrawerOpen(true)}
@@ -578,17 +574,9 @@ const handleCopyReplacementPrompt = useCallback(() => {
           onSetLoading={setChatLoading}
           onIncrementRound={incrementRound}
           onImportSongs={handleChatImportSongs}
-          preFilledMessage={preFilledMessage}
-        />
-      </div>
-
-      {/* Clear pre-filled message when chat is opened */}
-      {isChatOpen && preFilledMessage && (
-        <div style={{ display: 'none' }}>
-          {setTimeout(() => setPreFilledMessage(undefined), 100)}
-        </div>
-      )}
-
+      preFilledMessage={preFilledMessage}
+    />
+  </div>
       {/* 🆕 ADD TOASTER FOR NOTIFICATIONS */}
       <Toaster 
         position="bottom-right"

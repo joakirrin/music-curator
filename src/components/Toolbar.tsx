@@ -9,7 +9,6 @@ type Props = {
   songs: Song[];
   playlists: Playlist[];
   onClear?: () => void;
-  onOpenChatGPTModal: () => void;
   onExportFeedback: () => void;
   onGetReplacements: () => void;
   onOpenPlaylistsDrawer: () => void;
@@ -21,7 +20,6 @@ export default function Toolbar({
   songs, 
   playlists,
   onClear, 
-  onOpenChatGPTModal, 
   onExportFeedback,
   onGetReplacements,
   onOpenPlaylistsDrawer,

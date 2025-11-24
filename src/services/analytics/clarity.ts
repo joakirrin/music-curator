@@ -92,8 +92,9 @@ class ClarityService {
   /**
    * Track custom event
    * @param eventName - Event name
+   * @param data - Optional payload
    */
-  event(eventName: string): void {
+  event(eventName: string, data?: unknown): void {
     if (!this.initialized) {
       console.warn('Clarity not initialized');
       return;
@@ -101,7 +102,7 @@ class ClarityService {
 
     const clarityApi = (window as ClarityWindow).clarity;
     if (typeof clarityApi === 'function') {
-      clarityApi('event', eventName);
+      clarityApi('event', eventName, data);
     }
   }
 }
