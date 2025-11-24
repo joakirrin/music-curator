@@ -184,7 +184,7 @@ export async function resolveSpotifySong(
         log(`TIER 2 (Soft): Matched "${softResult.name}" with ${confidence.toFixed(2)} confidence`);
         return {
           song,
-          spotifyUri: softResult.uri,
+          spotifyUri: softResult.uri ?? null,
           tier: 'soft',
           confidence: 0.85 
         };
@@ -204,7 +204,7 @@ export async function resolveSpotifySong(
       log(`TIER 3 (Hard): Matched "${bestMatch.track.name}" with ${bestMatch.score.toFixed(2)} confidence`);
       return {
         song,
-        spotifyUri: bestMatch.track.uri,
+        spotifyUri: bestMatch.track.uri ?? null,
         tier: 'hard',
         confidence: bestMatch.score
       };
