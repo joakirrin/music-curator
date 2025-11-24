@@ -86,7 +86,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         onClick={handlePlayPause}
         disabled={isLoading}
         className={`
-          w-10 h-10 flex items-center justify-center rounded-full 
+          w-10 h-10 inline-flex items-center justify-center rounded-full text-white
           transition-all flex-shrink-0
           ${playing 
             ? 'bg-emerald-500 hover:bg-emerald-600 scale-105' 
@@ -97,50 +97,26 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         title={playing ? `Pause "${title}" by ${artist}` : `Play "${title}" by ${artist}`}
       >
         {isLoading ? (
-          // Loading spinner
           <svg className="w-5 h-5 text-white animate-spin" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-        ) : playing ? (
-          // Pause icon - Thicker bars for better visibility
-          <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-          </svg>
         ) : (
-          // Play icon - Triangle with better definition
-          <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M6 4l14 8-14 8V4z" />
-          </svg>
+          <span className="text-white text-xl font-black leading-none" aria-hidden="true">
+            {playing ? "❚❚" : "▶"}
+          </span>
         )}
       </button>
       
       {/* Content Area */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-2">
-          {/* Preview Badge - More prominent */}
-          <div className={`
-            flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium
-            ${playing 
-              ? 'bg-emerald-600 text-white' 
-              : 'bg-gray-700 text-gray-300'
-            }
-          `}>
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-            </svg>
-            <span>30s Preview</span>
+        {playing && duration > 0 && (
+          <div className="flex items-center gap-2 mb-2 text-sm text-gray-300 font-mono">
+            <span>{formatTime(currentTime)}</span>
+            <span className="text-gray-500">/</span>
+            <span>{formatTime(duration)}</span>
           </div>
-          
-          {/* Time Display - Only show if THIS song is playing */}
-          {playing && duration > 0 && (
-            <div className="flex items-center gap-2 text-sm text-gray-300 font-mono">
-              <span>{formatTime(currentTime)}</span>
-              <span className="text-gray-500">/</span>
-              <span>{formatTime(duration)}</span>
-            </div>
-          )}
-        </div>
+        )}
         
         {/* Progress Bar - Only animate if THIS song is playing */}
         <div 
@@ -234,14 +210,10 @@ export const AudioPlayerCompact: React.FC<AudioPlayerProps> = ({
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
-      ) : playing ? (
-        <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-        </svg>
       ) : (
-        <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M6 4l14 8-14 8V4z" />
-        </svg>
+        <span className="text-white text-lg font-semibold leading-none" aria-hidden="true">
+          {playing ? "⏸" : "▶"}
+        </span>
       )}
     </button>
   );

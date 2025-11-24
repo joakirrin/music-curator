@@ -1,14 +1,15 @@
 // src/components/EmptyState.tsx
-// ✅ NO LOGIN REQUIRED: Works immediately with MusicBrainz verification
+// ✅ PHASE 2.1: Chat-first workflow
 
 import { motion } from "framer-motion";
+import { FoneaLogo } from "@/components/FoneaLogo";
 
 type Props = {
-  onImport: () => void;
+  onOpenChat: () => void;  // 🆕 Open chat instead of import modal
   onOpenGuide: () => void;
 };
 
-export default function EmptyState({ onImport, onOpenGuide }: Props) {
+export default function EmptyState({ onOpenChat, onOpenGuide }: Props) {
   return (
     <div className="flex-1 flex items-center justify-center p-8">
       <motion.div
@@ -24,8 +25,8 @@ export default function EmptyState({ onImport, onOpenGuide }: Props) {
           transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
           className="mb-8"
         >
-          <div className="inline-block p-6 bg-emerald-500/10 rounded-3xl">
-            <span className="text-7xl">🎵</span>
+          <div className="inline-flex items-center justify-center text-emerald-400">
+            <FoneaLogo variant="icon" className="h-24 w-24" />
           </div>
         </motion.div>
 
@@ -34,12 +35,12 @@ export default function EmptyState({ onImport, onOpenGuide }: Props) {
           Welcome to Fonea Sound Curator
         </h1>
 
-        {/* ✅ UPDATED: Emphasize no login needed */}
+        {/* ✅ UPDATED: Emphasize chat-first workflow */}
         <p className="text-lg text-gray-400 mb-8 max-w-xl mx-auto">
           Your AI-powered music discovery assistant.
           <br />
           <span className="text-emerald-400 font-medium">
-            ✨ No login required to get started!
+            ✨ Chat with GPT-5 to discover music instantly!
           </span>
         </p>
 
@@ -51,12 +52,12 @@ export default function EmptyState({ onImport, onOpenGuide }: Props) {
             transition={{ delay: 0.3 }}
             className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-emerald-500 transition-colors"
           >
-            <div className="text-3xl mb-3">🤖</div>
+            <div className="text-3xl mb-3">💬</div>
             <h3 className="text-lg font-semibold text-white mb-2">
-              1. Get Recommendations
+              1. Chat with GPT
             </h3>
             <p className="text-sm text-gray-400">
-              Use ChatGPT to get personalized music recommendations based on your taste
+              Tell GPT your vibe - mood, context, energy level. Get personalized recommendations instantly.
             </p>
           </motion.div>
 
@@ -68,10 +69,10 @@ export default function EmptyState({ onImport, onOpenGuide }: Props) {
           >
             <div className="text-3xl mb-3">✨</div>
             <h3 className="text-lg font-semibold text-white mb-2">
-              2. Import & Verify
+              2. Auto-Verify
             </h3>
             <p className="text-sm text-gray-400">
-              Import songs and we'll verify them with MusicBrainz (no login needed!)
+              Songs are automatically verified with MusicBrainz, Apple Music, and Spotify
             </p>
           </motion.div>
 
@@ -86,7 +87,7 @@ export default function EmptyState({ onImport, onOpenGuide }: Props) {
               3. Curate & Export
             </h3>
             <p className="text-sm text-gray-400">
-              Review songs, create playlists, and export to Spotify when ready
+              Keep or skip songs, create playlists, and export to Spotify
             </p>
           </motion.div>
         </div>
@@ -97,11 +98,11 @@ export default function EmptyState({ onImport, onOpenGuide }: Props) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6 }}
-            onClick={onImport}
+            onClick={onOpenChat}
             className="px-8 py-4 rounded-xl bg-emerald-600 text-white text-lg font-semibold hover:bg-emerald-700 transition-colors shadow-lg hover:shadow-xl flex items-center gap-3"
           >
-            <span className="text-2xl">🚀</span>
-            <span>Import from ChatGPT</span>
+            <span className="text-2xl">💬</span>
+            <span>Start Chatting</span>
           </motion.button>
 
           <motion.button
@@ -123,7 +124,9 @@ export default function EmptyState({ onImport, onOpenGuide }: Props) {
           transition={{ delay: 0.8 }}
           className="mt-8 text-sm text-gray-500"
         >
-          ℹ️ Spotify login is optional - only needed when exporting playlists
+          💡 Tip: Describe the vibe and context for best results
+          <br />
+          (e.g., "upbeat indie rock for summer road trip")
         </motion.p>
       </motion.div>
     </div>

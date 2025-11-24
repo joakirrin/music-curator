@@ -41,8 +41,8 @@ export type ReplacementPayload = {
 
 // Parsed LLM response
 export type LLMResponse = {
-  explanationText: string;  // Human text before ```songs-json
-  songsJson: SongsJsonFormat;  // Parsed JSON
+  explanationText: string;  // Human text before ```songs-json (or entire response if no JSON)
+  songsJson: SongsJsonFormat | null;  // Parsed JSON (null for conversational responses)
   rawResponse: string;  // Full response for debugging
 };
 

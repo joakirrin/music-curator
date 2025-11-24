@@ -1,4 +1,4 @@
-// src/App.tsx - FINAL VERSION with GDPR Compliance + Export Verification + AUDIO PREVIEW + CHAT UI
+// src/App.tsx - FINAL VERSION with GDPR Compliance + Export Verification + AUDIO PREVIEW
 import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { spotifyAuth } from "./services/spotifyAuth";
 
@@ -33,11 +33,6 @@ import { PrivacyRouteHandler } from "./components/PrivacyRouteHandler";
 import { AudioProvider } from "./contexts/AudioContext";
 import { Toaster } from "sonner";
 
-// 🆕 PHASE 2: Chat UI Integration
-import ChatPanel from "./components/ChatPanel";
-import { useChatState } from "./hooks/useChatState";
-import { verifySongsInBatch } from "./utils/verificationOrchestrator";
-
 const DEV = import.meta.env.DEV;
 
 export default function App() {
@@ -53,23 +48,6 @@ export default function App() {
   const [isChatGPTModalOpen, setIsChatGPTModalOpen] = useState(false);
   const [isFailedTracksModalOpen, setIsFailedTracksModalOpen] = useState(false);
   const [selectedRound, setSelectedRound] = useState<number | "all">("all");
-
-  // 🆕 PHASE 2: Chat state
-  const {
-    messages,
-    currentRound,
-    isOpen: isChatOpen,
-    isLoading: isChatLoading,
-    addMessage,
-    updateLastMessage,
-    incrementRound,
-    toggleChat,
-    clearHistory,
-    setIsLoading: setChatLoading,
-  } = useChatState();
-
-  // 🆕 PHASE 2.2: Pre-filled message for feedback
-  const [preFilledMessage, setPreFilledMessage] = useState<string | undefined>(undefined);
 
   // Playlist state
   const {
@@ -181,65 +159,6 @@ export default function App() {
     [setSongs]
   );
 
-  // 🆕 PHASE 2.5: Auto-import and verify songs from chat
-  const handleChatImportSongs = useCallback(
-    async (newSongs: Song[]) => {
-      try {
-        // 1. Add songs to state immediately (with "checking" status)
-        setSongs((prev) => [...prev, ...newSongs]);
-
-        // 2. Run verification in background
-        const { verifiedSongs, summary } = await verifySongsInBatch(
-          newSongs,
-          (progress) => {
-            // Update last chat message with progress
-            updateLastMessage({
-              verificationProgress: {
-                total: progress.total,
-                verified: progress.verified,
-                failed: progress.failed,
-              },
-            });
-          }
-        );
-
-        // 3. Update songs with verification results
-        setSongs((prev) => {
-          const updatedSongs = prev.map((song) => {
-            const verified = verifiedSongs.find((v) => v.id === song.id);
-            return verified || song;
-          });
-          return updatedSongs;
-        });
-
-        // 4. Update last chat message as complete
-        updateLastMessage({
-          verificationStatus: "complete",
-          verificationProgress: {
-            total: summary.total,
-            verified: summary.verified,
-            failed: summary.failed,
-          },
-        });
-
-        // ✅ ANALYTICS: Track chat import success
-        if (clarity.isInitialized()) {
-          clarity.event('chat_import_completed', {
-            total: summary.total,
-            verified: summary.verified,
-            failed: summary.failed,
-          });
-        }
-      } catch (err) {
-        console.error("[App] Failed to verify chat songs:", err);
-        updateLastMessage({
-          verificationStatus: "failed",
-        });
-      }
-    },
-    [setSongs, updateLastMessage]
-  );
-
   // --- Filtering ---
 const filtered = useMemo(() => {
     let result = songs;
@@ -297,61 +216,57 @@ const handleExportFeedback = useCallback(() => {
     }
     
     const lines: string[] = [];
-    lines.push("Based on my library feedback:\n");
+    lines.push("## Your Feedback Summary\n");
+    lines.push("Here are my decisions on the verified songs:\n");
     
     const keep = verifiedSongs.filter((s) => s.feedback === "keep");
     const skip = verifiedSongs.filter((s) => s.feedback === "skip");
     
     // KEEP songs
     if (keep.length > 0) {
-      lines.push(`✓ Kept: ${keep.map(s => {
-        const feedback = s.userFeedback ? ` (${s.userFeedback})` : '';
-        return `"${s.title}" by ${s.artist}${feedback}`;
-      }).join(', ')}`);
+      lines.push(`### ✓ KEEP (${keep.length} song${keep.length !== 1 ? 's' : ''}):\n`);
+      keep.forEach((s, index) => {
+        lines.push(`${index + 1}. "${s.title}" by ${s.artist}`);
+        if (s.userFeedback && s.userFeedback.trim()) {
+          lines.push(`   Your feedback: "${s.userFeedback}"`);
+        }
+        lines.push("");
+      });
     }
     
     // SKIP songs
     if (skip.length > 0) {
-      lines.push(`\n✗ Skipped: ${skip.map(s => {
-        const feedback = s.userFeedback ? ` (${s.userFeedback})` : '';
-        return `"${s.title}" by ${s.artist}${feedback}`;
-      }).join(', ')}`);
-    }
-    
-    lines.push("\n\nGive me 5 new refined recommendations based on what I kept.");
-    
-    const feedbackMessage = lines.join("\n");
-    
-    // 🆕 PHASE 2.2: Open chat with pre-filled message
-    setPreFilledMessage(feedbackMessage);
-    if (!isChatOpen) {
-      toggleChat();
-    }
-    
-    // ✅ ANALYTICS: Track feedback refinement
-    if (clarity.isInitialized()) {
-      clarity.event('feedback_refinement_requested', {
-        kept: keep.length,
-        skipped: skip.length,
+      lines.push(`### ✗ SKIP (${skip.length} song${skip.length !== 1 ? 's' : ''}):\n`);
+      skip.forEach((s, index) => {
+        lines.push(`${index + 1}. "${s.title}" by ${s.artist}`);
+        if (s.userFeedback && s.userFeedback.trim()) {
+          lines.push(`   Your feedback: "${s.userFeedback}"`);
+        }
+        lines.push("");
       });
     }
-  }, [songs, isChatOpen, toggleChat]);
+    
+    lines.push("---");
+    lines.push("Please use this feedback to refine future recommendations.");
+    
+    const text = lines.join("\n");
+    navigator.clipboard.writeText(text);
+    alert(`📋 Feedback for ${verifiedSongs.length} verified song(s) copied to clipboard!`);
+  }, [songs]);
 
-const handleGetReplacements = useCallback(() => {
+  const handleGetReplacements = useCallback(() => {
+    // Get songs that failed verification (not songs marked as skip)
     const failedSongs = songs.filter((s) => s.verificationStatus === "failed");
     
     if (failedSongs.length === 0) {
-      alert("⚠️ No failed tracks to get replacements for.");
+      alert("⚠️ No failed tracks found. All songs verified successfully!");
       return;
     }
     
     const lines: string[] = [];
-    lines.push("These tracks failed verification:");
+    lines.push("These tracks failed verification and couldn't be found:");
     lines.push("");
-    failedSongs.forEach((s) => {
-      lines.push(`- "${s.title}" by ${s.artist}`);
-      if (s.verificationError) lines.push(`  (Error: ${s.verificationError})`);
-    });
+    failedSongs.forEach((s) => lines.push(`- "${s.title}" by ${s.artist}`));
     lines.push("");
     lines.push("Can you suggest alternative tracks that are similar but more mainstream/verified?");
     
@@ -443,7 +358,6 @@ const handleCopyReplacementPrompt = useCallback(() => {
               onGetReplacements={handleGetReplacements}
               onOpenPlaylistsDrawer={() => setIsPlaylistsDrawerOpen(true)}
               onOpenCreatePlaylist={() => setIsCreatePlaylistModalOpen(true)}
-              onOpenChat={toggleChat}
             />
 
             <FilterBar
@@ -518,7 +432,7 @@ const handleCopyReplacementPrompt = useCallback(() => {
             </div>
           </>
         ) : (
-          <EmptyState onOpenChat={toggleChat} onOpenGuide={() => setDrawerOpen(true)} />
+          <EmptyState onImport={handleImportFromEmpty} onOpenGuide={() => setDrawerOpen(true)} />
         )}
 
         {/* Modals */}
@@ -564,30 +478,7 @@ const handleCopyReplacementPrompt = useCallback(() => {
         />
         
         <FeedbackFAB onOpenGuide={() => setDrawerOpen(true)} />
-
-        {/* 🆕 PHASE 2: Chat Panel */}
-        <ChatPanel
-          isOpen={isChatOpen}
-          messages={messages}
-          isLoading={isChatLoading}
-          currentRound={currentRound}
-          onClose={toggleChat}
-          onClearHistory={clearHistory}
-          onAddMessage={addMessage}
-          onUpdateLastMessage={updateLastMessage}
-          onSetLoading={setChatLoading}
-          onIncrementRound={incrementRound}
-          onImportSongs={handleChatImportSongs}
-          preFilledMessage={preFilledMessage}
-        />
       </div>
-
-      {/* Clear pre-filled message when chat is opened */}
-      {isChatOpen && preFilledMessage && (
-        <div style={{ display: 'none' }}>
-          {setTimeout(() => setPreFilledMessage(undefined), 100)}
-        </div>
-      )}
 
       {/* 🆕 ADD TOASTER FOR NOTIFICATIONS */}
       <Toaster 

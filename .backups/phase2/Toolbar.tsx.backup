@@ -14,7 +14,6 @@ type Props = {
   onGetReplacements: () => void;
   onOpenPlaylistsDrawer: () => void;
   onOpenCreatePlaylist: () => void;
-  onOpenChat: () => void; // 🆕 PHASE 2: Open chat button
 };
 
 export default function Toolbar({ 
@@ -26,7 +25,6 @@ export default function Toolbar({
   onGetReplacements,
   onOpenPlaylistsDrawer,
   onOpenCreatePlaylist,
-  onOpenChat, // 🆕 PHASE 2
 }: Props) {
   // Calculate failed tracks count for button display
   const failedCount = songs.filter(s => s.verificationStatus === 'failed').length;
@@ -36,29 +34,20 @@ export default function Toolbar({
 
   return (
     <div className="container mx-auto px-4 py-4 flex items-center gap-2 border-b border-gray-700 bg-gray-900 flex-wrap">
-      {/* 🆕 PHASE 2: Open Chat Button */}
+      {/* ChatGPT Import Button */}
       <button
-        onClick={onOpenChat}
-        className="px-3 py-2 rounded-xl border shadow-sm text-sm bg-purple-600 text-white border-purple-600 hover:bg-purple-700 font-medium transition-colors"
-      >
-        💬 Open Chat
-      </button>
-
-      {/* ChatGPT Import Button - HIDDEN (Phase 2.1) 
-          Keeping code for potential fallback, but hiding in favor of integrated chat */}
-      {/* <button
         onClick={onOpenChatGPTModal}
         className="px-3 py-2 rounded-xl border shadow-sm text-sm bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700 font-medium transition-colors"
       >
         🤖 Import from ChatGPT
-      </button> */}
+      </button>
 
-      {/* 🆕 PHASE 2.2: Refine with Feedback Button (renamed from Export Feedback) */}
+      {/* Export Feedback Button */}
       <button
         onClick={onExportFeedback}
         className="px-3 py-2 rounded-xl border shadow-sm text-sm bg-blue-600 text-white border-blue-600 hover:bg-blue-700 font-medium transition-colors"
       >
-        🎯 Refine with Feedback
+        📤 Export Feedback
       </button>
 
       {/* Companion GPT Link */}
