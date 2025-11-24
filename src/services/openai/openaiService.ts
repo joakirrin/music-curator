@@ -17,6 +17,10 @@ const openai = new OpenAI({
  * Parses LLM response to extract explanation and songs-json (if present)
  * Now supports pure conversational responses without songs
  */
+function isSongsJsonObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
 function parseLLMResponse(rawResponse: string, allowNoSongs: boolean = false): LLMResponse {
   // Find the ```songs-json block (also accept plain ```json for flexibility)
   const jsonBlockRegex = /```(?:songs-json|json)\s*\n([\s\S]*?)\n```/;
@@ -67,15 +71,27 @@ function parseLLMResponse(rawResponse: string, allowNoSongs: boolean = false): L
       requestedCount: parsedJson.length,
       recommendations: parsedJson,
     };
-  } else if (parsedJson.recommendations && Array.isArray(parsedJson.recommendations)) {
+  } else if (
+    isSongsJsonObject(parsedJson) &&
+    "recommendations" in parsedJson &&
+    Array.isArray((parsedJson as Record<string, unknown>).recommendations)
+  ) {
     // Format with "recommendations" key
     songsJson = parsedJson as SongsJsonFormat;
-  } else if (parsedJson.songs && Array.isArray(parsedJson.songs)) {
+  } else if (
+    isSongsJsonObject(parsedJson) &&
+    "songs" in parsedJson &&
+    Array.isArray((parsedJson as Record<string, unknown>).songs)
+  ) {
     // Format with "songs" key (also valid)
     songsJson = {
-      round: parsedJson.round || 1,
-      requestedCount: parsedJson.requestedCount || parsedJson.songs.length,
-      recommendations: parsedJson.songs, // Map "songs" to "recommendations"
+      round: (parsedJson as Record<string, unknown>).round as number | undefined || 1,
+      requestedCount:
+        ((parsedJson as Record<string, unknown>).requestedCount as number | undefined) ||
+        (parsedJson as Record<string, unknown>).songs
+          ? (parsedJson as { songs: unknown[] }).songs.length
+          : 0,
+      recommendations: (parsedJson as { songs: SongsJsonFormat["recommendations"] }).songs,
     };
   } else {
     throw new Error(
