@@ -97,7 +97,7 @@ export function loadPlaylists(): Playlist[] {
       console.log('[PlaylistStorage] Migrating from v1 to v2...');
       
       // Migrate each playlist
-      const migratedPlaylists = (data.playlists as any[]).map(legacy => {
+      const migratedPlaylists = (data.playlists as Array<Playlist | LegacyPlaylist>).map(legacy => {
         // Check if it has songIds (old format)
         if ('songIds' in legacy && Array.isArray(legacy.songIds)) {
           return migrateLegacyPlaylist(legacy as LegacyPlaylist);

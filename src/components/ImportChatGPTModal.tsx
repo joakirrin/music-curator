@@ -5,11 +5,12 @@
 import { useState, useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import type { Song } from "../types/song";
-import { verifyWithMusicBrainz } from "../services/verification/musicBrainzVerification";
-import type { VerificationResult } from "../services/verification/verificationTypes";
-import { spotifyAuth } from "../services/spotifyAuth";
-import { resolveSpotifyByISRC } from "../services/spotifyIsrcResolver";
-import { resolveAppleMusic } from "../services/appleMusicResolver";
+import { mapChatGPTRecommendationToSong } from "@/utils/songMappers";
+import {
+  verifySongsInBatch,
+  type VerificationProgress,
+  type VerificationSummary,
+} from "@/utils/verificationOrchestrator";
 
 type Props = {
   open: boolean;
@@ -38,50 +39,6 @@ type ChatGPTFormat = {
   round?: number;
   recommendations: ChatGPTRecommendation[];
 };
-
-type VerificationProgress = {
-  total: number;
-  current: number;
-  verified: number;
-  failed: number;
-  currentSong?: string;
-};
-
-type VerificationSummary = {
-  total: number;
-  verified: number;
-  failed: number;
-  skipped: number;
-  failedSongs: Array<{ title: string; artist: string; error: string }>;
-};
-
-/**
- * Normalizes service link to URI format
- * Supports Spotify, YouTube, Apple Music URLs and converts them to URIs
- */
-function normalizeServiceLink(input?: string): string | undefined {
-  if (!input) return undefined;
-  
-  // Already a URI format
-  if (input.includes(':')) return input;
-  
-  // Spotify URL
-  const spotifyMatch = input.match(/spotify\.com\/track\/([a-zA-Z0-9]+)/);
-  if (spotifyMatch) return `spotify:track:${spotifyMatch[1]}`;
-  
-  // YouTube URL
-  const youtubeMatch = input.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
-  if (youtubeMatch) return `youtube:video:${youtubeMatch[1]}`;
-  
-  // Apple Music URL
-  const appleMusicMatch = input.match(/music\.apple\.com\/.*\/album\/.*\/(\d+)\?i=(\d+)/);
-  if (appleMusicMatch) return `applemusic:track:${appleMusicMatch[2]}`;
-  
-  // Just an ID (assume Spotify for backward compatibility)
-  if (input.match(/^[a-zA-Z0-9]{22}$/)) return `spotify:track:${input}`;
-  
-  return input;
-}
 
 export default function ImportChatGPTModal({
   open,
@@ -132,225 +89,21 @@ export default function ImportChatGPTModal({
       const maxRound = existingRounds.length > 0 ? Math.max(...existingRounds) : 0;
       const nextRound = parsed.round ?? maxRound + 1;
 
-      let newSongs: Song[] = parsed.recommendations.map((rec, index) => {
-        if (!rec.title || !rec.artist) {
-          throw new Error(`Recommendation #${index + 1} is missing required fields (title or artist)`);
-        }
-
-        // Support both new service-agnostic fields and legacy Spotify fields
-        const serviceLink = normalizeServiceLink(
-          rec.serviceUri || rec.serviceUrl || rec.spotifyUri || rec.spotifyUrl
-        );
-
-        return {
-          id: `chatgpt-${Date.now()}-${index}`,
-          title: rec.title,
-          artist: rec.artist,
-          album: rec.album,
-          year: rec.year,
-          source: "chatgpt" as const,
-          round: nextRound,
-          feedback: "pending" as const,
-          spotifyUri: serviceLink, // Store service link in spotifyUri for now (legacy field)
-          addedAt: new Date().toISOString(),
-          comments: rec.reason,
-          duration: rec.duration,
-          platforms: [],
-          liked: false,
-          toAdd: false,
-          verificationStatus: autoVerify ? "checking" : undefined,
-        };
-      });
+      let newSongs: Song[] = parsed.recommendations.map((rec, index) =>
+        mapChatGPTRecommendationToSong(rec, nextRound, index, autoVerify)
+      );
 
       if (autoVerify) {
         setIsVerifying(true);
-        
-        const summary: VerificationSummary = {
-          total: newSongs.length,
-          verified: 0,
-          failed: 0,
-          skipped: 0,
-          failedSongs: [],
-        };
 
-        setVerificationProgress({
-          total: newSongs.length,
-          current: 0,
-          verified: 0,
-          failed: 0,
-        });
-
-        for (let i = 0; i < newSongs.length; i++) {
-          const song = newSongs[i];
-          
-          setVerificationProgress({
-            total: newSongs.length,
-            current: i + 1,
-            verified: summary.verified,
-            failed: summary.failed,
-            currentSong: `${song.artist} - ${song.title}`,
-          });
-
-          if (!song.artist || !song.title) {
-            summary.skipped++;
-            newSongs[i] = {
-              ...song,
-              verificationStatus: 'unverified',
-            };
-            continue;
+        const { verifiedSongs, summary } = await verifySongsInBatch(
+          newSongs,
+          (progress) => {
+            setVerificationProgress(progress);
           }
+        );
 
-          try {
-            let isVerified = false;
-            
-            // ===================================================================
-            // TIER 1: Try MusicBrainz first (best source - has ISRCs, metadata)
-            // ===================================================================
-            const mbResult: VerificationResult = await verifyWithMusicBrainz(
-              song.artist,
-              song.title
-            );
-            
-            if (mbResult.verified) {
-              // ✅ MusicBrainz success! Update song with all the data
-              newSongs[i] = {
-                ...song,
-                verificationStatus: 'verified',
-                verificationSource: 'musicbrainz',
-                
-                // MusicBrainz-specific fields
-                musicBrainzId: mbResult.musicBrainzId,
-                isrc: mbResult.isrc,
-                albumArtUrl: mbResult.albumArtUrl,
-                releaseId: mbResult.releaseId,
-                
-                // 🆕 Preview URL fields (from iTunes Search API)
-                previewUrl: mbResult.previewUrl,
-                previewSource: mbResult.previewSource,
-
-                // Metadata (prefer MusicBrainz over ChatGPT)
-                artist: mbResult.artist,
-                title: mbResult.title,
-                album: mbResult.album || song.album,
-                year: mbResult.year || song.year,
-                duration: mbResult.duration,
-                durationMs: mbResult.durationMs,
-                
-                // Platform IDs from MusicBrainz
-                platformIds: mbResult.platformIds,
-              };
-              
-              isVerified = true;
-              
-              // Try to enhance with Spotify ISRC resolution (if user is logged in and ISRC exists)
-              if (mbResult.isrc && !mbResult.platformIds?.spotify) {
-                const spotifyToken = await spotifyAuth.getAccessToken();
-                if (spotifyToken) {
-                  const spotifyData = await resolveSpotifyByISRC(mbResult.isrc, spotifyToken);
-                  if (spotifyData) {
-                    if (!newSongs[i].platformIds) newSongs[i].platformIds = {};
-                    newSongs[i].platformIds!.spotify = spotifyData;
-                  }
-                }
-              }
-              
-              // Try to enhance with Apple Music resolution (always try - no auth needed)
-              const appleMusicData = await resolveAppleMusic(mbResult.artist, mbResult.title);
-              if (appleMusicData) {
-                if (!newSongs[i].platformIds) newSongs[i].platformIds = {};
-                newSongs[i].platformIds!.apple = appleMusicData;
-                // Use iTunes artwork as fallback if Cover Art Archive didn't have it
-                if (!newSongs[i].albumArtUrl && appleMusicData.artworkUrl) {
-                  newSongs[i].albumArtUrl = appleMusicData.artworkUrl;
-                }
-              }
-            } else {
-              // ===================================================================
-              // TIER 2: MusicBrainz failed → Try Apple Music (no auth required!)
-              // ===================================================================
-              const appleMusicData = await resolveAppleMusic(song.artist, song.title);
-              
-              if (appleMusicData) {
-                // ✅ Apple Music success!
-                newSongs[i] = {
-                  ...song,
-                  verificationStatus: 'verified',
-                  verificationSource: 'apple',
-                  
-                  // Store Apple Music data
-                  platformIds: {
-                    apple: appleMusicData,
-                  },
-                  
-                  // Use iTunes artwork
-                  albumArtUrl: appleMusicData.artworkUrl,
-                  
-                  // Keep original metadata from ChatGPT (Apple Music API doesn't return detailed metadata in our simplified resolver)
-                  artist: song.artist,
-                  title: song.title,
-                  album: song.album,
-                  year: song.year,
-                };
-                
-                isVerified = true;
-                
-                // Try to enhance with Spotify (if user is logged in)
-                const spotifyToken = await spotifyAuth.getAccessToken();
-                if (spotifyToken) {
-                  // Note: We can't use ISRC here since we don't have it from Apple Music
-                  // This is a limitation - Spotify verification would need artist+title search
-                  // For now, we skip Spotify enhancement when verifying via Apple Music
-                }
-              } else {
-                // ===================================================================
-                // TIER 3: Both failed → Mark as failed
-                // ===================================================================
-                // Note: We could add Spotify as a third tier here if needed,
-                // but it requires user login, so we keep it optional
-                
-                newSongs[i] = {
-                  ...song,
-                  verificationStatus: 'failed',
-                  verificationSource: 'multi',
-                  verificationError: `Not found in MusicBrainz or Apple Music. ${mbResult.error || 'No details available.'}`,
-                };
-              }
-            }
-            
-            // Update summary
-            if (isVerified) {
-              summary.verified++;
-            } else {
-              summary.failed++;
-              summary.failedSongs.push({
-                title: song.title,
-                artist: song.artist,
-                error: newSongs[i].verificationError || 'Verification failed',
-              });
-            }
-            
-          } catch (err) {
-            // Catch-all error handler
-            summary.failed++;
-            summary.failedSongs.push({
-              title: song.title,
-              artist: song.artist,
-              error: err instanceof Error ? err.message : 'Verification failed',
-            });
-            newSongs[i] = {
-              ...song,
-              verificationStatus: 'failed',
-              verificationSource: 'multi',
-              verificationError: err instanceof Error ? err.message : 'Verification failed',
-            };
-          }
-
-          // Small delay to avoid hammering the API
-          if (i < newSongs.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-          }
-        }
-
+        newSongs = verifiedSongs;
         setVerificationSummary(summary);
         setIsVerifying(false);
         setVerificationProgress(null);
@@ -388,8 +141,10 @@ export default function ImportChatGPTModal({
         alert(`✅ Successfully imported ${newSongs.length} song(s) from Round ${nextRound}!`);
       }
 
-    } catch (err: any) {
-      setError(err.message || "Failed to parse JSON. Please check the format.");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to parse JSON. Please check the format.";
+      setError(message);
       setIsVerifying(false);
       setVerificationProgress(null);
     } finally {

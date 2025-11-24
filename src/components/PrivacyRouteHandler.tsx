@@ -47,6 +47,7 @@ export function PrivacyRouteHandler() {
 }
 
 // Helper function to open privacy from anywhere in the app
+// eslint-disable-next-line react-refresh/only-export-components
 export function openPrivacyPolicy() {
   // Use hash routing to avoid full page reload
   window.location.hash = 'privacy';

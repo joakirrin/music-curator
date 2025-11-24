@@ -15,11 +15,11 @@
 
 const DEV = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
 
-function log(...args: any[]) {
+function log(...args: unknown[]) {
   if (DEV) console.log('[SpotifyISRC]', ...args);
 }
 
-function logError(...args: any[]) {
+function logError(...args: unknown[]) {
   if (DEV) console.error('[SpotifyISRC]', ...args);
 }
 

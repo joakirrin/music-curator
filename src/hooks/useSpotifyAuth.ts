@@ -1,5 +1,5 @@
 // src/hooks/useSpotifyAuth.ts
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { spotifyAuth } from '@/services/spotifyAuth';
 
 type Status = 'logged_out' | 'ready' | 'refreshing';
@@ -20,7 +20,7 @@ export function useSpotifyAuth() {
     return () => { alive = false; };
   }, []);
 
-  const accessToken = useMemo(() => spotifyAuth.getAuthState()?.access_token ?? null, [status, user]);
+  const accessToken = spotifyAuth.getAuthState()?.access_token ?? null;
 
   const login = () => spotifyAuth.login();
   const logout = () => {

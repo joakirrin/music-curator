@@ -4,7 +4,7 @@
  * Automatically fetches and displays album art with loading states
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getAlbumArt } from "../services/albumArtService";
 import type { Song } from "../types/song";
 import type { AlbumArtResult } from "../services/albumArtService";
@@ -26,13 +26,7 @@ export default function AlbumArt({
   const [loading, setLoading] = useState(!song.albumArtUrl);
   const [error, setError] = useState(false);
 
-  useEffect(() => {
-    if (!song.albumArtUrl && (song.releaseId || song.platformIds?.apple?.id)) {
-      loadAlbumArt();
-    }
-  }, [song.id]);
-
-  async function loadAlbumArt() {
+  const loadAlbumArt = useCallback(async () => {
     try {
       setLoading(true);
       setError(false);
@@ -46,7 +40,13 @@ export default function AlbumArt({
     } finally {
       setLoading(false);
     }
-  }
+  }, [onArtLoaded, song]);
+
+  useEffect(() => {
+    if (!song.albumArtUrl && (song.releaseId || song.platformIds?.apple?.id)) {
+      void loadAlbumArt();
+    }
+  }, [loadAlbumArt, song.albumArtUrl, song.platformIds?.apple?.id, song.releaseId]);
 
   const sizeClasses = {
     small: "w-12 h-12",

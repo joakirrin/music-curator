@@ -68,7 +68,7 @@ export function CreatePlaylistModal({
         setSelectedSongIds(new Set());
       }
     }
-  }, [open]); // Only depend on 'open' to avoid re-runs
+  }, [open, keepSongs.length, songs]); // Re-run when modal opens or song list changes
 
   // Handle mode changes (when user clicks mode buttons)
   useEffect(() => {
@@ -83,7 +83,7 @@ export function CreatePlaylistModal({
       setSelectedSongIds(new Set());
     }
     // For "select", we don't auto-change current selection
-  }, [mode]); // Only depend on mode changes
+  }, [mode, open, songs]); // Re-run when mode, modal state, or songs change
 
   const handleCreate = () => {
     const trimmedName = name.trim();

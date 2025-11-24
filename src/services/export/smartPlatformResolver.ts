@@ -3,9 +3,19 @@
 import type { Song } from '@/types/song';
 import type { SmartResolveResult } from './types';
 
+type SpotifyArtist = { name: string };
+type SpotifyTrack = {
+  id?: string;
+  uri?: string;
+  name: string;
+  artists: SpotifyArtist[];
+  external_urls?: { spotify?: string };
+};
+type SpotifySearchResponse = { tracks?: { items?: SpotifyTrack[] } };
+
 const DEV = import.meta.env.DEV;
 
-function log(...args: any[]) {
+function log(...args: unknown[]) {
   if (DEV) console.log('[SmartResolver]', ...args);
 }
 
@@ -46,7 +56,7 @@ function calculateSimilarity(a: string, b: string): number {
  * Find best match from Spotify results (for Tier 3)
  * Weights title 70% and artist 30% for higher confidence
  */
-function findBestMatch(results: any[], song: Song): { track: any; score: number } {
+function findBestMatch(results: SpotifyTrack[], song: Song): { track: SpotifyTrack; score: number } {
   const matches = results.map(track => {
     const artistMatch = calculateSimilarity(track.artists[0].name, song.artist);
     const titleMatch = calculateSimilarity(track.name, song.title);
@@ -98,7 +108,7 @@ async function searchSoft(
   artist: string,
   title: string,
   token: string
-): Promise<any | null> {
+): Promise<SpotifyTrack | null> {
   const query = encodeURIComponent(`${title} ${artist}`);
   const response = await fetch(
     `https://api.spotify.com/v1/search?type=track&limit=1&q=${query}&type=track&limit=1`, 
@@ -107,7 +117,7 @@ async function searchSoft(
     }
   );
   if (!response.ok) return null;
-  const data = await response.json();
+  const data = (await response.json()) as SpotifySearchResponse;
   return data.tracks?.items?.[0] || null;
 }
 
@@ -119,7 +129,7 @@ async function searchHard(
   artist: string,
   title: string,
   token: string
-): Promise<any | null> {
+): Promise<SpotifyTrack[] | null> {
   // NEW: Most flexible query: relies entirely on Spotify's ranking algorithm
   const query = encodeURIComponent(`${title} ${artist}`);
   
@@ -130,7 +140,7 @@ async function searchHard(
     }
   );
   if (!response.ok) return null;
-  const data = await response.json();
+  const data = (await response.json()) as SpotifySearchResponse;
   return data.tracks?.items || null;
 }
 

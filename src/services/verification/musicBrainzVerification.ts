@@ -45,11 +45,11 @@ const RETRY_CONFIG: RetryConfig = {
   backoffMultiplier: 2,
 };
 
-function log(...args: any[]) {
+function log(...args: unknown[]) {
   if (DEV) console.log('[MusicBrainz]', ...args);
 }
 
-function logError(...args: any[]) {
+function logError(...args: unknown[]) {
   if (DEV) console.error('[MusicBrainz]', ...args);
 }
 

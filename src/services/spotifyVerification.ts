@@ -5,11 +5,11 @@ import { spotifyAuth } from '@/services/spotifyAuth';
 
 const DEV = import.meta.env.DEV;
 
-function log(...args: any[]) {
+function log(...args: unknown[]) {
   if (DEV) console.log('[SpotifyVerify]', ...args);
 }
 
-function logError(...args: any[]) {
+function logError(...args: unknown[]) {
   if (DEV) console.error('[SpotifyVerify]', ...args);
 }
 
@@ -200,8 +200,8 @@ export async function verifySong(input: Song): Promise<Partial<Song>> {
         releaseDate: input.releaseDate ?? best.album?.release_date,
       };
       
-    } catch (e: any) {
-      if (e?.message === 'unauthorized') {
+    } catch (e: unknown) {
+      if (e instanceof Error && e.message === 'unauthorized') {
         logError('=== ❌ Authorization failed ===');
         return {
           verificationStatus: 'unverified',
@@ -210,7 +210,8 @@ export async function verifySong(input: Song): Promise<Partial<Song>> {
         };
       }
       
-      logError(`Query ${i + 1} failed:`, e.message);
+      const message = e instanceof Error ? e.message : 'Unknown error';
+      logError(`Query ${i + 1} failed:`, message);
       // Continue to next query
     }
   }

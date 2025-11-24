@@ -4,8 +4,14 @@
 import { spotifyAuth } from '@/services/spotifyAuth';
 import { useState, useEffect } from 'react';
 
+type SpotifyUser = {
+  id: string;
+  display_name?: string;
+  images?: { url?: string }[];
+} | null;
+
 export function SpotifyLoginButton() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<SpotifyUser>(null);
   const [isReady, setIsReady] = useState(false);
 
   // Check auth status on mount and set up interval to recheck

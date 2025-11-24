@@ -11,7 +11,7 @@ import type { Platform } from '@/types/song';
 
 const DEV = import.meta.env?.DEV;
 
-function log(...args: any[]) {
+function log(...args: unknown[]) {
   if (DEV) console.log('[ExportVerification]', ...args);
 }
 

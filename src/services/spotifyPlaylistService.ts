@@ -2,20 +2,19 @@
 
 import { spotifyAuth } from './spotifyAuth';
 import type { Playlist } from '@/types/playlist';
-// import type { Song } from '@/types/song';
-// NEW IMPORTS
+import type { Song } from '@/types/song';
 import { resolveSpotifySong } from './export/smartPlatformResolver';
 import { formatPlaylistDescription } from '@/utils/formatters';
 import { FEATURES } from '@/config/features';
-import type { SmartResolveResult } from './export/types';
+import type { ExportReport, ExportedSong, FailedSong, SmartResolveResult } from './export/types';
 import { verifySpotifyExport, type ExtendedPushResult } from './export/spotifyExportVerification';
 
 const DEV = import.meta.env.DEV;
 
-function log(...args: any[]) {
+function log(...args: unknown[]) {
   if (DEV) console.log('[SpotifyPlaylist]', ...args);
 }
-function logError(...args: any[]) {
+function logError(...args: unknown[]) {
   if (DEV) console.error('[SpotifyPlaylist]', ...args);
 }
 
@@ -159,19 +158,22 @@ export async function pushPlaylistToSpotify(
   const startTime = Date.now();
   
   // Build the initial (empty) report-like structure
-  const baseReport = {
+  const baseReport: ExportReport = {
     playlistName: playlist.name,
     platform: 'spotify',
     timestamp: new Date().toISOString(),
     totalSongs: playlist.songs.length,
-    successful: { direct: 0, softSearch: 0, hardSearch: 0, total: 0, songs: [] as any[] },
-    failed: { count: 0, songs: [] as any[] },
+    successful: { direct: 0, softSearch: 0, hardSearch: 0, total: 0, songs: [] as ExportedSong[] },
+    failed: { count: 0, songs: [] as FailedSong[] },
     statistics: { successRate: 0, averageConfidence: 0, exportDuration: 0 },
     success: false,
   };
 
-  // Iremos mutando este objeto y luego lo convertimos en ExtendedPushResult al final
-  const report: any = { ...baseReport };
+  const report: ExportReport & {
+    verification?: ExtendedPushResult['verification'];
+    updatedSongs?: Song[];
+    error?: string;
+  } = { ...baseReport };
 
   try {
     // Step 1: Get access token
@@ -247,7 +249,7 @@ export async function pushPlaylistToSpotify(
     }
 
     // Step 5: NEW - Apply branding from Task 4.5.2
-    let descriptionToPush = formatPlaylistDescription(playlist.description);
+    const descriptionToPush = formatPlaylistDescription(playlist.description);
     
     // This logic is from your task list
     if (!FEATURES.BRANDING_ON_EXPORT.enabled || 
@@ -345,7 +347,7 @@ export async function pushPlaylistToSpotify(
     log('=== ✅ Push complete ===');
     return extendedResult;
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     logError('=== ❌ Push failed ===');
     logError(error);
     
@@ -354,23 +356,19 @@ export async function pushPlaylistToSpotify(
         stage: 'error',
         current: 0,
         total: 100,
-        message: error?.message || 'Failed to push playlist',
+        message: error instanceof Error ? error.message : 'Failed to push playlist',
       });
     }
     
     report.success = false;
-    report.error = error?.message || 'Unknown error occurred';
+    report.error = error instanceof Error ? error.message : 'Unknown error occurred';
     report.statistics.exportDuration = Date.now() - startTime;
 
     // Aseguramos que devolvemos algo que matchee ExtendedPushResult,
     // aunque verificación no se haya podido hacer.
-    const extendedResult: ExtendedPushResult = {
+    return {
       ...report,
-      verification: (report as any).verification,
-      updatedSongs: (report as any).updatedSongs,
     };
-
-    return extendedResult;
   }
 }
 
@@ -378,4 +376,3 @@ export async function pushPlaylistToSpotify(
  * REMOVED: searchSpotifyTrack(artist: string, title: string)
  * This logic is now inside smartPlatformResolver.ts
  */
-

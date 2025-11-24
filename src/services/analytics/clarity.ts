@@ -10,6 +10,9 @@ export interface ClarityConfig {
   enabled: boolean;
 }
 
+type ClarityFunction = ((...args: unknown[]) => void) & { q?: unknown[] };
+type ClarityWindow = Window & { clarity?: ClarityFunction };
+
 class ClarityService {
   private initialized = false;
 
@@ -28,18 +31,19 @@ class ClarityService {
       return;
     }
 
-    // Load Clarity script
-    // The IIFE takes 5 arguments, and declares 2 local variables (t, y) inside
-    (function(c: any, l: Document, a: string, r: string, i: string) {
-      c[a] = c[a] || function() {
-        (c[a].q = c[a].q || []).push(arguments);
+    const clarityWindow = window as ClarityWindow;
+    if (!clarityWindow.clarity) {
+      const clarityFn: ClarityFunction = (...args: unknown[]) => {
+        (clarityFn.q = clarityFn.q || []).push(args);
       };
-      const t = l.createElement(r) as HTMLScriptElement;
-      t.async = true;
-      t.src = "https://www.clarity.ms/tag/" + i;
-      const y = l.getElementsByTagName(r)[0] as HTMLScriptElement;
-      y.parentNode!.insertBefore(t, y);
-    })(window, document, "clarity", "script", projectId);
+      clarityWindow.clarity = clarityFn;
+    }
+
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = `https://www.clarity.ms/tag/${projectId}`;
+    const firstScript = document.getElementsByTagName('script')[0];
+    firstScript?.parentNode?.insertBefore(script, firstScript);
 
     this.initialized = true;
     console.log('✅ Microsoft Clarity initialized');
@@ -63,8 +67,9 @@ class ClarityService {
       return;
     }
 
-    if (typeof (window as any).clarity === 'function') {
-      (window as any).clarity('set', key, value);
+    const clarityApi = (window as ClarityWindow).clarity;
+    if (typeof clarityApi === 'function') {
+      clarityApi('set', key, value);
     }
   }
 
@@ -78,8 +83,9 @@ class ClarityService {
       return;
     }
 
-    if (typeof (window as any).clarity === 'function') {
-      (window as any).clarity('identify', userId);
+    const clarityApi = (window as ClarityWindow).clarity;
+    if (typeof clarityApi === 'function') {
+      clarityApi('identify', userId);
     }
   }
 
@@ -93,8 +99,9 @@ class ClarityService {
       return;
     }
 
-    if (typeof (window as any).clarity === 'function') {
-      (window as any).clarity('event', eventName);
+    const clarityApi = (window as ClarityWindow).clarity;
+    if (typeof clarityApi === 'function') {
+      clarityApi('event', eventName);
     }
   }
 }

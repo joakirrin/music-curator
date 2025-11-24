@@ -17,11 +17,11 @@ import { searchByISRC as searchAppleMusicByISRC, searchByText as searchAppleMusi
 
 const DEV = import.meta.env?.DEV;
 
-function log(...args: any[]) {
+function log(...args: unknown[]) {
   if (DEV) console.log('[PlatformLink]', ...args);
 }
 
-function logError(...args: any[]) {
+function logError(...args: unknown[]) {
   if (DEV) console.error('[PlatformLink]', ...args);
 }
 

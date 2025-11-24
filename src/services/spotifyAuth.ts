@@ -26,11 +26,11 @@ const SCOPES = [
 
 const DEV = import.meta.env.DEV;
 
-function log(...args: any[]) {
+function log(...args: unknown[]) {
   if (DEV) console.log('[SpotifyAuth]', ...args);
 }
 
-function logError(...args: any[]) {
+function logError(...args: unknown[]) {
   if (DEV) console.error('[SpotifyAuth]', ...args);
 }
 
@@ -253,7 +253,7 @@ export const spotifyAuth = {
       log('=== ✅ Login successful ===');
       return true;
       
-    } catch (err: any) {
+    } catch (err: unknown) {
       logError('=== ❌ Token exchange failed ===');
       logError(err);
       return false;

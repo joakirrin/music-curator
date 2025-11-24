@@ -12,11 +12,11 @@ import { ExportVerificationService, type ExportResult, type VerificationResult }
 
 const DEV = import.meta.env?.DEV;
 
-function log(...args: any[]) {
+function log(...args: unknown[]) {
   if (DEV) console.log('[SpotifyVerification]', ...args);
 }
 
-function logError(...args: any[]) {
+function logError(...args: unknown[]) {
   if (DEV) console.error('[SpotifyVerification]', ...args);
 }
 
@@ -43,9 +43,9 @@ async function fetchPlaylistTracks(
       throw new Error(`Failed to fetch playlist tracks: ${response.status}`);
     }
     
-    const data = await response.json();
+    const data = (await response.json()) as { items: Array<{ track?: { uri?: string | null } }> };
     const trackUris = data.items
-      .map((item: any) => item.track?.uri)
+      .map((item) => item.track?.uri || undefined)
       .filter((uri: string | undefined): uri is string => !!uri);
     
     log(`Found ${trackUris.length} tracks in Spotify playlist`);
