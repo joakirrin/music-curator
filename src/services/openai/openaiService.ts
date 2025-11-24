@@ -1,17 +1,35 @@
-import OpenAI from "openai";
 import type { 
   LLMResponse, 
   FeedbackPayload, 
   ReplacementPayload,
   SongsJsonFormat 
 } from "./types";
-import { OPENAI_CONFIG, SYSTEM_PROMPTS } from "./config";
+import { SYSTEM_PROMPTS } from "./config";
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true, // For client-side use (consider proxy in production)
-});
+type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
+
+async function callOpenAIProxy(messages: ChatMessage[]): Promise<string> {
+  const response = await fetch("/api/openai", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `OpenAI proxy error (${response.status}): ${errorText || response.statusText}`
+    );
+  }
+
+  const data = (await response.json()) as { content?: string; error?: string };
+
+  if (!data.content) {
+    throw new Error(data.error || "No response from OpenAI");
+  }
+
+  return data.content;
+}
 
 /**
  * Parses LLM response to extract explanation and songs-json (if present)
@@ -129,11 +147,11 @@ function parseLLMResponse(rawResponse: string, allowNoSongs: boolean = false): L
 export async function getRecommendationsFromVibe(
   prompt: string,
   requestedCount: number = 5,
-  conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>
+  conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>
 ): Promise<LLMResponse> {
   try {
     // Build messages array with full conversation history
-    const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+    const messages: ChatMessage[] = [
       {
         role: "system",
         content: SYSTEM_PROMPTS.base,
@@ -159,15 +177,8 @@ export async function getRecommendationsFromVibe(
       content: prompt,
     });
     
-    const completion = await openai.chat.completions.create({
-      model: OPENAI_CONFIG.model,
-      max_completion_tokens: OPENAI_CONFIG.max_completion_tokens,
-      reasoning_effort: OPENAI_CONFIG.reasoning_effort,
-      messages,
-    });
-    
-    const rawResponse = completion.choices[0]?.message?.content;
-    
+    const rawResponse = await callOpenAIProxy(messages);
+
     if (!rawResponse) {
       throw new Error("No response from OpenAI");
     }
@@ -210,24 +221,17 @@ Format your response as:
 2. A \`\`\`songs-json code block with ${feedbackPayload.requestedCount} new recommendations`;
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: OPENAI_CONFIG.model,
-      max_completion_tokens: OPENAI_CONFIG.max_completion_tokens,
-      reasoning_effort: OPENAI_CONFIG.reasoning_effort,
-      messages: [
-        {
-          role: "system",
-          content: SYSTEM_PROMPTS.base + "\n\n" + SYSTEM_PROMPTS.feedback,
-        },
-        {
-          role: "user",
-          content: userMessage,
-        },
-      ],
-    });
-    
-    const rawResponse = completion.choices[0]?.message?.content;
-    
+    const rawResponse = await callOpenAIProxy([
+      {
+        role: "system",
+        content: SYSTEM_PROMPTS.base + "\n\n" + SYSTEM_PROMPTS.feedback,
+      },
+      {
+        role: "user",
+        content: userMessage,
+      },
+    ]);
+
     if (!rawResponse) {
       throw new Error("No response from OpenAI");
     }
@@ -268,24 +272,17 @@ Format your response as:
 2. A \`\`\`songs-json code block with ONLY the ${replacementPayload.requestedCount} replacement(s)`;
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: OPENAI_CONFIG.model,
-      max_completion_tokens: OPENAI_CONFIG.max_completion_tokens,
-      reasoning_effort: OPENAI_CONFIG.reasoning_effort,
-      messages: [
-        {
-          role: "system",
-          content: SYSTEM_PROMPTS.base + "\n\n" + SYSTEM_PROMPTS.replacements,
-        },
-        {
-          role: "user",
-          content: userMessage,
-        },
-      ],
-    });
-    
-    const rawResponse = completion.choices[0]?.message?.content;
-    
+    const rawResponse = await callOpenAIProxy([
+      {
+        role: "system",
+        content: SYSTEM_PROMPTS.base + "\n\n" + SYSTEM_PROMPTS.replacements,
+      },
+      {
+        role: "user",
+        content: userMessage,
+      },
+    ]);
+
     if (!rawResponse) {
       throw new Error("No response from OpenAI");
     }
