@@ -92,7 +92,7 @@
 ---
 
 ### 🆕 4.5.3: Song Preview Mini-Player (Apple Music Public API)
-**Status:** ⏳ PENDING
+**Status:** ✅ Implemented & Stable
 **Priority:** HIGH (Core UX improvement)
 **Estimated Effort:** 8-12 hours
 
@@ -381,7 +381,7 @@ Add an "About" section to the app that explains the project, credits APIs/servic
 
 **Mockup:**
 ```
-┌──────────────────────────────────────────┐
+┌──────────────────────────────────────────┐ 
 │ About Fonea Sound Curator                │
 ├──────────────────────────────────────────┤
 │ 🎵 A smart music curation tool...        │
