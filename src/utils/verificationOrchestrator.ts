@@ -3,6 +3,7 @@ import { verifyWithMusicBrainz } from "@/services/verification/musicBrainzVerifi
 import { resolveAppleMusic } from "@/services/appleMusicResolver";
 import { resolveSpotifyByISRC } from "@/services/spotifyIsrcResolver";
 import { spotifyAuth } from "@/services/spotifyAuth";
+import { resolveSpotifySong } from "@/services/export/smartPlatformResolver";
 
 export type VerificationSummary = {
   total: number;
@@ -21,16 +22,18 @@ export type VerificationProgress = {
 };
 
 /**
- * Verifies a batch of songs using the 3-tier verification system:
+ * Verifies a batch of songs using the 4-tier verification system:
  * Tier 1: MusicBrainz (ISRC, metadata, platform IDs)
  * Tier 2: Apple Music (no auth required)
- * Optional: Spotify ISRC resolution (requires auth)
+ * Tier 3: Spotify 3-tier search (requires auth: Direct → Soft → Hard)
+ * Tier 4: Mark as failed (only after all tiers exhausted)
  * 
  * Extracted from ImportChatGPTModal for reusability
  */
 export async function verifySongsInBatch(
   songs: Song[],
-  onProgress?: (progress: VerificationProgress) => void
+  onProgress?: (progress: VerificationProgress) => void,
+  abortSignal?: AbortSignal
 ): Promise<{ verifiedSongs: Song[]; summary: VerificationSummary }> {
   
   const summary: VerificationSummary = {
@@ -44,6 +47,10 @@ export async function verifySongsInBatch(
   const verifiedSongs: Song[] = [];
 
   for (let i = 0; i < songs.length; i++) {
+    if (abortSignal?.aborted) {
+      throw new DOMException("Verification aborted", "AbortError");
+    }
+
     const song = songs[i];
     
     // Report progress
@@ -116,12 +123,32 @@ export async function verifySongsInBatch(
           if (!lastSong.albumArtUrl && appleMusicData.artworkUrl) {
             lastSong.albumArtUrl = appleMusicData.artworkUrl;
           }
+          
+          // 🆕 Also enhance with preview URL if MusicBrainz didn't get one
+          if (!lastSong.previewUrl) {
+            const { getPreviewUrl } = await import('@/services/appleMusicService');
+            const applePreview = await getPreviewUrl({
+              artist: mbResult.artist,
+              title: mbResult.title,
+            });
+            if (applePreview) {
+              lastSong.previewUrl = applePreview;
+              lastSong.previewSource = 'apple';
+            }
+          }
         }
       } else {
         // TIER 2: MusicBrainz failed → Try Apple Music (no auth required!)
         const appleMusicData = await resolveAppleMusic(song.artist, song.title);
         
         if (appleMusicData) {
+          // 🆕 Also fetch preview URL for Apple Music
+          const { getPreviewUrl } = await import('@/services/appleMusicService');
+          const previewUrl = await getPreviewUrl({
+            artist: song.artist,
+            title: song.title,
+          });
+          
           // Apple Music success!
           verifiedSongs.push({
             ...song,
@@ -131,6 +158,8 @@ export async function verifySongsInBatch(
               apple: appleMusicData,
             },
             albumArtUrl: appleMusicData.artworkUrl,
+            previewUrl: previewUrl || undefined, // 🆕 Add preview URL
+            previewSource: previewUrl ? 'apple' : undefined, // 🆕 Add preview source
             artist: song.artist,
             title: song.title,
             album: song.album,
@@ -139,13 +168,59 @@ export async function verifySongsInBatch(
           
           isVerified = true;
         } else {
-          // TIER 3: Both failed → Mark as failed
-          verifiedSongs.push({
-            ...song,
-            verificationStatus: 'failed',
-            verificationSource: 'multi',
-            verificationError: `Not found in MusicBrainz or Apple Music. ${mbResult.error || 'No details available.'}`,
-          });
+          // TIER 3: Both MusicBrainz and Apple failed → Try Spotify 3-tier (if logged in)
+          const spotifyToken = await spotifyAuth.getAccessToken();
+          
+          if (spotifyToken) {
+            try {
+              const spotifyResult = await resolveSpotifySong(song, spotifyToken);
+              
+              if (spotifyResult.spotifyUri) {
+                // Spotify 3-tier success!
+                const spotifyId = spotifyResult.spotifyUri.split(':')[2];
+                
+                // 🆕 Try to get preview URL from Apple Music as enhancement
+                const { getPreviewUrl } = await import('@/services/appleMusicService');
+                const previewUrl = await getPreviewUrl({
+                  artist: song.artist,
+                  title: song.title,
+                });
+                
+                verifiedSongs.push({
+                  ...song,
+                  verificationStatus: 'verified',
+                  verificationSource: 'spotify',
+                  spotifyUri: spotifyResult.spotifyUri,
+                  platformIds: {
+                    spotify: {
+                      id: spotifyId,
+                      url: `https://open.spotify.com/track/${spotifyId}`,
+                    }
+                  },
+                  previewUrl: previewUrl || undefined, // 🆕 Add Apple Music preview as fallback
+                  previewSource: previewUrl ? 'apple' : undefined, // 🆕 Preview source
+                  artist: song.artist,
+                  title: song.title,
+                  album: song.album,
+                  year: song.year,
+                });
+                
+                isVerified = true;
+              }
+            } catch (spotifyError) {
+              console.error('[Verification] Spotify 3-tier failed:', spotifyError);
+            }
+          }
+          
+          // TIER 4: All tiers failed → Mark as failed
+          if (!isVerified) {
+            verifiedSongs.push({
+              ...song,
+              verificationStatus: 'failed',
+              verificationSource: 'multi',
+              verificationError: `Not found in MusicBrainz, Apple Music${spotifyToken ? ', or Spotify' : ''}. ${mbResult.error || 'No details available.'}`,
+            });
+          }
         }
       }
       

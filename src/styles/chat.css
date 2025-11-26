@@ -1,0 +1,308 @@
+/* src/styles/chat.css */
+/* Fonea Chat UI - Modern chat bubbles with high contrast */
+
+:root {
+  /* Fonea colors from guide.css */
+  --fonea-bg: #0b0c10;
+  --fonea-panel: #111218;
+  --fonea-card: #161821;
+  --fonea-text: #e6e6f0;
+  --fonea-subtle: #b9bbd2;
+  --fonea-accent: #6ee7ff;
+  --fonea-accent-2: #9b6bff;
+  --fonea-border: #222534;
+  --fonea-emerald: #10b981;
+  --radius-xl: 20px;
+}
+
+/* Chat message container */
+.chat-message {
+  display: flex;
+  margin-bottom: 16px;
+  width: 100%;
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Assistant messages (left-aligned, cyan gradient) */
+.chat-message.assistant {
+  justify-content: flex-start;
+}
+
+.chat-message.assistant .message-bubble {
+  background: linear-gradient(135deg, rgba(110, 231, 255, 0.15), rgba(155, 107, 255, 0.12));
+  border: 1px solid rgba(110, 231, 255, 0.25);
+  color: var(--fonea-text);
+  border-radius: 18px 18px 18px 4px;
+  max-width: 85%;
+}
+
+/* User messages (right-aligned, emerald accent) */
+.chat-message.user {
+  justify-content: flex-end;
+}
+
+.chat-message.user .message-bubble {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.15));
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: var(--fonea-text);
+  border-radius: 18px 18px 4px 18px;
+  max-width: 85%;
+}
+
+/* System messages (centered, subtle) */
+.chat-message.system {
+  justify-content: center;
+}
+
+.chat-message.system .message-bubble {
+  background: rgba(185, 187, 210, 0.08);
+  border: 1px solid var(--fonea-border);
+  color: var(--fonea-subtle);
+  border-radius: 12px;
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  max-width: 80%;
+  text-align: center;
+}
+
+/* Message bubble base styles */
+.message-bubble {
+  padding: 12px 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  line-height: 1.5;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Message content */
+.message-content {
+  font-size: 0.9375rem;
+  white-space: pre-wrap;
+}
+
+/* Verification section */
+.verification-section {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(22, 24, 33, 0.6);
+  border: 1px solid var(--fonea-border);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+}
+
+/* Verification in progress */
+.verification-section .text-sm {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* Progress bar container - Fonea style */
+.verification-section .w-full.bg-gray-200,
+.verification-section .w-full.dark\:bg-gray-700 {
+  background: rgba(22, 24, 33, 0.9) !important;
+  border: 1px solid rgba(110, 231, 255, 0.15);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Progress bar fill - Emerald gradient with glow */
+.verification-section .bg-blue-600 {
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%) !important;
+  box-shadow: 
+    0 0 16px rgba(16, 185, 129, 0.6),
+    0 2px 8px rgba(5, 150, 105, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Animated shimmer effect on progress bar */
+.verification-section .bg-blue-600::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Cancel button */
+.verification-section button {
+  margin-top: 8px;
+  padding: 4px 8px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.verification-section button:hover {
+  background: rgba(239, 68, 68, 0.1);
+  transform: translateX(2px);
+}
+
+/* Status indicators - improved contrast */
+.text-gray-700 {
+  color: var(--fonea-text) !important;
+}
+
+.text-gray-300 {
+  color: var(--fonea-text) !important;
+}
+
+.text-blue-600 {
+  color: var(--fonea-accent) !important;
+}
+
+.text-blue-700 {
+  color: var(--fonea-accent) !important;
+}
+
+.text-blue-400 {
+  color: var(--fonea-accent) !important;
+}
+
+.text-green-700,
+.text-green-400 {
+  color: var(--fonea-emerald) !important;
+}
+
+.text-yellow-700,
+.text-yellow-400 {
+  color: #fbbf24 !important;
+}
+
+.text-orange-700,
+.text-orange-400 {
+  color: #fb923c !important;
+}
+
+.text-red-600,
+.text-red-700,
+.text-red-400,
+.text-red-300 {
+  color: #ef4444 !important;
+}
+
+/* Replacement section */
+.replacement-section {
+  margin-top: 8px;
+  padding: 12px;
+  background: rgba(110, 231, 255, 0.08);
+  border: 1px solid rgba(110, 231, 255, 0.2);
+  border-radius: 12px;
+}
+
+/* Loading spinners */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Icon colors */
+.lucide-loader-2 {
+  color: var(--fonea-accent);
+}
+
+.lucide-check-circle {
+  color: var(--fonea-emerald);
+}
+
+.lucide-alert-circle {
+  color: #fbbf24;
+}
+
+.lucide-x {
+  color: #ef4444;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .chat-message.assistant .message-bubble,
+  .chat-message.user .message-bubble {
+    max-width: 90%;
+  }
+  
+  .message-bubble {
+    padding: 10px 14px;
+  }
+  
+  .message-content {
+    font-size: 0.875rem;
+  }
+}
+
+/* Hover effects for interactive elements */
+.verification-section button:active {
+  transform: translateX(1px);
+}
+
+/* Status badge styles */
+.verification-section span {
+  font-weight: 500;
+}
+
+/* Ensure text is always readable */
+.dark .chat-message {
+  color: var(--fonea-text);
+}
+
+/* Better spacing for consecutive messages */
+.chat-message + .chat-message.assistant {
+  margin-top: 4px;
+}
+
+.chat-message + .chat-message.user {
+  margin-top: 4px;
+}
+
+/* System message spacing */
+.chat-message.system {
+  margin: 12px 0;
+}

@@ -72,6 +72,12 @@ export function useChatState() {
     setMessages(prev => [...prev, message]);
   };
 
+  const updateChatMessage = (id: string, updates: Partial<ChatMessage>) => {
+    setMessages(prev =>
+      prev.map(msg => (msg.id === id ? { ...msg, ...updates } : msg))
+    );
+  };
+
   const updateLastMessage = (updates: Partial<ChatMessage>) => {
     setMessages(prev => {
       const newMessages = [...prev];
@@ -104,6 +110,7 @@ export function useChatState() {
     isOpen,
     isLoading,
     addMessage,
+    updateChatMessage,
     updateLastMessage,
     incrementRound,
     toggleChat,

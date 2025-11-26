@@ -20,6 +20,7 @@ export type VerificationSource =
 
 export type Song = {
   id: string;
+  messageId?: string; // Links song to originating chat message (for cancellation)
   title: string;
   artist: string;
   album?: string;

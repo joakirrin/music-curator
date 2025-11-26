@@ -2,7 +2,7 @@
 import { useEffect, useRef } from "react";
 import ChatHeader from "./chat/ChatHeader";
 import ChatInput from "./chat/ChatInput";
-import ChatMessage from "./chat/ChatMessage";
+import { ChatMessage } from "./chat/ChatMessage";
 import type { ChatMessage as ChatMessageType } from "@/types/chat";
 import type { Song } from "@/types/song";
 import { getRecommendationsFromVibe } from "@/services/openai/openaiService";
@@ -17,9 +17,12 @@ type Props = {
   onClearHistory: () => void;
   onAddMessage: (message: ChatMessageType) => void;
   onUpdateLastMessage: (updates: Partial<ChatMessageType>) => void;
+  onUpdateChatMessage?: (id: string, updates: Partial<ChatMessageType>) => void;
   onSetLoading: (loading: boolean) => void;
   onIncrementRound: () => void;
   onImportSongs: (songs: Song[]) => Promise<void>;
+  onCancelVerification?: (messageId: string) => void;
+  parseTimeoutExtension: (userMessage: string) => number | null;
   preFilledMessage?: string; // 🆕 Phase 2.2: Pre-filled feedback message
 };
 
@@ -32,9 +35,12 @@ export default function ChatPanel({
   onClearHistory,
   onAddMessage,
   onUpdateLastMessage,
+  onUpdateChatMessage,
   onSetLoading,
   onIncrementRound,
   onImportSongs,
+  onCancelVerification,
+  parseTimeoutExtension,
   preFilledMessage,
 }: Props) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -48,6 +54,49 @@ export default function ChatPanel({
 
   // Handle sending a message to GPT
   const handleSendMessage = async (userPrompt: string) => {
+    // 🆕 Check if user is trying to extend timeout
+    const timeoutExtension = parseTimeoutExtension(userPrompt);
+    
+    if (timeoutExtension) {
+      // Find the last in-progress verification
+      const lastVerifyingMessage = [...messages]
+        .reverse()
+        .find(m => m.verificationStatus === 'in_progress');
+      
+      if (lastVerifyingMessage && lastVerifyingMessage.id) {
+        if (onUpdateChatMessage) {
+          onUpdateChatMessage(lastVerifyingMessage.id, {
+            verificationTimeoutSeconds: timeoutExtension
+          });
+        } else {
+          // Fallback: update last message if no direct updater
+          onUpdateLastMessage({
+            verificationTimeoutSeconds: timeoutExtension
+          });
+        }
+        
+        // Add system confirmation message
+        onAddMessage({
+          id: `system-${Date.now()}`,
+          role: 'system',
+          content: `✓ Verification timeout extended to ${timeoutExtension} seconds`,
+          timestamp: Date.now(),
+        });
+        
+        console.log(`[Verification] Timeout extended to ${timeoutExtension}s`);
+        return; // Don't send to ChatGPT - handle locally
+      } else {
+        // No active verification to extend
+        onAddMessage({
+          id: `system-${Date.now()}`,
+          role: 'system',
+          content: `⚠️ No active verification to extend`,
+          timestamp: Date.now(),
+        });
+        return;
+      }
+    }
+
     try {
       onSetLoading(true);
 
@@ -61,10 +110,12 @@ export default function ChatPanel({
       onAddMessage(userMessage);
 
       // 2. Build conversation history (all previous messages)
-      const conversationHistory = messages.map(msg => ({
-        role: msg.role,
-        content: msg.content,
-      }));
+      const conversationHistory: Array<{ role: "user" | "assistant"; content: string }> = messages
+        .filter(msg => msg.role === "user" || msg.role === "assistant")
+        .map(msg => ({
+          role: msg.role as "user" | "assistant",
+          content: msg.content,
+        }));
       
       // Add the new user message
       conversationHistory.push({
@@ -178,7 +229,11 @@ export default function ChatPanel({
           ) : (
             <>
               {messages.map((message) => (
-                <ChatMessage key={message.id} message={message} />
+                <ChatMessage 
+                  key={message.id} 
+                  message={message} 
+                  onCancelVerification={onCancelVerification}
+                />
               ))}
               <div ref={messagesEndRef} />
             </>
