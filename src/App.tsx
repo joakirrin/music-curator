@@ -219,6 +219,145 @@ export default function App() {
           return updatedSongs;
         });
 
+        // 🆕 TIER S: AUTO-REPLACEMENT START
+        // If there are failed songs (after ALL 4 verification tiers), automatically get replacements
+        if (summary.failed > 0) {
+          console.log(`[Auto-Replacement] ${summary.failed} songs failed all verification tiers`);
+          const failedSongs = verifiedSongs.filter(s => s.verificationStatus === 'failed');
+          const maxRetries = 3;
+          let attempt = 0;
+          let remainingFailed = [...failedSongs];
+
+          while (attempt < maxRetries && remainingFailed.length > 0) {
+            attempt++;
+            console.log(`[Auto-Replacement] Attempt ${attempt}/${maxRetries} for ${remainingFailed.length} songs`);
+            
+            try {
+              // Update chat with replacement progress
+              updateLastMessage({
+                verificationProgress: {
+                  total: summary.total,
+                  verified: summary.verified,
+                  failed: remainingFailed.length,
+                },
+                replacementStatus: 'requesting',
+                replacementAttempt: attempt,
+              });
+
+              // Get replacements from OpenAI
+              const { getReplacementsForInvalidSongs } = await import('@/services/openai/openaiService');
+              const response = await getReplacementsForInvalidSongs({
+                type: 'replacements',
+                round: newSongs[0]?.round || currentRound,
+                invalidSongs: remainingFailed.map(s => ({
+                  title: s.title,
+                  artist: s.artist,
+                  reason: s.verificationError || 'Failed verification',
+                })),
+                requestedCount: remainingFailed.length,
+              });
+
+              if (!response.songsJson) {
+                throw new Error('No replacement songs returned from OpenAI');
+              }
+
+              // Map replacement songs
+              const replacementSongs = response.songsJson.recommendations.map((rec, index) =>
+                mapChatGPTRecommendationToSong(
+                  {
+                    title: rec.title,
+                    artist: rec.artist,
+                    album: rec.album,
+                    year: rec.year,
+                    reason: rec.reason,
+                    duration: rec.duration,
+                  },
+                  newSongs[0]?.round || currentRound,
+                  summary.verified + index, // Continue indexing after verified songs
+                  true // autoVerify
+                )
+              );
+
+              // Update chat: verifying replacements
+              updateLastMessage({
+                replacementStatus: 'verifying',
+                replacementAttempt: attempt,
+              });
+
+              // Verify replacement songs
+              const { verifiedSongs: verifiedReplacements } = await verifySongsInBatch(
+                replacementSongs,
+                (progress) => {
+                  updateLastMessage({
+                    verificationProgress: {
+                      total: summary.total + progress.total,
+                      verified: summary.verified + progress.verified,
+                      failed: progress.failed,
+                    },
+                    replacementStatus: 'verifying',
+                    replacementAttempt: attempt,
+                  });
+                }
+              );
+
+              // Check which replacements succeeded
+              const successfulReplacements = verifiedReplacements.filter(
+                s => s.verificationStatus === 'verified'
+              );
+              const failedReplacements = verifiedReplacements.filter(
+                s => s.verificationStatus === 'failed'
+              );
+
+              console.log(`[Auto-Replacement] Attempt ${attempt} results: ${successfulReplacements.length} verified, ${failedReplacements.length} failed`);
+              
+              // Log which tier verified each successful replacement
+              successfulReplacements.forEach(s => {
+                console.log(`  ✓ "${s.title}" by ${s.artist} - verified via ${s.verificationSource}`);
+              });
+
+              if (successfulReplacements.length > 0) {
+                // Delete ALL old failed songs that we tried to replace
+                const failedIds = remainingFailed.map(s => s.id);
+                
+                setSongs((prev) => {
+                  // Remove all failed songs we tried to replace
+                  const withoutFailed = prev.filter(s => !failedIds.includes(s.id));
+                  // Add ALL successful replacements
+                  return [...withoutFailed, ...successfulReplacements];
+                });
+
+                // Update summary
+                summary.verified += successfulReplacements.length;
+                summary.failed = summary.failed - remainingFailed.length + failedReplacements.length;
+              }
+
+              // Update remaining failed songs for next retry
+              remainingFailed = failedReplacements;
+
+              if (remainingFailed.length === 0) {
+                // All replacements successful!
+                updateLastMessage({
+                  replacementStatus: 'complete',
+                  replacementAttempt: attempt,
+                });
+                break;
+              }
+
+            } catch (error) {
+              console.error(`[App] Auto-replacement attempt ${attempt} failed:`, error);
+              
+              if (attempt >= maxRetries) {
+                // Exhausted retries
+                updateLastMessage({
+                  replacementStatus: 'failed',
+                  replacementAttempt: attempt,
+                });
+              }
+            }
+          }
+        }
+        // 🆕 TIER S: AUTO-REPLACEMENT END
+
         // 4. Update last chat message as complete
         updateLastMessage({
           verificationStatus: "complete",
@@ -244,7 +383,7 @@ export default function App() {
         });
       }
     },
-    [setSongs, updateLastMessage]
+    [setSongs, updateLastMessage, currentRound]
   );
 
   // --- Filtering ---
