@@ -101,7 +101,7 @@ async function searchYouTube(
  * - "Title by Artist"
  * - "Artist: Title"
  */
-function parseYouTubeTit le(videoTitle: string): {
+function parseYouTubeTitle(videoTitle: string): {
   artist: string;
   title: string;
 } {
