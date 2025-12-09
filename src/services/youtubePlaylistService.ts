@@ -18,36 +18,6 @@ function logError(...args: unknown[]) {
 }
 
 /**
- * Get user's YouTube channel ID
- * NOTE: Currently unused but kept for future features
- */
-async function _getChannelId(token: string): Promise<string> {
-  log('Fetching user channel ID...');
-
-  const response = await fetch(
-    'https://www.googleapis.com/youtube/v3/channels?part=id&mine=true',
-    {
-      headers: { Authorization: `Bearer ${token}` },
-    }
-  );
-
-  if (!response.ok) {
-    const error = await response.text();
-    logError('Failed to get channel:', response.status, error);
-    throw new Error(`Failed to get YouTube channel: ${response.status}`);
-  }
-
-  const data = await response.json();
-  if (!data.items || data.items.length === 0) {
-    throw new Error('No YouTube channel found for this account');
-  }
-
-  const channelId = data.items[0].id;
-  log('Got channel ID:', channelId);
-  return channelId;
-}
-
-/**
  * Create a new YouTube playlist
  */
 async function createYouTubePlaylist(
