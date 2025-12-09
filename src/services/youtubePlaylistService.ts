@@ -20,7 +20,7 @@ function logError(...args: unknown[]) {
 /**
  * Get user's YouTube channel ID
  */
-async function getChannelId(token: string): Promise<string> {
+async function _getChannelId(token: string): Promise<string> {
   log('Fetching user channel ID...');
 
   const response = await fetch(
