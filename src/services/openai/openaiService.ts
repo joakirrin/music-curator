@@ -83,7 +83,7 @@ function parseLLMResponse(rawResponse: string, allowNoSongs: boolean = false): L
   let songsJson: SongsJsonFormat;
   
   if (Array.isArray(parsedJson)) {
-    // GPT-5 returned a direct array - wrap it
+    // Model returned a direct array - wrap it
     songsJson = {
       round: 1, // Default round
       requestedCount: parsedJson.length,

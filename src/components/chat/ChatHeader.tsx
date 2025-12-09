@@ -12,7 +12,7 @@ export default function ChatHeader({ onClose, onClearHistory, messageCount }: Pr
     <div className="flex items-center justify-between p-4 border-b border-gray-700 bg-gray-800">
       <div className="flex items-center gap-2">
         <div className="text-lg font-semibold text-white">
-          💬 Chat with GPT-5-mini
+          Chat with Fonea GPT
         </div>
         {messageCount > 0 && (
           <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-xs font-bold">

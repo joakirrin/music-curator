@@ -1,4 +1,4 @@
-// Types for GPT-5 mini contract
+// Types for Fonea GPT contract
 
 // What GPT returns in ```songs-json block
 export type SongsJsonFormat = {

@@ -40,7 +40,7 @@ export default function EmptyState({ onOpenChat, onOpenGuide }: Props) {
           Your AI-powered music discovery assistant.
           <br />
           <span className="text-emerald-400 font-medium">
-            ✨ Chat with GPT-5 to discover music instantly!
+            ✨ Chat with Fonea GPT to discover music instantly!
           </span>
         </p>
 
@@ -54,10 +54,10 @@ export default function EmptyState({ onOpenChat, onOpenGuide }: Props) {
           >
             <div className="text-3xl mb-3">💬</div>
             <h3 className="text-lg font-semibold text-white mb-2">
-              1. Chat with GPT
+              1. Chat with Fonea GPT
             </h3>
             <p className="text-sm text-gray-400">
-              Tell GPT your vibe - mood, context, energy level. Get personalized recommendations instantly.
+              Tell Fonea GPT your vibe - mood, context, energy level. Get personalized recommendations instantly.
             </p>
           </motion.div>
 
