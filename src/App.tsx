@@ -793,7 +793,7 @@ const handleCopyReplacementPrompt = useCallback(() => {
     <AudioProvider>
       <div className="min-h-screen bg-gray-800 flex flex-col">
         {/* ✅ GDPR-COMPLIANT PRIVACY SYSTEM */}
-        {/* <CookieConsentBanner /> */}
+        <CookieConsentBanner />
         <PrivacyRouteHandler />
 
         <Header onOpenGuide={() => setDrawerOpen(true)} />
