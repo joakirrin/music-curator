@@ -138,44 +138,74 @@ export default function App() {
   const callbackHandledRef = useRef(false);
 
   useEffect(() => {
-    if (callbackHandledRef.current) {
-      if (DEV) console.log("[App] ⏭️ Skipping duplicate callback (already handled)");
-      return;
-    }
-
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get("code");
     const state = urlParams.get("state");
     const error = urlParams.get("error");
     const errorDescription = urlParams.get("error_description");
 
+    // Skip if no OAuth params present
+    if (!code && !state && !error) {
+      return;
+    }
+
+    // Skip if already handled
+    if (callbackHandledRef.current) {
+      if (DEV) console.log("[App] ⏭️ Skipping duplicate callback (already handled)");
+      return;
+    }
+
+    // Mark as handled immediately
+    callbackHandledRef.current = true;
+
+    // Handle OAuth errors
     if (error) {
       if (DEV) {
         console.error("[App] OAuth error:", error, errorDescription);
       }
-      alert(`❌ Spotify login error: ${error}\n${errorDescription || ''}`);
+      alert(`❌ Login error: ${error}\n${errorDescription || ''}`);
       window.history.replaceState({}, "", window.location.pathname);
       return;
     }
 
+    // Check if this is an OAuth callback
     if (code && state) {
-      callbackHandledRef.current = true;
+      // 🎯 CRITICAL: Determine which platform based on URL path
+      const path = window.location.pathname;
+      const isYouTubeCallback = path.includes('/callback/youtube');
+      const isSpotifyCallback = path.includes('/callback') && !isYouTubeCallback;
 
       if (DEV) {
         console.log("[App] 🔑 OAuth callback detected");
+        console.log("  Platform:", isYouTubeCallback ? 'YouTube' : isSpotifyCallback ? 'Spotify' : 'Unknown');
+        console.log("  Path:", path);
         console.log("  code:", code?.substring(0, 20) + "...");
         console.log("  state:", state?.substring(0, 20) + "...");
       }
 
       (async () => {
         try {
-          await spotifyAuth.handleCallback(code, state);
-          if (DEV) console.log("[App] ✅ OAuth successful");
+          if (isYouTubeCallback) {
+            // Handle YouTube callback
+            if (DEV) console.log("[App] Calling youtubeAuth.handleCallback...");
+            const { youtubeAuth } = await import('./services/youtubeAuth');
+            const success = await youtubeAuth.handleCallback(code, state);
+            if (DEV) console.log("[App] YouTube OAuth", success ? "✅ successful" : "❌ failed");
+          } else if (isSpotifyCallback) {
+            // Handle Spotify callback
+            if (DEV) console.log("[App] Calling spotifyAuth.handleCallback...");
+            const success = await spotifyAuth.handleCallback(code, state);
+            if (DEV) console.log("[App] Spotify OAuth", success ? "✅ successful" : "❌ failed");
+          } else {
+            console.warn("[App] ⚠️ Unknown OAuth callback path:", path);
+          }
         } catch (err) {
           console.error("[App] ❌ OAuth failed:", err);
-          alert("❌ Failed to authenticate with Spotify. Please try again.");
+          const platform = isYouTubeCallback ? 'YouTube' : 'Spotify';
+          alert(`❌ Failed to authenticate with ${platform}. Please try again.`);
         } finally {
-          window.history.replaceState({}, "", window.location.pathname);
+          // Clean up URL (remove query params and reset path to home)
+          window.history.replaceState({}, "", window.location.pathname.replace(/\/callback.*$/, '/'));
         }
       })();
     }
@@ -763,7 +793,7 @@ const handleCopyReplacementPrompt = useCallback(() => {
     <AudioProvider>
       <div className="min-h-screen bg-gray-800 flex flex-col">
         {/* ✅ GDPR-COMPLIANT PRIVACY SYSTEM */}
-        <CookieConsentBanner />
+        {/* <CookieConsentBanner /> */}
         <PrivacyRouteHandler />
 
         <Header onOpenGuide={() => setDrawerOpen(true)} />

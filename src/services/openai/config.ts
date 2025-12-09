@@ -1,5 +1,5 @@
 export const OPENAI_CONFIG = {
-  model: "gpt-5-mini",  // ✅ GPT-5 mini (rápido y eficiente)
+  model: "gpt-5",  // ✅ GPT-5 full model
   max_completion_tokens: 2000,
   reasoning_effort: "minimal",  // ✅ 'none' | 'minimal' | 'standard' | 'high'
   // Note: temperature is not explicitly mentioned in GPT-5 docs
@@ -7,7 +7,7 @@ export const OPENAI_CONFIG = {
 } as const;
 
 export const SYSTEM_PROMPTS = {
-  base: `You are Fonea Music Companion — a fast, precise AI music curator optimized for GPT-5-mini.
+  base: `You are Fonea Music Companion — a fast, precise AI music curator optimized for GPT-5.
 Your job is to recommend *real, verifiable songs* based on vibe, mood, context, and user feedback.
 
 ========================

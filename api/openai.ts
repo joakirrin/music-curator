@@ -8,7 +8,7 @@ type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
 // Inline config to avoid TypeScript import issues in Vercel serverless
 const OPENAI_CONFIG = {
-  model: "gpt-5-mini",
+  model: "gpt-5",
   max_completion_tokens: 2000,
   reasoning_effort: "minimal",
 } as const;

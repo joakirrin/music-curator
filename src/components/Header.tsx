@@ -1,9 +1,10 @@
 // src/components/Header.tsx
-// ✅ SIMPLIFIED: Spotify login is optional, not required
+// ✅ UPDATED: Added YouTube login support alongside Spotify
 
 import { motion } from "framer-motion";
 import { FoneaLogo } from "./FoneaLogo";
 import { SpotifyLoginButton } from "./SpotifyLoginButton";
+import { YouTubeLoginButton } from "./YouTubeLoginButton";
 
 type HeaderProps = {
   onOpenGuide: () => void;
@@ -34,7 +35,10 @@ export const Header = ({ onOpenGuide }: HeaderProps) => {
 
           {/* Right: Utility buttons */}
           <div className="flex items-center gap-3">
-            {/* ✅ CHANGED: Spotify login is now optional (not blocking) */}
+            {/* 🆕 YouTube login button */}
+            <YouTubeLoginButton />
+
+            {/* Spotify login button */}
             <SpotifyLoginButton />
 
             {/* Open Guide button */}
