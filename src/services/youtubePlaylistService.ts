@@ -19,6 +19,7 @@ function logError(...args: unknown[]) {
 
 /**
  * Get user's YouTube channel ID
+ * NOTE: Currently unused but kept for future features
  */
 async function _getChannelId(token: string): Promise<string> {
   log('Fetching user channel ID...');
