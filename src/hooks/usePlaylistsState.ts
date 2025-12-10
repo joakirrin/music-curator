@@ -231,6 +231,20 @@ export function usePlaylistsState() {
   );
 
   /**
+   * Replace entire playlist (used for exports that modify platformPlaylists)
+   * Useful when external services (Spotify/YouTube export) update the playlist
+   */
+  const replacePlaylist = useCallback((updatedPlaylist: Playlist): void => {
+    setPlaylists(prev =>
+      prev.map(playlist =>
+        playlist.id === updatedPlaylist.id
+          ? { ...updatedPlaylist, updatedAt: new Date().toISOString() }
+          : playlist
+      )
+    );
+  }, []);
+
+  /**
    * Clear all playlists (dangerous!)
    */
   const clearAllPlaylists = useCallback((): void => {
@@ -250,6 +264,7 @@ export function usePlaylistsState() {
     // CRUD operations
     createPlaylist,
     updatePlaylist,
+    replacePlaylist, // 🆕 Add this line
     deletePlaylist,
     
     // Song operations (now work with full Song objects)

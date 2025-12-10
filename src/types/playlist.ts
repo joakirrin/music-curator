@@ -14,16 +14,41 @@ export type Playlist = {
   description?: string;          // Optional description
   songs: Song[];                 // FULL song objects (not just IDs!)
   
-  // Spotify integration fields
-  spotifyPlaylistId?: string;    // ID once pushed to Spotify
-  spotifyUrl?: string;           // Direct URL to playlist on Spotify
-  synced: boolean;               // Is it synced with Spotify?
+  // Platform integration fields (platform-agnostic)
+  platformPlaylists?: {
+    spotify?: {
+      id: string;               // Spotify playlist ID
+      url: string;              // Spotify playlist URL
+      synced: boolean;          // Is it synced?
+    };
+    youtube?: {
+      id: string;               // YouTube playlist ID
+      url: string;              // YouTube playlist URL
+      synced: boolean;          // Is it synced?
+    };
+    apple?: {
+      id: string;               // Apple Music playlist ID
+      url: string;              // Apple Music playlist URL
+      synced: boolean;          // Is it synced?
+    };
+    tidal?: {
+      id: string;               // Tidal playlist ID
+      url: string;              // Tidal playlist URL
+      synced: boolean;          // Is it synced?
+    };
+  };
+  
+  // Legacy Spotify fields (kept for backwards compatibility)
+  // TODO: Migrate existing data to platformPlaylists.spotify
+  spotifyPlaylistId?: string;    // DEPRECATED: Use platformPlaylists.spotify.id
+  spotifyUrl?: string;           // DEPRECATED: Use platformPlaylists.spotify.url
+  synced: boolean;               // DEPRECATED: Use platformPlaylists.spotify.synced
   
   // Metadata
   createdAt: string;             // ISO 8601 timestamp
   updatedAt: string;             // ISO 8601 timestamp (updated on any change)
-  isPublic: boolean;             // Spotify visibility setting
-  coverImage?: string;           // Playlist cover image URL (from Spotify)
+  isPublic: boolean;             // Playlist visibility setting
+  coverImage?: string;           // Playlist cover image URL
 };
 
 /**

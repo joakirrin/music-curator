@@ -15,7 +15,8 @@ type Props = {
   onOpenCreatePlaylist: () => void;
   onRemoveSongFromPlaylist: (playlistId: string, songId: string) => void;
   onMarkAsSynced: (playlistId: string, spotifyPlaylistId: string, spotifyUrl: string) => void;
-  onUpdatePlaylistSongs: (playlistId: string, updatedSongs: Song[]) => void;  // ← AGREGAR
+  onUpdatePlaylistSongs: (playlistId: string, updatedSongs: Song[]) => void;
+  onPlaylistUpdate: (playlist: Playlist) => void;
 };
 
 export const PlaylistsDrawer = ({
@@ -26,7 +27,8 @@ export const PlaylistsDrawer = ({
   onOpenCreatePlaylist,
   onRemoveSongFromPlaylist,
   onMarkAsSynced,
-  onUpdatePlaylistSongs,  // ← AGREGAR
+  onUpdatePlaylistSongs,
+  onPlaylistUpdate,
 }: Props) => {
   const drawerRef = useRef<HTMLDivElement>(null);
   
@@ -383,6 +385,7 @@ const handlePushToSpotify = async (e: React.MouseEvent, playlistId: string) => {
         onOpenChange={setIsDetailModalOpen}
         playlist={selectedPlaylist}
         onRemoveSong={onRemoveSongFromPlaylist}
+        onPlaylistUpdate={onPlaylistUpdate}
       />
       
       {/* Push to Spotify Modal */}

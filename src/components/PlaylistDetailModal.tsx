@@ -1,12 +1,12 @@
 // src/components/PlaylistDetailModal.tsx
 /**
  * Modal for viewing and managing songs in a playlist
- * Shows all songs with ability to remove them
- * 
- * SIMPLIFIED: Songs are now stored directly in playlists (no lookup needed!)
+ * CHUNK 8: Updated with discrete platform badges
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { ExportYouTubeModal } from './ExportYouTubeModal';
+import { PlaylistBadges } from './PlaylistBadges';
 import type { Playlist } from '@/types/playlist';
 
 type Props = {
@@ -14,6 +14,8 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   playlist: Playlist | null;
   onRemoveSong: (playlistId: string, songId: string) => void;
+  onPlaylistUpdate: (playlist: Playlist) => void;
+  onSpotifyExport?: () => void; // 🆕 Callback para export a Spotify
 };
 
 export const PlaylistDetailModal = ({
@@ -21,14 +23,29 @@ export const PlaylistDetailModal = ({
   onOpenChange,
   playlist,
   onRemoveSong,
+  onPlaylistUpdate,
+  onSpotifyExport,
 }: Props) => {
-  // Close on Escape key - with stopPropagation to prevent drawer from closing
+  const [isExportYouTubeModalOpen, setIsExportYouTubeModalOpen] = useState(false);
+
+  // 🔍 DEBUG TEMPORAL - AGREGAR ESTO
+  useEffect(() => {
+    if (open && playlist) {
+      console.log('=== PLAYLIST PROP EN MODAL ===');
+      console.log('Name:', playlist.name);
+      console.log('YouTube ID:', playlist.platformPlaylists?.youtube?.id);
+      console.log('YouTube URL:', playlist.platformPlaylists?.youtube?.url);
+      console.log('Full platformPlaylists:', playlist.platformPlaylists);
+    }
+  }, [open, playlist]);
+
+  // Close on Escape key
   useEffect(() => {
     if (!open) return;
 
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        e.stopPropagation(); // CRITICAL: Stop drawer from seeing this!
+        e.stopPropagation();
         onOpenChange(false);
       }
     };
@@ -61,7 +78,7 @@ export const PlaylistDetailModal = ({
   };
 
   const handleRemove = (e: React.MouseEvent, songId: string) => {
-    e.stopPropagation(); // CRITICAL: Prevent click from bubbling up
+    e.stopPropagation();
     
     if (!playlist) return;
     
@@ -91,7 +108,7 @@ export const PlaylistDetailModal = ({
 
   return (
     <>
-      {/* Backdrop - higher z-index than drawer */}
+      {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4"
         onClick={(e) => {
@@ -121,12 +138,25 @@ export const PlaylistDetailModal = ({
               </div>
               
               {playlist.description && (
-                <p className="text-sm text-gray-400 line-clamp-2">
+                <p className="text-sm text-gray-400 line-clamp-2 mb-2">
                   {playlist.description}
                 </p>
               )}
+
+              {/* 🆕 Platform Badges */}
+              {hasAnySongs && (
+                <div className="mb-2">
+                  <PlaylistBadges
+                    playlist={playlist}
+                    variant="full"
+                    onSpotifyClick={onSpotifyExport}
+                    onYouTubeClick={() => setIsExportYouTubeModalOpen(true)}
+                    showLabel={true}
+                  />
+                </div>
+              )}
               
-              <div className="flex items-center gap-3 mt-2 text-sm text-gray-400">
+              <div className="flex items-center gap-3 text-sm text-gray-400">
                 <span>
                   {songCount} song{songCount !== 1 ? 's' : ''}
                 </span>
@@ -231,26 +261,21 @@ export const PlaylistDetailModal = ({
               </div>
             )}
           </div>
-
-          {/* Footer with Spotify link if available */}
-          {playlist.spotifyUrl && (
-            <div className="px-6 py-4 bg-gray-900 border-t border-gray-700 flex-shrink-0">
-              <a
-                href={playlist.spotifyUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="block w-full px-4 py-3 rounded-lg bg-[#1DB954] text-white text-sm font-medium hover:bg-[#1ed760] transition-colors text-center inline-flex items-center justify-center gap-2"
-              >
-                <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-                  <path d="M12 0a12 12 0 100 24 12 12 0 000-24Zm5.2 16.7a.9.9 0 01-1.2.3c-3.2-2-7.6-2.5-12.3-1.3a.9.9 0 01-.4-1.7c5.1-1.3 10.2-.7 13.9 1.6a.9.9 0 01.4 1.1Zm1.7-3.6a1 1 0 01-1.3.3c-3.7-2.3-9.3-3-13.5-1.6a1 1 0 11-.6-1.9c4.9-1.5 11.2-.7 15.5 2a1 1 0 01-.1 1.2Zm.1-3.8c-4.3-2.6-11.4-2.8-15.8-1.5a1.2 1.2 0 11-.7-2.2c5.1-1.5 13-1.2 18 1.8a1.2 1.2 0 01-1.3 2Z" />
-                </svg>
-                <span>Open in Spotify</span>
-              </a>
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Export YouTube Modal */}
+      {playlist && (
+        <ExportYouTubeModal
+          isOpen={isExportYouTubeModalOpen}
+          onClose={() => setIsExportYouTubeModalOpen(false)}
+          playlist={playlist}
+          onExportComplete={(updatedPlaylist) => {
+            onPlaylistUpdate(updatedPlaylist);
+            setIsExportYouTubeModalOpen(false);
+          }}
+        />
+      )}
     </>
   );
 };
