@@ -7,6 +7,7 @@ import type { ChatMessage as ChatMessageType } from "@/types/chat";
 import type { Song } from "@/types/song";
 import { getRecommendationsFromVibe } from "@/services/openai/openaiService";
 import { mapChatGPTRecommendationToSong } from "@/utils/songMappers";
+import { AlertCircle } from "lucide-react";
 
 type Props = {
   isOpen: boolean;
@@ -23,7 +24,7 @@ type Props = {
   onImportSongs: (songs: Song[]) => Promise<void>;
   onCancelVerification?: (messageId: string) => void;
   parseTimeoutExtension: (userMessage: string) => number | null;
-  preFilledMessage?: string; // 🆕 Phase 2.2: Pre-filled feedback message
+  preFilledMessage?: string;
 };
 
 export default function ChatPanel({
@@ -53,12 +54,11 @@ export default function ChatPanel({
   }, [messages]);
 
   // Handle sending a message to GPT
-  const handleSendMessage = async (userPrompt: string) => {
-    // 🆕 Check if user is trying to extend timeout
+  const handleSendMessage = async (userPrompt: string, forceSongMode: boolean = false, strictJson: boolean = false) => {
+    // Check if user is trying to extend timeout
     const timeoutExtension = parseTimeoutExtension(userPrompt);
     
     if (timeoutExtension) {
-      // Find the last in-progress verification
       const lastVerifyingMessage = [...messages]
         .reverse()
         .find(m => m.verificationStatus === 'in_progress');
@@ -69,13 +69,11 @@ export default function ChatPanel({
             verificationTimeoutSeconds: timeoutExtension
           });
         } else {
-          // Fallback: update last message if no direct updater
           onUpdateLastMessage({
             verificationTimeoutSeconds: timeoutExtension
           });
         }
         
-        // Add system confirmation message
         onAddMessage({
           id: `system-${Date.now()}`,
           role: 'system',
@@ -83,10 +81,8 @@ export default function ChatPanel({
           timestamp: Date.now(),
         });
         
-        console.log(`[Verification] Timeout extended to ${timeoutExtension}s`);
-        return; // Don't send to ChatGPT - handle locally
+        return;
       } else {
-        // No active verification to extend
         onAddMessage({
           id: `system-${Date.now()}`,
           role: 'system',
@@ -97,9 +93,9 @@ export default function ChatPanel({
       }
     }
 
-    try {
-      onSetLoading(true);
+    onSetLoading(true);
 
+    try {
       // 1. Add user message to chat
       const userMessage: ChatMessageType = {
         id: `user-${Date.now()}`,
@@ -109,40 +105,80 @@ export default function ChatPanel({
       };
       onAddMessage(userMessage);
 
-      // 2. Build conversation history (all previous messages)
+      // 2. Build conversation history
       const conversationHistory: Array<{ role: "user" | "assistant"; content: string }> = messages
         .filter(msg => msg.role === "user" || msg.role === "assistant")
+        .filter(msg => msg.content !== "soft_error_recovery") // Skip recovery UI messages
         .map(msg => ({
           role: msg.role as "user" | "assistant",
           content: msg.content,
         }));
       
-      // Add the new user message
       conversationHistory.push({
         role: "user",
         content: userPrompt,
       });
 
-      // 3. Call OpenAI service with full conversation history
+      // 3. Determine mode
+      const mode = forceSongMode ? "songs" : "auto";
+
+      // 4. Call OpenAI service
       const response = await getRecommendationsFromVibe(
         userPrompt,
-        5, // Default count, GPT will extract actual number from prompt
-        conversationHistory.slice(0, -1) // Don't include the message we just added
+        5,
+        conversationHistory.slice(0, -1),
+        mode,
+        strictJson // Pass strict JSON mode flag
       );
 
-      // 4. Add assistant message with explanation
-      const assistantMessage: ChatMessageType = {
-        id: `assistant-${Date.now()}`,
-        role: "assistant",
-        content: response.explanationText,
-        timestamp: Date.now(),
-        verificationStatus: response.songsJson ? "pending" : undefined,
-      };
-      onAddMessage(assistantMessage);
+      // 5. Handle response based on type
+      if (response.type === "soft_error") {
+        // SOFT ERROR: Show GPT's text + recovery options
+        const assistantMessage: ChatMessageType = {
+          id: `assistant-${Date.now()}`,
+          role: "assistant",
+          content: response.explanationText || "I had trouble generating songs.",
+          timestamp: Date.now(),
+        };
+        onAddMessage(assistantMessage);
 
-      // 5. If GPT provided songs, process them
-      if (response.songsJson) {
-        // Map LLM songs to Song objects with current round
+        // Add recovery UI
+        if (response.error?.recoveryOptions) {
+          const recoveryMessage: ChatMessageType = {
+            id: `recovery-${Date.now()}`,
+            role: "system",
+            content: "soft_error_recovery",
+            timestamp: Date.now(),
+            metadata: {
+              errorMessage: response.error.message,
+              recoveryOptions: response.error.recoveryOptions,
+            },
+          };
+          onAddMessage(recoveryMessage);
+        }
+
+      } else if (response.type === "conversation") {
+        // CONVERSATION: Just show GPT's text (no songs)
+        const assistantMessage: ChatMessageType = {
+          id: `assistant-${Date.now()}`,
+          role: "assistant",
+          content: response.explanationText,
+          timestamp: Date.now(),
+        };
+        onAddMessage(assistantMessage);
+
+      } else if (response.type === "success" && response.songsJson) {
+        // SUCCESS: Show text + songs
+        const assistantMessage: ChatMessageType = {
+          id: `assistant-${Date.now()}`,
+          role: "assistant",
+          content: response.explanationText,
+          timestamp: Date.now(),
+          verificationStatus: "pending",
+        };
+        onAddMessage(assistantMessage);
+
+        // Map songs
         const songs = response.songsJson.recommendations.map((rec, index) =>
           mapChatGPTRecommendationToSong(
             {
@@ -150,34 +186,39 @@ export default function ChatPanel({
               artist: rec.artist,
               album: rec.album,
               year: rec.year,
-              reason: rec.reason,
+              reason: rec.reason || rec.comment,
               duration: rec.duration,
             },
             currentRound,
             index,
-            true // autoVerify = true
+            true
           )
         );
 
-        // Update assistant message with songs
+        // Update message with songs
         onUpdateLastMessage({ songs });
 
-        // Trigger auto-import and verification
+        // Import and verify
         await onImportSongs(songs);
-
-        // Increment round for next recommendation
         onIncrementRound();
+
+      } else {
+        // SUCCESS but no songs (shouldn't happen, but handle it)
+        const assistantMessage: ChatMessageType = {
+          id: `assistant-${Date.now()}`,
+          role: "assistant",
+          content: response.explanationText,
+          timestamp: Date.now(),
+        };
+        onAddMessage(assistantMessage);
       }
-      // If no songs (conversational response), just show the message
 
     } catch (err) {
-      // Handle errors
+      // HARD ERROR: Network/API failures only
       const errorMessage: ChatMessageType = {
         id: `error-${Date.now()}`,
         role: "assistant",
-        content: `❌ Sorry, I encountered an error: ${
-          err instanceof Error ? err.message : "Unknown error"
-        }`,
+        content: `❌ Connection error: ${err instanceof Error ? err.message : "Unknown error"}`,
         timestamp: Date.now(),
         verificationStatus: "failed",
       };
@@ -185,6 +226,17 @@ export default function ChatPanel({
     } finally {
       onSetLoading(false);
     }
+  };
+
+  // Handle recovery button clicks
+  const handleRecoveryAction = (action: string) => {
+    if (action === "retry" || action === "regenerate") {
+      const lastUserMessage = [...messages].reverse().find(m => m.role === "user");
+      if (lastUserMessage) {
+        handleSendMessage(lastUserMessage.content, true, true); // Force song mode + strict JSON
+      }
+    }
+    // "continue" action does nothing - just dismisses
   };
 
   return (
@@ -228,13 +280,40 @@ export default function ChatPanel({
             </div>
           ) : (
             <>
-              {messages.map((message) => (
-                <ChatMessage 
-                  key={message.id} 
-                  message={message} 
-                  onCancelVerification={onCancelVerification}
-                />
-              ))}
+              {messages.map((message) => {
+                // Handle soft error recovery UI
+                if (message.role === "system" && message.content === "soft_error_recovery") {
+                  return (
+                    <div key={message.id} className="p-4 bg-orange-900/20 border border-orange-600 rounded-lg">
+                      <div className="flex items-start gap-2 mb-3">
+                        <AlertCircle className="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5" />
+                        <div className="text-sm text-orange-200">
+                          {message.metadata?.errorMessage || "I had trouble with that response."}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 flex-wrap">
+                        {message.metadata?.recoveryOptions?.map((option: any) => (
+                          <button
+                            key={option.action}
+                            onClick={() => handleRecoveryAction(option.action)}
+                            className="px-3 py-1.5 text-sm rounded-lg bg-orange-600 hover:bg-orange-700 text-white transition-colors"
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <ChatMessage 
+                    key={message.id} 
+                    message={message} 
+                    onCancelVerification={onCancelVerification}
+                  />
+                );
+              })}
               <div ref={messagesEndRef} />
             </>
           )}
@@ -242,7 +321,7 @@ export default function ChatPanel({
 
         {/* Input */}
         <ChatInput
-          onSend={handleSendMessage}
+          onSend={(msg) => handleSendMessage(msg, false, false)}
           isLoading={isLoading}
           preFilledMessage={preFilledMessage}
           showWelcome={messages.length === 0}
