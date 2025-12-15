@@ -149,7 +149,10 @@ export const ChatGPTSongRow = ({
 
   const handleKeep = () => {
     set("feedback", "keep");
-    setShowPlaylistModal(true);
+    // Show toast notification
+    toast.success("✓ Marked as Keep", {
+      duration: 2000,
+    });
   };
 
   const getVerificationSourceLabel = (source?: string) => {
@@ -592,24 +595,32 @@ const getPlatformUrl = (platform: PlatformType): string => {
             key={option}
             onClick={() => {
               if (option === "keep") {
-                handleKeep();
+                // Allow toggling Keep on/off
+                if (song.feedback === "keep") {
+                  set("feedback", "pending");
+                  toast.info("Unmarked from Keep", { duration: 1500 });
+                } else {
+                  handleKeep();
+                }
               } else {
                 set("feedback", option);
                 setShowPlaylistModal(false);
               }
             }}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-              song.feedback === option
+            className={`
+              px-3 py-1.5 rounded-full text-sm font-medium border-2 transition-all duration-200
+              ${song.feedback === option
                 ? option === "keep"
-                  ? "bg-green-600 text-white border-green-600"
+                  ? "bg-green-600 text-white border-green-600 scale-105 shadow-lg shadow-green-600/50"
                   : option === "skip"
-                  ? "bg-red-600 text-white border-red-600"
+                  ? "bg-red-600 text-white border-red-600 scale-105 shadow-lg shadow-red-600/50"
                   : "bg-gray-600 text-white border-gray-600"
                 : "bg-gray-800 text-gray-300 border-gray-600 hover:bg-gray-700"
-            }`}
+              }
+            `}
           >
-            {option === "keep" && "✓ Keep"}
-            {option === "skip" && "✗ Skip"}
+            {option === "keep" && (song.feedback === "keep" ? "✓ Kept" : "✓ Keep")}
+            {option === "skip" && (song.feedback === "skip" ? "✗ Skipped" : "✗ Skip")}
             {option === "pending" && "⏳ Pending"}
           </button>
         ))}
@@ -617,7 +628,7 @@ const getPlatformUrl = (platform: PlatformType): string => {
         {song.feedback === 'keep' && (
           <button
             onClick={() => setShowPlaylistModal(true)}
-            className="px-3 py-1.5 rounded-full text-sm font-medium bg-purple-600 text-white hover:bg-purple-700 transition-colors inline-flex items-center gap-2"
+            className="px-3 py-1.5 rounded-full text-sm font-medium bg-transparent text-purple-400 border border-purple-600 hover:bg-purple-900/20 transition-colors inline-flex items-center gap-2"
           >
             <span>📚</span>
             <span>Add to Playlist</span>

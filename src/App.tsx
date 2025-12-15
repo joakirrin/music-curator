@@ -33,13 +33,19 @@ import { PrivacyRouteHandler } from "./components/PrivacyRouteHandler";
 
 // 🆕 NEW IMPORTS - Audio Preview System
 import { AudioProvider } from "./contexts/AudioContext";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
 
 // 🆕 PHASE 2: Chat UI Integration
 import ChatPanel from "./components/ChatPanel";
 import { useChatState } from "./hooks/useChatState";
 import { verifySongsInBatch } from "./utils/verificationOrchestrator";
 import { mapChatGPTRecommendationToSong } from "./utils/songMappers";
+import { useSessionState } from "./hooks/useSessionState";
+import { SessionIndicator } from "./components/SessionIndicator";
+import { getOrphanedKeptSongs } from "./utils/libraryHelpers";
+import { useUndoClear } from "./hooks/useUndoClear";
+import { UndoIndicator } from "./components/UndoIndicator";
+import { ClearLibraryWarningModal } from "./components/ClearLibraryWarningModal";
 
 const DEV = import.meta.env.DEV;
 
@@ -84,6 +90,9 @@ export default function App() {
   const [isChatGPTModalOpen, setIsChatGPTModalOpen] = useState(false);
   const [isFailedTracksModalOpen, setIsFailedTracksModalOpen] = useState(false);
   const [selectedRound, setSelectedRound] = useState<number | "all">("all");
+  // 🆕 PHASE 3: Warning modal state
+  const [showClearWarning, setShowClearWarning] = useState(false);
+  const [clearWarningCallback, setClearWarningCallback] = useState<(() => void) | null>(null);
 
   // 🆕 PHASE 2: Chat state
   const {
@@ -100,15 +109,17 @@ export default function App() {
     setIsLoading: setChatLoading,
   } = useChatState();
 
-  // 🆕 PHASE 2.2: Pre-filled message for feedback
-  const [preFilledMessage, setPreFilledMessage] = useState<string | undefined>(undefined);
-  useEffect(() => {
-    if (isChatOpen && preFilledMessage) {
-      const timer = setTimeout(() => setPreFilledMessage(undefined), 100);
-      return () => clearTimeout(timer);
-    }
-    return undefined;
-  }, [isChatOpen, preFilledMessage]);
+  // 🆕 PHASE 1: Session tracking
+  const { startNewSession } = useSessionState();
+
+  // 🆕 PHASE 2: Undo system
+  const {
+    canUndo,
+    songsCount: undoSongsCount,
+    secondsRemaining,
+    storeClearedSongs,
+    restoreSongs,
+  } = useUndoClear();
 
   // Playlist state
   const {
@@ -127,6 +138,53 @@ export default function App() {
   const [isPlaylistsDrawerOpen, setIsPlaylistsDrawerOpen] = useState(false);
   // YouTube import modal state (Chunk 7)
   const [isImportYouTubeModalOpen, setIsImportYouTubeModalOpen] = useState(false);
+
+  // 🆕 PHASE 2.2: Pre-filled message for feedback
+  const [preFilledMessage, setPreFilledMessage] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    if (isChatOpen && preFilledMessage) {
+      const timer = setTimeout(() => setPreFilledMessage(undefined), 100);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [isChatOpen, preFilledMessage]);
+
+  // 🆕 PHASE 3: Check for orphaned songs and show modal if needed
+  const checkAndClear = useCallback((onConfirm: () => void) => {
+    const orphanedSongs = getOrphanedKeptSongs(songs, playlists);
+    
+    if (orphanedSongs.length > 0) {
+      // Show modal
+      setClearWarningCallback(() => onConfirm);
+      setShowClearWarning(true);
+    } else {
+      // No orphaned songs - clear immediately
+      onConfirm();
+    }
+  }, [songs, playlists]);
+
+  // 🆕 PHASE 3: Quick save orphaned songs to new playlist
+  const handleQuickSaveOrphaned = useCallback((playlistName: string) => {
+    const orphanedSongs = getOrphanedKeptSongs(songs, playlists);
+    
+    if (orphanedSongs.length > 0) {
+      createPlaylist({
+        name: playlistName,
+        description: `Auto-saved from library clear on ${new Date().toLocaleDateString()}`,
+        songs: orphanedSongs,
+        isPublic: false,
+      });
+      
+      toast.success(`✓ Saved ${orphanedSongs.length} songs to "${playlistName}"`, {
+        duration: 3000,
+      });
+    }
+    
+    // Continue with clear
+    if (clearWarningCallback) {
+      clearWarningCallback();
+    }
+  }, [songs, playlists, createPlaylist, clearWarningCallback]);
 
   // ✅ ANALYTICS: Initialize Clarity (only if user already consented)
   useEffect(() => {
@@ -293,12 +351,34 @@ export default function App() {
     [setSongs, songs]
   );
 
+  // 🆕 PHASE 2: Handle undo clear
+  const handleUndoClear = useCallback(() => {
+    const restoredSongs = restoreSongs();
+    
+    if (restoredSongs) {
+      setSongs(restoredSongs);
+      toast.success(`✓ Restored ${restoredSongs.length} song${restoredSongs.length !== 1 ? 's' : ''}`, {
+        duration: 2000,
+      });
+    }
+  }, [restoreSongs, setSongs]);
+
   const onClear = useCallback(() => {
     if (songs.length === 0) return;
-    if (window.confirm("🗑️ Clear ALL songs? This action cannot be undone.")) {
+    
+    checkAndClear(() => {
+      // 🆕 PHASE 2: Store for undo
+      storeClearedSongs(songs);
+      
+      // Clear
       setSongs([]);
-    }
-  }, [songs, setSongs]);
+      
+      // 🆕 PHASE 2: Show simple success message
+      toast.success(`✓ Library cleared • ${songs.length} song${songs.length !== 1 ? 's' : ''} backed up`, {
+        duration: 3000,
+      });
+    });
+  }, [songs, checkAndClear, storeClearedSongs, setSongs]);
 
   const handleChatGPTImport = useCallback(
     (newSongs: Song[]) => {
@@ -815,6 +895,31 @@ const handleCopyReplacementPrompt = useCallback(() => {
     setIsCreatePlaylistModalOpen(true);
   }, []);
 
+  // 🆕 PHASE 1: Handle new session
+  const handleNewSession = useCallback(() => {
+    checkAndClear(() => {
+      // 🆕 PHASE 2: Store songs for undo BEFORE clearing
+      if (songs.length > 0) {
+        storeClearedSongs(songs);
+      }
+      
+      // Clear everything
+      clearHistory();
+      setSongs([]);
+      startNewSession();
+      
+      // 🆕 PHASE 2: Show simple success message
+      toast.success(
+        songs.length > 0 
+          ? `🔄 New session started • ${songs.length} song${songs.length !== 1 ? 's' : ''} backed up`
+          : "🔄 New session started",
+        {
+          duration: 3000,
+        }
+      );
+    });
+  }, [songs, checkAndClear, storeClearedSongs, clearHistory, setSongs, startNewSession]);
+
   return (
     // 🆕 WRAP EVERYTHING WITH AudioProvider - THIS IS THE ONLY CHANGE IN THE RETURN STATEMENT
     <AudioProvider>
@@ -824,6 +929,14 @@ const handleCopyReplacementPrompt = useCallback(() => {
         <PrivacyRouteHandler />
 
         <Header onOpenGuide={() => setDrawerOpen(true)} />
+
+        {/* 🆕 PHASE 1: Session Indicator */}
+        {hasContent && (
+          <SessionIndicator 
+            songCount={songs.length}
+            onNewSession={handleNewSession}
+          />
+        )}
 
         {hasContent ? (
           <>
@@ -964,6 +1077,14 @@ const handleCopyReplacementPrompt = useCallback(() => {
           }}
         />
         
+        {/* 🆕 PHASE 2: Persistent Undo Indicator */}
+        <UndoIndicator
+          canUndo={canUndo}
+          songsCount={undoSongsCount}
+          secondsRemaining={secondsRemaining}
+          onUndo={handleUndoClear}
+        />
+
         <FeedbackFAB onOpenGuide={() => setDrawerOpen(true)} />
 
         {/* 🆕 PHASE 2: Chat Panel */}
@@ -972,8 +1093,11 @@ const handleCopyReplacementPrompt = useCallback(() => {
           messages={messages}
           isLoading={isChatLoading}
           currentRound={currentRound}
+          songs={songs}
+          playlists={playlists}
           onClose={toggleChat}
-          onClearHistory={clearHistory}
+          onClearHistory={handleNewSession}
+          onClearLibrary={handleNewSession}
           onAddMessage={addMessage}
           onUpdateLastMessage={updateLastMessage}
           onUpdateChatMessage={updateChatMessage}
@@ -985,6 +1109,19 @@ const handleCopyReplacementPrompt = useCallback(() => {
           preFilledMessage={preFilledMessage}
         />
   </div>
+
+      {/* 🆕 PHASE 3: Clear Library Warning Modal */}
+      <ClearLibraryWarningModal
+        open={showClearWarning}
+        onOpenChange={setShowClearWarning}
+        orphanedSongs={getOrphanedKeptSongs(songs, playlists)}
+        onContinue={() => {
+          if (clearWarningCallback) {
+            clearWarningCallback();
+          }
+        }}
+        onQuickSave={handleQuickSaveOrphaned}
+      />
       {/* 🆕 ADD TOASTER FOR NOTIFICATIONS */}
       <Toaster 
         position="bottom-right"

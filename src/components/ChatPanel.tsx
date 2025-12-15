@@ -1,21 +1,26 @@
 // src/components/ChatPanel.tsx
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import ChatHeader from "./chat/ChatHeader";
 import ChatInput from "./chat/ChatInput";
 import { ChatMessage } from "./chat/ChatMessage";
 import type { ChatMessage as ChatMessageType } from "@/types/chat";
 import type { Song } from "@/types/song";
+import type { Playlist } from "@/types/playlist";
 import { getRecommendationsFromVibe } from "@/services/openai/openaiService";
 import { mapChatGPTRecommendationToSong } from "@/utils/songMappers";
 import { AlertCircle } from "lucide-react";
+import { FreshStartBanner } from "./FreshStartBanner";
 
 type Props = {
   isOpen: boolean;
   messages: ChatMessageType[];
   isLoading: boolean;
   currentRound: number;
+  songs: Song[]; // 🆕 PHASE 3
+  playlists: Playlist[]; // 🆕 PHASE 3
   onClose: () => void;
   onClearHistory: () => void;
+  onClearLibrary: () => void; // 🆕 PHASE 3
   onAddMessage: (message: ChatMessageType) => void;
   onUpdateLastMessage: (updates: Partial<ChatMessageType>) => void;
   onUpdateChatMessage?: (id: string, updates: Partial<ChatMessageType>) => void;
@@ -27,13 +32,35 @@ type Props = {
   preFilledMessage?: string;
 };
 
+// 🆕 PHASE 3: Detect "fresh start" phrases in GPT responses
+function detectFreshStartKeywords(text: string): boolean {
+  const keywords = [
+    'fresh start',
+    'start fresh',
+    'new playlist',
+    'start over',
+    'clean slate',
+    'begin again',
+    'start anew',
+    'new session',
+    'clear everything',
+    'wipe clean',
+  ];
+  
+  const lowerText = text.toLowerCase();
+  return keywords.some(keyword => lowerText.includes(keyword));
+}
+
 export default function ChatPanel({
   isOpen,
   messages,
   isLoading,
   currentRound,
+  songs,
+  playlists,
   onClose,
   onClearHistory,
+  onClearLibrary,
   onAddMessage,
   onUpdateLastMessage,
   onUpdateChatMessage,
@@ -45,6 +72,9 @@ export default function ChatPanel({
   preFilledMessage,
 }: Props) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // 🆕 PHASE 3: Track if last message suggested fresh start
+  const [showFreshStartBanner, setShowFreshStartBanner] = useState(false);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -52,6 +82,20 @@ export default function ChatPanel({
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
+  
+  // 🆕 PHASE 3: Check if last assistant message suggests fresh start
+  useEffect(() => {
+    const lastAssistantMessage = [...messages]
+      .reverse()
+      .find(m => m.role === 'assistant');
+    
+    if (lastAssistantMessage && lastAssistantMessage.content) {
+      const shouldShow = detectFreshStartKeywords(lastAssistantMessage.content);
+      setShowFreshStartBanner(shouldShow);
+    } else {
+      setShowFreshStartBanner(false);
+    }
+  }, [messages, songs.length]); // ← Add songs.length to deps
 
   // Handle sending a message to GPT
   const handleSendMessage = async (userPrompt: string, forceSongMode: boolean = false, strictJson: boolean = false) => {
@@ -314,6 +358,18 @@ export default function ChatPanel({
                   />
                 );
               })}
+              
+              {/* 🆕 PHASE 3: Fresh Start Banner */}
+              {showFreshStartBanner && songs.length > 0 && (
+                <FreshStartBanner
+                  songs={songs}
+                  playlists={playlists}
+                  onClearLibrary={() => {
+                    onClearLibrary();
+                    setShowFreshStartBanner(false);
+                  }}
+                />
+              )}
               <div ref={messagesEndRef} />
             </>
           )}
