@@ -1,0 +1,43 @@
+name: CI
+
+# Se ejecuta en cada cambio subido a main y en cada Pull Request.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Si llega un cambio nuevo mientras otro sigue corriendo en la misma rama, cancela el anterior.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Typecheck, tests y build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # El lint aún tiene errores de estilo que ya existían antes de añadir tests.
+      # Se muestra el resultado pero no bloquea; quitar "continue-on-error" cuando estén corregidos.
+      - name: Lint (no bloqueante)
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Tests
+        run: npm test
+
+      - name: Build
+        run: npm run build

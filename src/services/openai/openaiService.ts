@@ -102,7 +102,7 @@ Comment: Another comment
  * Supports soft error recovery for better user experience
  * Uses line-based format instead of JSON
  */
-function parseLLMResponse(rawResponse: string, mode: ResponseMode): LLMResponse {
+export function parseLLMResponse(rawResponse: string, mode: ResponseMode): LLMResponse {
   // Look for song recommendations block (case-insensitive)
   const blockRegex = /===\s*SONG RECOMMENDATIONS START\s*===([\s\S]*?)===\s*SONG RECOMMENDATIONS END\s*===/i;
   const blockMatch = rawResponse.match(blockRegex);
