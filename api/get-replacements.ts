@@ -15,6 +15,28 @@ type ChatGPTRecommendation = {
   reason?: string;
 };
 
+// Only accept calls from Fonea's own pages. Browsers always send Origin on
+// POST, so this blocks other websites from spending the OpenAI balance.
+// Not bulletproof (scripts can fake the header), but stops casual abuse.
+function isAllowedOrigin(req: { headers?: Record<string, string | string[] | undefined> }): boolean {
+  const headers = req.headers ?? {};
+  const pick = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
+  const raw = pick(headers.origin) || pick(headers.referer);
+  let host = "";
+  try {
+    host = new URL(raw).hostname;
+  } catch {
+    return false;
+  }
+  return (
+    host === "foneamusic.com" ||
+    host === "www.foneamusic.com" ||
+    (host.startsWith("music-curator") && host.endsWith(".vercel.app")) ||
+    host === "localhost" ||
+    host === "127.0.0.1"
+  );
+}
+
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse
@@ -22,6 +44,10 @@ export default async function handler(
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  if (!isAllowedOrigin(req)) {
+    return res.status(403).json({ error: 'Forbidden' });
   }
 
   // Verify API key is configured

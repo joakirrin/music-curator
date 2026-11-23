@@ -65,3 +65,7 @@ Thumbs.db
 *.log
 .cache/docs/Task Plan Backups/
 .vercel
+
+# Never commit env files with keys
+.env.production
+src/.env*

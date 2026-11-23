@@ -101,4 +101,34 @@ describe('POST /api/openai', () => {
 
   // PENDIENTE DE DECIDIR: hoy cualquiera que conozca la URL puede usar el saldo de OpenAI.
   it.todo('exige algún tipo de autenticación o límite de uso por visitante');
+
+  describe('filtro de origen', () => {
+    it('rechaza con 403 una llamada sin Origin ni Referer, sin llamar a OpenAI', async () => {
+      const res = mockRes();
+      await handler(mockReq({ body: { messages }, headers: {} }), res);
+      expect(res.statusCode).toBe(403);
+      expect(createMock).not.toHaveBeenCalled();
+    });
+
+    it('rechaza con 403 una llamada desde otra web', async () => {
+      const res = mockRes();
+      await handler(mockReq({ body: { messages }, headers: { origin: 'https://evil.example.com' } }), res);
+      expect(res.statusCode).toBe(403);
+      expect(createMock).not.toHaveBeenCalled();
+    });
+
+    it('rechaza dominios que solo se parecen (foneamusic.com.evil.com)', async () => {
+      const res = mockRes();
+      await handler(mockReq({ body: { messages }, headers: { origin: 'https://foneamusic.com.evil.com' } }), res);
+      expect(res.statusCode).toBe(403);
+    });
+
+    it('acepta la dirección de Vercel y el Referer como alternativa', async () => {
+      createMock.mockResolvedValue({ choices: [{ message: { content: 'ok' } }] });
+      const res = mockRes();
+      await handler(mockReq({ body: { messages }, headers: { referer: 'https://music-curator-self.vercel.app/' } }), res);
+      expect(res.statusCode).not.toBe(403);
+      expect(createMock).toHaveBeenCalled();
+    });
+  });
 });

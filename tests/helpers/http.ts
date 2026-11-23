@@ -51,7 +51,8 @@ export function mockReq(init: {
   return {
     method: init.method ?? 'POST',
     body: init.body,
-    headers: init.headers ?? {},
+    // Por defecto simula una llamada desde la propia app.
+    headers: init.headers ?? { origin: 'https://foneamusic.com' },
   };
 }
 
