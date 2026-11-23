@@ -21,7 +21,8 @@ type AuthState = {
 };
 
 const CLIENT_ID = import.meta.env.VITE_YOUTUBE_CLIENT_ID!;
-const REDIRECT_URI = import.meta.env.VITE_YOUTUBE_REDIRECT_URI!;
+// trim(): a stray space in the Vercel value breaks the OAuth redirect match
+const REDIRECT_URI = (import.meta.env.VITE_YOUTUBE_REDIRECT_URI ?? '').trim();
 const STORAGE_KEY = 'fonea_youtube_auth_v1';
 const SCOPES = [
   'https://www.googleapis.com/auth/youtube',

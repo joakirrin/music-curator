@@ -6,6 +6,10 @@ import { spotifyAuth } from '@/services/spotifyAuth';
 import { useState, useEffect } from 'react';
 import { SpotifyBetaRequestModal } from './SpotifyBetaRequestModal';
 
+// Beta access request pop-up. Turned off while Fonea has a single user:
+// the Sign in button goes straight to Spotify login. Set to true to bring it back.
+const SHOW_SPOTIFY_BETA_MODAL = false;
+
 type SpotifyUser = {
   id: string;
   display_name?: string;
@@ -72,9 +76,15 @@ export function SpotifyLoginButton() {
   return (
     <>
       <button
-        onClick={() => setShowBetaModal(true)}
+        onClick={() => {
+          if (SHOW_SPOTIFY_BETA_MODAL) {
+            setShowBetaModal(true);
+          } else {
+            void spotifyAuth.login();
+          }
+        }}
         className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-600 bg-transparent text-gray-300 text-sm font-medium hover:bg-gray-700 hover:text-white hover:border-emerald-500 hover:text-emerald-400 transition-colors group"
-        title="Request Spotify beta access or sign in"
+        title="Sign in with Spotify"
       >
         {/* Spotify logo SVG */}
         <svg
@@ -89,10 +99,12 @@ export function SpotifyLoginButton() {
         <span className="hidden sm:inline">Sign in</span>
       </button>
 
-      <SpotifyBetaRequestModal 
-        open={showBetaModal} 
-        onOpenChange={setShowBetaModal}
-      />
+      {SHOW_SPOTIFY_BETA_MODAL && (
+        <SpotifyBetaRequestModal
+          open={showBetaModal}
+          onOpenChange={setShowBetaModal}
+        />
+      )}
     </>
   );
 }
