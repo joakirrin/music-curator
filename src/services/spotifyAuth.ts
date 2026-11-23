@@ -20,7 +20,8 @@ type AuthState = {
 };
 
 const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID!;
-const REDIRECT_URI = import.meta.env.VITE_SPOTIFY_REDIRECT_URI!;
+// trim(): a stray space in the Vercel value breaks the OAuth redirect match
+const REDIRECT_URI = (import.meta.env.VITE_SPOTIFY_REDIRECT_URI ?? '').trim();
 const STORAGE_KEY = 'fonea_spotify_auth_v1';
 const SCOPES = [
   'user-read-private',
