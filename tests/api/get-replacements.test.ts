@@ -112,4 +112,22 @@ describe('POST /api/get-replacements', () => {
     await handler(mockReq({ body: { prompt: 'x' } }), res);
     expect(JSON.stringify(res.body)).not.toContain('clave-falsa-de-prueba');
   });
+
+  describe('filtro de origen', () => {
+    it('rechaza con 403 una llamada desde otra web', async () => {
+      const handler = await loadHandler();
+      const res = mockRes();
+      await handler(mockReq({ body: {}, headers: { origin: 'https://evil.example.com' } }), res);
+      expect(res.statusCode).toBe(403);
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('rechaza con 403 una llamada sin Origin ni Referer', async () => {
+      const handler = await loadHandler();
+      const res = mockRes();
+      await handler(mockReq({ body: {}, headers: {} }), res);
+      expect(res.statusCode).toBe(403);
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+  });
 });

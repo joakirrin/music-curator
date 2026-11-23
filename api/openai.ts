@@ -13,11 +13,38 @@ const OPENAI_CONFIG = {
   reasoning_effort: "minimal",
 } as const;
 
+// Only accept calls from Fonea's own pages. Browsers always send Origin on
+// POST, so this blocks other websites from spending the OpenAI balance.
+// Not bulletproof (scripts can fake the header), but stops casual abuse.
+function isAllowedOrigin(req: { headers?: Record<string, string | string[] | undefined> }): boolean {
+  const headers = req.headers ?? {};
+  const pick = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
+  const raw = pick(headers.origin) || pick(headers.referer);
+  let host = "";
+  try {
+    host = new URL(raw).hostname;
+  } catch {
+    return false;
+  }
+  return (
+    host === "foneamusic.com" ||
+    host === "www.foneamusic.com" ||
+    (host.startsWith("music-curator") && host.endsWith(".vercel.app")) ||
+    host === "localhost" ||
+    host === "127.0.0.1"
+  );
+}
+
 export default async function handler(req: any, res: any) {
   // Only allow POST
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     res.status(405).send("Method Not Allowed");
+    return;
+  }
+
+  if (!isAllowedOrigin(req)) {
+    res.status(403).send("Forbidden");
     return;
   }
 
