@@ -47,9 +47,8 @@ export async function verifySongsInBatch(
   const verifiedSongs: Song[] = [];
 
   for (let i = 0; i < songs.length; i++) {
-    if (abortSignal?.aborted) {
-      throw new DOMException("Verification aborted", "AbortError");
-    }
+    // Stopped (timeout or cancel): return what was checked so far
+    if (abortSignal?.aborted) break;
 
     const song = songs[i];
     

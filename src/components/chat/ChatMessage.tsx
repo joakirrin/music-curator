@@ -65,7 +65,7 @@ export function ChatMessage({ message, onCancelVerification }: ChatMessageProps)
               <div className="flex items-center gap-2 text-sm text-yellow-700 dark:text-yellow-400">
                 <AlertCircle className="h-4 w-4" />
                 <span>
-                  Verification cancelled. All songs kept; unchecked ones are marked unverified.
+                  Verification cancelled. All songs kept: {message.verificationProgress.verified} verified, the unchecked ones marked unverified.
                 </span>
               </div>
             )}
@@ -76,7 +76,7 @@ export function ChatMessage({ message, onCancelVerification }: ChatMessageProps)
                 <AlertCircle className="h-4 w-4" />
                 <span>
                   Verification timed out after {message.verificationTimeoutSeconds || 30}s. 
-                  All songs kept; unchecked ones are marked unverified.
+                  All songs kept: {message.verificationProgress.verified} verified, the unchecked ones marked unverified.
                 </span>
               </div>
             )}

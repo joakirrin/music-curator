@@ -371,7 +371,6 @@ export default function App() {
           verificationStatus: 'in_progress', // 🆕 Set to in_progress
           verificationAbortController: abortController, // 🆕 Store controller
           verificationStartTime: Date.now(), // 🆕 Track start time
-          songs: newSongs, // timeout/cancel find this round's songs through it
           verificationTimeoutSeconds: 30, // 🆕 Default 30s timeout
           verificationProgress: {
             total: newSongs.length,
@@ -396,13 +395,7 @@ export default function App() {
           abortController.signal // 🆕 Pass abort signal for cancellation
         );
         
-        // 4. Check if verification was aborted
-        if (abortController.signal.aborted) {
-          console.log('[Verification] Aborted by user or timeout');
-          return; // Exit early, cleanup already handled by cancel/timeout handler
-        }
-
-        // 5. Update songs with verification results
+        // 4. Update songs with verification results (partial if it was stopped)
         setSongs((prev) => {
           const updatedSongs = prev.map((song) => {
             const verified = verifiedSongs.find((v) => v.id === song.id);
@@ -410,6 +403,12 @@ export default function App() {
           });
           return updatedSongs;
         });
+
+        // 5. Stopped by user or timeout: keep partial results, skip the rest
+        if (abortController.signal.aborted) {
+          console.log('[Verification] Aborted by user or timeout');
+          return;
+        }
 
         // 🆕 TIER S: AUTO-REPLACEMENT START
         // If there are failed songs (after ALL 4 verification tiers), automatically get replacements
