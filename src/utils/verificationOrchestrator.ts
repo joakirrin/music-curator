@@ -21,6 +21,157 @@ export type VerificationProgress = {
   currentSong?: string;
 };
 
+const SONG_TIMEOUT_MS = 15000;
+
+/** Runs the tiers for one song: returns it marked 'verified' or 'failed'. */
+async function verifyOne(song: Song): Promise<Song> {
+  let out: Song | undefined;
+  
+  // TIER 1: Try MusicBrainz first (best source - has ISRCs, metadata)
+  const mbResult = await verifyWithMusicBrainz(song.artist, song.title);
+  
+  if (mbResult.verified) {
+    // MusicBrainz success! Update song with all the data
+    out = {
+      ...song,
+      verificationStatus: 'verified',
+      verificationSource: 'musicbrainz',
+      musicBrainzId: mbResult.musicBrainzId,
+      isrc: mbResult.isrc,
+      albumArtUrl: mbResult.albumArtUrl,
+      releaseId: mbResult.releaseId,
+      previewUrl: mbResult.previewUrl,
+      previewSource: mbResult.previewSource,
+      artist: mbResult.artist,
+      title: mbResult.title,
+      album: mbResult.album || song.album,
+      year: mbResult.year || song.year,
+      duration: mbResult.duration,
+      durationMs: mbResult.durationMs,
+      platformIds: mbResult.platformIds,
+    };
+    
+    // Try to enhance with Spotify ISRC resolution (if user is logged in and ISRC exists)
+    if (mbResult.isrc && !mbResult.platformIds?.spotify) {
+      const spotifyToken = await spotifyAuth.getAccessToken();
+      if (spotifyToken) {
+        const spotifyData = await resolveSpotifyByISRC(mbResult.isrc, spotifyToken);
+        if (spotifyData) {
+          const lastSong = out!;
+          if (!lastSong.platformIds) lastSong.platformIds = {};
+          lastSong.platformIds.spotify = spotifyData;
+        }
+      }
+    }
+    
+    // Try to enhance with Apple Music resolution (always try - no auth needed)
+    const appleMusicData = await resolveAppleMusic(mbResult.artist, mbResult.title);
+    if (appleMusicData) {
+      const lastSong = out!;
+      if (!lastSong.platformIds) lastSong.platformIds = {};
+      lastSong.platformIds.apple = appleMusicData;
+      if (!lastSong.albumArtUrl && appleMusicData.artworkUrl) {
+        lastSong.albumArtUrl = appleMusicData.artworkUrl;
+      }
+      
+      // 🆕 Also enhance with preview URL if MusicBrainz didn't get one
+      if (!lastSong.previewUrl) {
+        const { getPreviewUrl } = await import('@/services/appleMusicService');
+        const applePreview = await getPreviewUrl({
+          artist: mbResult.artist,
+          title: mbResult.title,
+        });
+        if (applePreview) {
+          lastSong.previewUrl = applePreview;
+          lastSong.previewSource = 'apple';
+        }
+      }
+    }
+  } else {
+    // TIER 2: MusicBrainz failed → Try Apple Music (no auth required!)
+    const appleMusicData = await resolveAppleMusic(song.artist, song.title);
+    
+    if (appleMusicData) {
+      // 🆕 Also fetch preview URL for Apple Music
+      const { getPreviewUrl } = await import('@/services/appleMusicService');
+      const previewUrl = await getPreviewUrl({
+        artist: song.artist,
+        title: song.title,
+      });
+      
+      // Apple Music success!
+      out = {
+        ...song,
+        verificationStatus: 'verified',
+        verificationSource: 'apple',
+        platformIds: {
+          apple: appleMusicData,
+        },
+        albumArtUrl: appleMusicData.artworkUrl,
+        previewUrl: previewUrl || undefined, // 🆕 Add preview URL
+        previewSource: previewUrl ? 'apple' : undefined, // 🆕 Add preview source
+        artist: song.artist,
+        title: song.title,
+        album: song.album,
+        year: song.year,
+      };
+    } else {
+      // TIER 3: Both MusicBrainz and Apple failed → Try Spotify 3-tier (if logged in)
+      const spotifyToken = await spotifyAuth.getAccessToken();
+      
+      if (spotifyToken) {
+        try {
+          const spotifyResult = await resolveSpotifySong(song, spotifyToken);
+          
+          if (spotifyResult.spotifyUri) {
+            // Spotify 3-tier success!
+            const spotifyId = spotifyResult.spotifyUri.split(':')[2];
+            
+            // 🆕 Try to get preview URL from Apple Music as enhancement
+            const { getPreviewUrl } = await import('@/services/appleMusicService');
+            const previewUrl = await getPreviewUrl({
+              artist: song.artist,
+              title: song.title,
+            });
+            
+            out = {
+              ...song,
+              verificationStatus: 'verified',
+              verificationSource: 'spotify',
+              spotifyUri: spotifyResult.spotifyUri,
+              platformIds: {
+                spotify: {
+                  id: spotifyId,
+                  url: `https://open.spotify.com/track/${spotifyId}`,
+                }
+              },
+              previewUrl: previewUrl || undefined, // 🆕 Add Apple Music preview as fallback
+              previewSource: previewUrl ? 'apple' : undefined, // 🆕 Preview source
+              artist: song.artist,
+              title: song.title,
+              album: song.album,
+              year: song.year,
+            };
+          }
+        } catch (spotifyError) {
+          console.error('[Verification] Spotify 3-tier failed:', spotifyError);
+        }
+      }
+      
+      // TIER 4: All tiers failed → Mark as failed
+      if (!out) {
+        out = {
+          ...song,
+          verificationStatus: 'failed',
+          verificationSource: 'multi',
+          verificationError: `Not found in MusicBrainz, Apple Music${spotifyToken ? ', or Spotify' : ''}. ${mbResult.error || 'No details available.'}`,
+        };
+      }
+    }
+  }
+  return out!;
+}
+
 /**
  * Verifies a batch of songs using the 4-tier verification system:
  * Tier 1: MusicBrainz (ISRC, metadata, platform IDs)
@@ -47,9 +198,8 @@ export async function verifySongsInBatch(
   const verifiedSongs: Song[] = [];
 
   for (let i = 0; i < songs.length; i++) {
-    if (abortSignal?.aborted) {
-      throw new DOMException("Verification aborted", "AbortError");
-    }
+    // Stopped (timeout or cancel): return what was checked so far
+    if (abortSignal?.aborted) break;
 
     const song = songs[i];
     
@@ -72,170 +222,38 @@ export async function verifySongsInBatch(
       continue;
     }
 
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let onAbort: (() => void) | undefined;
     try {
-      let isVerified = false;
-      
-      // TIER 1: Try MusicBrainz first (best source - has ISRCs, metadata)
-      const mbResult = await verifyWithMusicBrainz(song.artist, song.title);
-      
-      if (mbResult.verified) {
-        // MusicBrainz success! Update song with all the data
-        verifiedSongs.push({
-          ...song,
-          verificationStatus: 'verified',
-          verificationSource: 'musicbrainz',
-          musicBrainzId: mbResult.musicBrainzId,
-          isrc: mbResult.isrc,
-          albumArtUrl: mbResult.albumArtUrl,
-          releaseId: mbResult.releaseId,
-          previewUrl: mbResult.previewUrl,
-          previewSource: mbResult.previewSource,
-          artist: mbResult.artist,
-          title: mbResult.title,
-          album: mbResult.album || song.album,
-          year: mbResult.year || song.year,
-          duration: mbResult.duration,
-          durationMs: mbResult.durationMs,
-          platformIds: mbResult.platformIds,
-        });
-        
-        isVerified = true;
-        
-        // Try to enhance with Spotify ISRC resolution (if user is logged in and ISRC exists)
-        if (mbResult.isrc && !mbResult.platformIds?.spotify) {
-          const spotifyToken = await spotifyAuth.getAccessToken();
-          if (spotifyToken) {
-            const spotifyData = await resolveSpotifyByISRC(mbResult.isrc, spotifyToken);
-            if (spotifyData) {
-              const lastSong = verifiedSongs[verifiedSongs.length - 1];
-              if (!lastSong.platformIds) lastSong.platformIds = {};
-              lastSong.platformIds.spotify = spotifyData;
-            }
-          }
-        }
-        
-        // Try to enhance with Apple Music resolution (always try - no auth needed)
-        const appleMusicData = await resolveAppleMusic(mbResult.artist, mbResult.title);
-        if (appleMusicData) {
-          const lastSong = verifiedSongs[verifiedSongs.length - 1];
-          if (!lastSong.platformIds) lastSong.platformIds = {};
-          lastSong.platformIds.apple = appleMusicData;
-          if (!lastSong.albumArtUrl && appleMusicData.artworkUrl) {
-            lastSong.albumArtUrl = appleMusicData.artworkUrl;
-          }
-          
-          // 🆕 Also enhance with preview URL if MusicBrainz didn't get one
-          if (!lastSong.previewUrl) {
-            const { getPreviewUrl } = await import('@/services/appleMusicService');
-            const applePreview = await getPreviewUrl({
-              artist: mbResult.artist,
-              title: mbResult.title,
-            });
-            if (applePreview) {
-              lastSong.previewUrl = applePreview;
-              lastSong.previewSource = 'apple';
-            }
-          }
-        }
-      } else {
-        // TIER 2: MusicBrainz failed → Try Apple Music (no auth required!)
-        const appleMusicData = await resolveAppleMusic(song.artist, song.title);
-        
-        if (appleMusicData) {
-          // 🆕 Also fetch preview URL for Apple Music
-          const { getPreviewUrl } = await import('@/services/appleMusicService');
-          const previewUrl = await getPreviewUrl({
-            artist: song.artist,
-            title: song.title,
-          });
-          
-          // Apple Music success!
-          verifiedSongs.push({
-            ...song,
-            verificationStatus: 'verified',
-            verificationSource: 'apple',
-            platformIds: {
-              apple: appleMusicData,
-            },
-            albumArtUrl: appleMusicData.artworkUrl,
-            previewUrl: previewUrl || undefined, // 🆕 Add preview URL
-            previewSource: previewUrl ? 'apple' : undefined, // 🆕 Add preview source
-            artist: song.artist,
-            title: song.title,
-            album: song.album,
-            year: song.year,
-          });
-          
-          isVerified = true;
-        } else {
-          // TIER 3: Both MusicBrainz and Apple failed → Try Spotify 3-tier (if logged in)
-          const spotifyToken = await spotifyAuth.getAccessToken();
-          
-          if (spotifyToken) {
-            try {
-              const spotifyResult = await resolveSpotifySong(song, spotifyToken);
-              
-              if (spotifyResult.spotifyUri) {
-                // Spotify 3-tier success!
-                const spotifyId = spotifyResult.spotifyUri.split(':')[2];
-                
-                // 🆕 Try to get preview URL from Apple Music as enhancement
-                const { getPreviewUrl } = await import('@/services/appleMusicService');
-                const previewUrl = await getPreviewUrl({
-                  artist: song.artist,
-                  title: song.title,
-                });
-                
-                verifiedSongs.push({
-                  ...song,
-                  verificationStatus: 'verified',
-                  verificationSource: 'spotify',
-                  spotifyUri: spotifyResult.spotifyUri,
-                  platformIds: {
-                    spotify: {
-                      id: spotifyId,
-                      url: `https://open.spotify.com/track/${spotifyId}`,
-                    }
-                  },
-                  previewUrl: previewUrl || undefined, // 🆕 Add Apple Music preview as fallback
-                  previewSource: previewUrl ? 'apple' : undefined, // 🆕 Preview source
-                  artist: song.artist,
-                  title: song.title,
-                  album: song.album,
-                  year: song.year,
-                });
-                
-                isVerified = true;
-              }
-            } catch (spotifyError) {
-              console.error('[Verification] Spotify 3-tier failed:', spotifyError);
-            }
-          }
-          
-          // TIER 4: All tiers failed → Mark as failed
-          if (!isVerified) {
-            verifiedSongs.push({
-              ...song,
-              verificationStatus: 'failed',
-              verificationSource: 'multi',
-              verificationError: `Not found in MusicBrainz, Apple Music${spotifyToken ? ', or Spotify' : ''}. ${mbResult.error || 'No details available.'}`,
-            });
-          }
-        }
-      }
-      
-      // Update summary
-      if (isVerified) {
+      // A slow song (MusicBrainz retries) must not hold up the rest: after
+      // SONG_TIMEOUT_MS it is left 'unverified' and we move on to the next one.
+      const tooSlow = new Promise<'slow'>(resolve => {
+        timer = setTimeout(() => resolve('slow'), SONG_TIMEOUT_MS);
+      });
+      const stopped = new Promise<'stopped'>(resolve => {
+        onAbort = () => resolve('stopped');
+        abortSignal?.addEventListener('abort', onAbort);
+      });
+      const result = await Promise.race([verifyOne(song), tooSlow, stopped]);
+      if (result === 'stopped') break;
+
+      const out: Song = result === 'slow'
+        ? { ...song, verificationStatus: 'unverified', verificationError: 'Verification took too long. Use Re-verify to try again.' }
+        : result;
+      verifiedSongs.push(out);
+
+      if (out.verificationStatus === 'verified') {
         summary.verified++;
-      } else {
+      } else if (out.verificationStatus === 'failed') {
         summary.failed++;
         summary.failedSongs.push({
           title: song.title,
           artist: song.artist,
-          error: verifiedSongs[verifiedSongs.length - 1].verificationError || 'Verification failed',
+          error: out.verificationError || 'Verification failed',
         });
+      } else {
+        summary.skipped++;
       }
-      
     } catch (err) {
       // Catch-all error handler
       summary.failed++;
@@ -250,6 +268,9 @@ export async function verifySongsInBatch(
         verificationSource: 'multi',
         verificationError: err instanceof Error ? err.message : 'Verification failed',
       });
+    } finally {
+      clearTimeout(timer);
+      if (onAbort) abortSignal?.removeEventListener('abort', onAbort);
     }
 
     // Small delay to avoid hammering the API

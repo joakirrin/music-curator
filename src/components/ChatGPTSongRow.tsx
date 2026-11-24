@@ -21,6 +21,7 @@ type Props = {
   playlists: Playlist[];
   onAddToPlaylist: (playlistId: string, songId: string) => void;
   onRemoveFromPlaylist: (playlistId: string, songId: string) => void;
+  onReverify: () => void;
 };
 
 // 🆕 Platform button loading state type
@@ -110,6 +111,7 @@ export const ChatGPTSongRow = ({
   playlists,
   onAddToPlaylist,
   onRemoveFromPlaylist,
+  onReverify,
 }: Props) => {
   
   const set = <K extends keyof Song>(key: K, value: Song[K]) =>
@@ -306,6 +308,14 @@ const getPlatformUrl = (platform: PlatformType): string => {
             {song.verificationStatus === "failed" && "✗ Failed"}
             {song.verificationStatus === "unverified" && "⚠️ Unverified"}
           </span>
+        )}
+        {(song.verificationStatus === "unverified" || song.verificationStatus === "failed") && (
+          <button
+            onClick={onReverify}
+            className="px-2 py-1 rounded-full text-xs font-medium border border-gray-500 text-gray-200 hover:bg-gray-700"
+          >
+            ↻ Re-verify
+          </button>
         )}
 
         {/* Round */}

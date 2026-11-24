@@ -12,7 +12,6 @@ interface ChatMessageProps {
 export function ChatMessage({ message, onCancelVerification }: ChatMessageProps) {
   const isVerifying = message.verificationStatus === 'in_progress';
   const isCancelled = message.verificationStatus === 'cancelled';
-  const isTimeout = message.verificationStatus === 'timeout';
   const isComplete = message.verificationStatus === 'complete';
   
   return (
@@ -65,18 +64,7 @@ export function ChatMessage({ message, onCancelVerification }: ChatMessageProps)
               <div className="flex items-center gap-2 text-sm text-yellow-700 dark:text-yellow-400">
                 <AlertCircle className="h-4 w-4" />
                 <span>
-                  Verification cancelled. Kept {message.verificationProgress.verified}/{message.verificationProgress.total} verified songs.
-                </span>
-              </div>
-            )}
-            
-            {/* Timeout State */}
-            {isTimeout && (
-              <div className="flex items-center gap-2 text-sm text-orange-700 dark:text-orange-400">
-                <AlertCircle className="h-4 w-4" />
-                <span>
-                  Verification timed out after {message.verificationTimeoutSeconds || 30}s. 
-                  Kept {message.verificationProgress.verified}/{message.verificationProgress.total} verified songs.
+                  Verification cancelled. All songs kept: {message.verificationProgress.verified} verified, the rest marked unverified (use Re-verify).
                 </span>
               </div>
             )}

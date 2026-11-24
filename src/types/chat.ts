@@ -7,13 +7,12 @@ export type ChatMessage = {
   content: string;
   timestamp: number;
   songs?: Song[];
-  verificationStatus?: 'pending' | 'in_progress' | 'complete' | 'failed' | 'cancelled' | 'timeout';
+  verificationStatus?: 'pending' | 'in_progress' | 'complete' | 'failed' | 'cancelled';
   verificationProgress?: {
     total: number;
     verified: number;
     failed: number;
   };
-  verificationTimeoutSeconds?: number;
   verificationStartTime?: number; // 🆕 Track when verification started
   verificationAbortController?: AbortController; // 🆕 For canceling verification
   replacementStatus?: 'requesting' | 'verifying' | 'complete' | 'failed';

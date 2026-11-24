@@ -41,40 +41,12 @@ import { verifySongsInBatch } from "./utils/verificationOrchestrator";
 import { mapChatGPTRecommendationToSong } from "./utils/songMappers";
 import { useSessionState } from "./hooks/useSessionState";
 import { SessionIndicator } from "./components/SessionIndicator";
-import { getOrphanedKeptSongs } from "./utils/libraryHelpers";
+import { getOrphanedKeptSongs, keepPendingAsUnverified } from "./utils/libraryHelpers";
 import { useUndoClear } from "./hooks/useUndoClear";
 import { UndoIndicator } from "./components/UndoIndicator";
 import { ClearLibraryWarningModal } from "./components/ClearLibraryWarningModal";
 
 const DEV = import.meta.env.DEV;
-
-// 🆕 Parse timeout extension from user prompts
-function parseTimeoutExtension(userMessage: string): number | null {
-  const lowerMessage = userMessage.toLowerCase().trim();
-  
-  // Match patterns like:
-  // "extend timeout to 60 seconds"
-  // "extend timeout to 60s"
-  // "set timeout to 60"
-  // "increase timeout to 60"
-  const patterns = [
-    /(?:extend|set|increase|change)\s+timeout\s+to\s+(\d+)(?:\s*seconds?|s)?/,
-    /timeout\s+(\d+)(?:\s*seconds?|s)?/,
-  ];
-  
-  for (const pattern of patterns) {
-    const match = lowerMessage.match(pattern);
-    if (match) {
-      const seconds = parseInt(match[1]);
-      // Only allow 30 or 60 seconds
-      if (seconds === 30 || seconds === 60) {
-        return seconds;
-      }
-    }
-  }
-  
-  return null;
-}
 
 export default function App() {
   // --- Onboarding / Guide ---
@@ -272,61 +244,6 @@ export default function App() {
     }
   }, []);
 
-  // 🆕 Timeout detection for hung verifications
-  useEffect(() => {
-    const checkTimeouts = setInterval(() => {
-      messages.forEach(message => {
-        // Only check messages that are actively verifying
-        if (message.verificationStatus === 'in_progress' && message.verificationStartTime) {
-          const timeoutSeconds = message.verificationTimeoutSeconds || 30;
-          const elapsedSeconds = (Date.now() - message.verificationStartTime) / 1000;
-          
-          if (elapsedSeconds > timeoutSeconds) {
-            console.log(`[Verification] Timeout after ${timeoutSeconds}s for message ${message.id}`);
-            
-            // Abort verification
-            if (message.verificationAbortController) {
-              message.verificationAbortController.abort();
-            }
-            
-            // Update message status AND clear replacement status
-            updateChatMessage(message.id, {
-              verificationStatus: 'timeout',
-              replacementStatus: undefined, // 🆕 Clear replacement animation
-              replacementAttempt: undefined, // 🆕 Clear attempt counter
-            });
-            
-            // Delete unverified songs (same logic as cancel)
-            const verifiedCount = message.verificationProgress?.verified || 0;
-            const totalCount = message.verificationProgress?.total || 0;
-            const unverifiedCount = totalCount - verifiedCount;
-            
-            if (unverifiedCount > 0) {
-              setSongs((prev) => {
-                const updated = prev.filter(song => {
-                  const isFromThisMessage = song.messageId === message.id || 
-                                           (song.round === message.songs?.[0]?.round);
-                  
-                  if (!isFromThisMessage) return true;
-                  if (song.verificationStatus === 'verified') return true;
-                  
-                  console.log(`[Verification] Timeout - Deleting: ${song.title}`);
-                  return false;
-                });
-                
-                return updated;
-              });
-              
-              console.log(`[Verification] Timeout: Deleted ${unverifiedCount}, kept ${verifiedCount}`);
-            }
-          }
-        }
-      });
-    }, 5000); // Check every 5 seconds
-    
-    return () => clearInterval(checkTimeouts);
-  }, [messages, setSongs, updateChatMessage]);
-
   // --- Song logic ---
   const updateSong = useCallback(
     (id: string, updates: Partial<Song>) => {
@@ -335,6 +252,24 @@ export default function App() {
       );
     },
     [setSongs]
+  );
+
+  // Run verification again for songs that came out unverified or failed
+  const reverifySongs = useCallback(
+    async (targets: Song[]) => {
+      if (targets.length === 0) return;
+      const ids = new Set(targets.map((s) => s.id));
+      setSongs((prev) =>
+        prev.map((s) => (ids.has(s.id) ? { ...s, verificationStatus: "checking" } : s))
+      );
+      const { verifiedSongs } = await verifySongsInBatch(targets);
+      setSongs((prev) => prev.map((s) => verifiedSongs.find((v) => v.id === s.id) ?? s));
+    },
+    [setSongs]
+  );
+  const unverifiedSongs = useMemo(
+    () => songs.filter((s) => s.verificationStatus === "unverified"),
+    [songs]
   );
 
   const deleteSong = useCallback(
@@ -393,7 +328,6 @@ export default function App() {
           verificationStatus: 'in_progress', // 🆕 Set to in_progress
           verificationAbortController: abortController, // 🆕 Store controller
           verificationStartTime: Date.now(), // 🆕 Track start time
-          verificationTimeoutSeconds: 30, // 🆕 Default 30s timeout
           verificationProgress: {
             total: newSongs.length,
             verified: 0,
@@ -417,13 +351,7 @@ export default function App() {
           abortController.signal // 🆕 Pass abort signal for cancellation
         );
         
-        // 4. Check if verification was aborted
-        if (abortController.signal.aborted) {
-          console.log('[Verification] Aborted by user or timeout');
-          return; // Exit early, cleanup already handled by cancel/timeout handler
-        }
-
-        // 5. Update songs with verification results
+        // 4. Update songs with verification results (partial if it was stopped)
         setSongs((prev) => {
           const updatedSongs = prev.map((song) => {
             const verified = verifiedSongs.find((v) => v.id === song.id);
@@ -431,6 +359,12 @@ export default function App() {
           });
           return updatedSongs;
         });
+
+        // 5. Cancelled by the user: keep partial results, skip the rest
+        if (abortController.signal.aborted) {
+          console.log('[Verification] Cancelled by user');
+          return;
+        }
 
         // 🆕 TIER S: AUTO-REPLACEMENT START
         // If there are failed songs (after ALL 4 verification tiers), automatically get replacements
@@ -662,31 +596,7 @@ export default function App() {
         replacementAttempt: undefined,
       });
       
-      // Calculate how many songs to delete
-      const verifiedCount = message.verificationProgress?.verified || 0;
-      const totalCount = message.verificationProgress?.total || 0;
-      const unverifiedCount = totalCount - verifiedCount;
-      
-      if (unverifiedCount > 0) {
-        // Delete unverified songs (keep verified ones)
-        setSongs((prev) => {
-          const updated = prev.filter(song => {
-            // Keep if: (1) verified, OR (2) from a different message
-            const isFromThisMessage = song.messageId === messageId || 
-                                     (song.round === message.songs?.[0]?.round);
-            
-            if (!isFromThisMessage) return true; // Keep songs from other messages
-            if (song.verificationStatus === 'verified') return true; // Keep verified songs
-            
-            console.log(`[Verification] Deleting unverified: ${song.title} by ${song.artist}`);
-            return false; // Delete unverified songs
-          });
-          
-          return updated;
-        });
-        
-        console.log(`[Verification] Deleted ${unverifiedCount} unverified songs, kept ${verifiedCount} verified`);
-      }
+      setSongs((prev) => keepPendingAsUnverified(prev, messageId, message.songs?.[0]?.round));
     },
     [messages, setSongs, updateChatMessage]
   );
@@ -955,6 +865,16 @@ const handleCopyReplacementPrompt = useCallback(() => {
             />
 
             <div className="flex-1 pb-8">
+              {unverifiedSongs.length > 0 && (
+                <div className="container mx-auto px-4 pt-4">
+                  <button
+                    onClick={() => reverifySongs(unverifiedSongs)}
+                    className="px-3 py-2 rounded-xl border text-sm bg-orange-600 text-white border-orange-600 hover:bg-orange-700"
+                  >
+                    ↻ Re-verify {unverifiedSongs.length} unverified
+                  </button>
+                </div>
+              )}
               {filtered.map((s) => (
                 <ChatGPTSongRow
                   key={s.id}
@@ -965,6 +885,7 @@ const handleCopyReplacementPrompt = useCallback(() => {
                   playlists={playlists}
                   onAddToPlaylist={handleAddToPlaylist}
                   onRemoveFromPlaylist={handleRemoveFromPlaylist}
+                  onReverify={() => reverifySongs([s])}
                 />
               ))}
 
@@ -1083,12 +1004,10 @@ const handleCopyReplacementPrompt = useCallback(() => {
           onClearLibrary={handleNewSession}
           onAddMessage={addMessage}
           onUpdateLastMessage={updateLastMessage}
-          onUpdateChatMessage={updateChatMessage}
           onSetLoading={setChatLoading}
           onIncrementRound={incrementRound}
           onImportSongs={handleChatImportSongs}
           onCancelVerification={handleCancelVerification}
-          parseTimeoutExtension={parseTimeoutExtension}
           preFilledMessage={preFilledMessage}
         />
   </div>
