@@ -6,7 +6,6 @@ import { Header } from "./components/Header";
 import Toolbar from "./components/Toolbar";
 import FilterBar from "./components/FilterBar";
 import { ChatGPTSongRow } from "./components/ChatGPTSongRow";
-import ImportChatGPTModal from "./components/ImportChatGPTModal";
 import FailedTracksModal from "./components/FailedTracksModal";
 import { FeedbackFAB } from "./components/FeedbackFAB";
 import { ImportYouTubePlaylistModal } from "./components/ImportYouTubePlaylistModal";
@@ -87,7 +86,6 @@ export default function App() {
   const [filterType, setFilterType] = useState<FilterType>("all");
   const [verificationFilter, setVerificationFilter] = useState<VerificationFilterType>("all");
   const [search, setSearch] = useState("");
-  const [isChatGPTModalOpen, setIsChatGPTModalOpen] = useState(false);
   const [isFailedTracksModalOpen, setIsFailedTracksModalOpen] = useState(false);
   const [selectedRound, setSelectedRound] = useState<number | "all">("all");
   // 🆕 PHASE 3: Warning modal state
@@ -379,14 +377,6 @@ export default function App() {
       });
     });
   }, [songs, checkAndClear, storeClearedSongs, setSongs]);
-
-  const handleChatGPTImport = useCallback(
-    (newSongs: Song[]) => {
-      setSongs((prev) => [...prev, ...newSongs]);
-      setIsChatGPTModalOpen(false);
-    },
-    [setSongs]
-  );
 
   // 🆕 PHASE 2.5: Auto-import and verify songs from chat (WITH CANCELLATION SUPPORT)
   const handleChatImportSongs = useCallback(
@@ -1011,10 +1001,10 @@ const handleCopyReplacementPrompt = useCallback(() => {
                     <>
                       No songs yet. Click{" "}
                       <button
-                        onClick={() => setIsChatGPTModalOpen(true)}
+                        onClick={() => { if (!isChatOpen) toggleChat(); }}
                         className="text-emerald-400 hover:text-emerald-300 underline"
                       >
-                        🤖 Import from ChatGPT
+                        💬 Open the chat
                       </button>{" "}
                       to get started.
                     </>
@@ -1028,13 +1018,6 @@ const handleCopyReplacementPrompt = useCallback(() => {
         )}
 
         {/* Modals */}
-        <ImportChatGPTModal
-          open={isChatGPTModalOpen}
-          onOpenChange={setIsChatGPTModalOpen}
-          onImport={handleChatGPTImport}
-          existingSongs={songs}
-        />
-
         <FailedTracksModal
           open={isFailedTracksModalOpen}
           onOpenChange={setIsFailedTracksModalOpen}

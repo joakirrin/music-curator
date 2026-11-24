@@ -1,7 +1,7 @@
 import type { Song } from "@/types/song";
 import type { YouTubeVideo, YouTubeSearchResult } from "@/services/youtube/YouTubeApiClient";
 
-// Type from ImportChatGPTModal (also used there)
+// Shape of a song recommendation coming from the chat
 type ChatGPTRecommendation = {
   title: string;
   artist: string;
@@ -18,7 +18,7 @@ type ChatGPTRecommendation = {
 
 /**
  * Maps a ChatGPT recommendation to a Song object
- * Extracted from ImportChatGPTModal for reusability
+ * Maps a chat recommendation to a Song
  */
 export function mapChatGPTRecommendationToSong(
   rec: ChatGPTRecommendation,
@@ -55,7 +55,7 @@ export function mapChatGPTRecommendationToSong(
 }
 
 /**
- * Normalizes service link to URI format (copied from ImportChatGPTModal)
+ * Normalizes service link to URI format
  */
 function normalizeServiceLink(input?: string): string | undefined {
   if (!input) return undefined;
