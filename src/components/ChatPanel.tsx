@@ -23,12 +23,10 @@ type Props = {
   onClearLibrary: () => void; // 🆕 PHASE 3
   onAddMessage: (message: ChatMessageType) => void;
   onUpdateLastMessage: (updates: Partial<ChatMessageType>) => void;
-  onUpdateChatMessage?: (id: string, updates: Partial<ChatMessageType>) => void;
   onSetLoading: (loading: boolean) => void;
   onIncrementRound: () => void;
   onImportSongs: (songs: Song[]) => Promise<void>;
   onCancelVerification?: (messageId: string) => void;
-  parseTimeoutExtension: (userMessage: string) => number | null;
   preFilledMessage?: string;
 };
 
@@ -63,12 +61,10 @@ export default function ChatPanel({
   onClearLibrary,
   onAddMessage,
   onUpdateLastMessage,
-  onUpdateChatMessage,
   onSetLoading,
   onIncrementRound,
   onImportSongs,
   onCancelVerification,
-  parseTimeoutExtension,
   preFilledMessage,
 }: Props) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -99,44 +95,6 @@ export default function ChatPanel({
 
   // Handle sending a message to GPT
   const handleSendMessage = async (userPrompt: string, forceSongMode: boolean = false, strictJson: boolean = false) => {
-    // Check if user is trying to extend timeout
-    const timeoutExtension = parseTimeoutExtension(userPrompt);
-    
-    if (timeoutExtension) {
-      const lastVerifyingMessage = [...messages]
-        .reverse()
-        .find(m => m.verificationStatus === 'in_progress');
-      
-      if (lastVerifyingMessage && lastVerifyingMessage.id) {
-        if (onUpdateChatMessage) {
-          onUpdateChatMessage(lastVerifyingMessage.id, {
-            verificationTimeoutSeconds: timeoutExtension
-          });
-        } else {
-          onUpdateLastMessage({
-            verificationTimeoutSeconds: timeoutExtension
-          });
-        }
-        
-        onAddMessage({
-          id: `system-${Date.now()}`,
-          role: 'system',
-          content: `✓ Verification timeout extended to ${timeoutExtension} seconds`,
-          timestamp: Date.now(),
-        });
-        
-        return;
-      } else {
-        onAddMessage({
-          id: `system-${Date.now()}`,
-          role: 'system',
-          content: `⚠️ No active verification to extend`,
-          timestamp: Date.now(),
-        });
-        return;
-      }
-    }
-
     onSetLoading(true);
 
     try {
