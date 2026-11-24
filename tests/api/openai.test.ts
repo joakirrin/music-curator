@@ -130,5 +130,16 @@ describe('POST /api/openai', () => {
       expect(res.statusCode).not.toBe(403);
       expect(createMock).toHaveBeenCalled();
     });
+
+    it('acepta las vistas previas de Vercel de la cuenta, y no otros proyectos de Vercel', async () => {
+      createMock.mockResolvedValue({ choices: [{ message: { content: 'ok' } }] });
+      const ok = mockRes();
+      await handler(mockReq({ body: { messages }, headers: { origin: 'https://fonea-app-git-fix-keep-songs-9cdfc7-joaquins-projects-d341371b.vercel.app' } }), ok);
+      expect(ok.statusCode).not.toBe(403);
+
+      const other = mockRes();
+      await handler(mockReq({ body: { messages }, headers: { origin: 'https://music-curator-evil.vercel.app' } }), other);
+      expect(other.statusCode).toBe(403);
+    });
   });
 });

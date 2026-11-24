@@ -29,7 +29,10 @@ function isAllowedOrigin(req: { headers?: Record<string, string | string[] | und
   return (
     host === "foneamusic.com" ||
     host === "www.foneamusic.com" ||
-    (host.startsWith("music-curator") && host.endsWith(".vercel.app")) ||
+    host === "music-curator-self.vercel.app" ||
+    // Preview deployments of this Vercel account (fonea-app-git-<branch>-<account>.vercel.app).
+    // The account suffix is unique, so other people's Vercel projects can't match it.
+    host.endsWith("-joaquins-projects-d341371b.vercel.app") ||
     host === "localhost" ||
     host === "127.0.0.1"
   );
