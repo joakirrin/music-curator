@@ -47,7 +47,8 @@ export function keepPendingAsUnverified(
   round: number | undefined
 ): Song[] {
   return songs.map(song => {
-    const isFromThisMessage = song.messageId === messageId || song.round === round;
+    const isFromThisMessage =
+      song.messageId === messageId || (round !== undefined && song.round === round);
     return isFromThisMessage && song.verificationStatus === 'checking'
       ? { ...song, verificationStatus: 'unverified' }
       : song;

@@ -16,4 +16,14 @@ describe('keepPendingAsUnverified', () => {
     expect(result.map(s => s.id)).toEqual(['a', 'b', 'c', 'd']);
     expect(result.map(s => s.verificationStatus)).toEqual(['unverified', 'verified', 'failed', 'checking']);
   });
+
+  it('marca las canciones de la ronda aunque no tengan messageId, y no toca otras sin ronda', () => {
+    const songs = [
+      makeSong({ id: 'a', round: 3, verificationStatus: 'checking' }),
+      makeSong({ id: 'b', verificationStatus: 'checking' }),
+    ];
+
+    expect(keepPendingAsUnverified(songs, 'm1', 3).map(s => s.verificationStatus)).toEqual(['unverified', 'checking']);
+    expect(keepPendingAsUnverified(songs, 'm1', undefined).map(s => s.verificationStatus)).toEqual(['checking', 'checking']);
+  });
 });

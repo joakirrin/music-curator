@@ -371,6 +371,7 @@ export default function App() {
           verificationStatus: 'in_progress', // 🆕 Set to in_progress
           verificationAbortController: abortController, // 🆕 Store controller
           verificationStartTime: Date.now(), // 🆕 Track start time
+          songs: newSongs, // timeout/cancel find this round's songs through it
           verificationTimeoutSeconds: 30, // 🆕 Default 30s timeout
           verificationProgress: {
             total: newSongs.length,
