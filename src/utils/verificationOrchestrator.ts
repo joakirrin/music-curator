@@ -28,7 +28,7 @@ export type VerificationProgress = {
  * Tier 3: Spotify 3-tier search (requires auth: Direct → Soft → Hard)
  * Tier 4: Mark as failed (only after all tiers exhausted)
  * 
- * Extracted from ImportChatGPTModal for reusability
+ * Verifies songs in batch
  */
 export async function verifySongsInBatch(
   songs: Song[],
