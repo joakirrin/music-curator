@@ -36,3 +36,20 @@ export function getLibraryStats(songs: Song[]) {
   
   return { total, kept, skipped, pending };
 }
+
+/**
+ * When a verification is stopped (timeout or cancel), keep its songs:
+ * the ones still being checked become 'unverified' instead of being deleted.
+ */
+export function keepPendingAsUnverified(
+  songs: Song[],
+  messageId: string,
+  round: number | undefined
+): Song[] {
+  return songs.map(song => {
+    const isFromThisMessage = song.messageId === messageId || song.round === round;
+    return isFromThisMessage && song.verificationStatus === 'checking'
+      ? { ...song, verificationStatus: 'unverified' }
+      : song;
+  });
+}

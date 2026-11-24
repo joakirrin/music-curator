@@ -41,7 +41,7 @@ import { verifySongsInBatch } from "./utils/verificationOrchestrator";
 import { mapChatGPTRecommendationToSong } from "./utils/songMappers";
 import { useSessionState } from "./hooks/useSessionState";
 import { SessionIndicator } from "./components/SessionIndicator";
-import { getOrphanedKeptSongs } from "./utils/libraryHelpers";
+import { getOrphanedKeptSongs, keepPendingAsUnverified } from "./utils/libraryHelpers";
 import { useUndoClear } from "./hooks/useUndoClear";
 import { UndoIndicator } from "./components/UndoIndicator";
 import { ClearLibraryWarningModal } from "./components/ClearLibraryWarningModal";
@@ -296,29 +296,7 @@ export default function App() {
               replacementAttempt: undefined, // 🆕 Clear attempt counter
             });
             
-            // Delete unverified songs (same logic as cancel)
-            const verifiedCount = message.verificationProgress?.verified || 0;
-            const totalCount = message.verificationProgress?.total || 0;
-            const unverifiedCount = totalCount - verifiedCount;
-            
-            if (unverifiedCount > 0) {
-              setSongs((prev) => {
-                const updated = prev.filter(song => {
-                  const isFromThisMessage = song.messageId === message.id || 
-                                           (song.round === message.songs?.[0]?.round);
-                  
-                  if (!isFromThisMessage) return true;
-                  if (song.verificationStatus === 'verified') return true;
-                  
-                  console.log(`[Verification] Timeout - Deleting: ${song.title}`);
-                  return false;
-                });
-                
-                return updated;
-              });
-              
-              console.log(`[Verification] Timeout: Deleted ${unverifiedCount}, kept ${verifiedCount}`);
-            }
+            setSongs((prev) => keepPendingAsUnverified(prev, message.id, message.songs?.[0]?.round));
           }
         }
       });
@@ -662,31 +640,7 @@ export default function App() {
         replacementAttempt: undefined,
       });
       
-      // Calculate how many songs to delete
-      const verifiedCount = message.verificationProgress?.verified || 0;
-      const totalCount = message.verificationProgress?.total || 0;
-      const unverifiedCount = totalCount - verifiedCount;
-      
-      if (unverifiedCount > 0) {
-        // Delete unverified songs (keep verified ones)
-        setSongs((prev) => {
-          const updated = prev.filter(song => {
-            // Keep if: (1) verified, OR (2) from a different message
-            const isFromThisMessage = song.messageId === messageId || 
-                                     (song.round === message.songs?.[0]?.round);
-            
-            if (!isFromThisMessage) return true; // Keep songs from other messages
-            if (song.verificationStatus === 'verified') return true; // Keep verified songs
-            
-            console.log(`[Verification] Deleting unverified: ${song.title} by ${song.artist}`);
-            return false; // Delete unverified songs
-          });
-          
-          return updated;
-        });
-        
-        console.log(`[Verification] Deleted ${unverifiedCount} unverified songs, kept ${verifiedCount} verified`);
-      }
+      setSongs((prev) => keepPendingAsUnverified(prev, messageId, message.songs?.[0]?.round));
     },
     [messages, setSongs, updateChatMessage]
   );
