@@ -1001,7 +1001,7 @@ const handleCopyReplacementPrompt = useCallback(() => {
                     <>
                       No songs yet. Click{" "}
                       <button
-                        onClick={toggleChat}
+                        onClick={() => { if (!isChatOpen) toggleChat(); }}
                         className="text-emerald-400 hover:text-emerald-300 underline"
                       >
                         💬 Open the chat
